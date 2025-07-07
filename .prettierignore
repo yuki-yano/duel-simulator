@@ -1,0 +1,7 @@
+node_modules
+dist
+.wrangler
+.mf
+pnpm-lock.yaml
+*.log
+*.md

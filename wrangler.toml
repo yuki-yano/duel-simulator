@@ -1,0 +1,31 @@
+name = "duel-simulator"
+main = "src/server/index.ts"
+compatibility_date = "2024-12-01"
+
+[vars]
+ENVIRONMENT = "development"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "duel-simulator"
+database_id = "1cb9b5cb-8700-4921-9312-add657a08fe5"
+
+# R2 Storage binding
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "duel-simulator-images"
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Build settings
+[build]
+command = ""
+
+# Route configuration
+[[routes]]
+pattern = "duel-simulator.com/*"
+zone_name = "duel-simulator.com"
