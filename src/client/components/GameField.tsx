@@ -1,11 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, Undo2, Redo2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause } from "lucide-react"
 import { useAtom, useAtomValue } from "jotai"
-import { gameStateAtom, hoveredZoneAtom, draggedCardAtom, moveCardAtom, undoAtom, redoAtom, canUndoAtom, canRedoAtom } from "@/client/atoms/boardAtoms"
+import { 
+  gameStateAtom, hoveredZoneAtom, draggedCardAtom, moveCardAtom, 
+  undoAtom, redoAtom, canUndoAtom, canRedoAtom,
+  replayRecordingAtom, replayStartIndexAtom,
+  replayPlayingAtom, replayPausedAtom, replayCurrentIndexAtom,
+  startReplayRecordingAtom, stopReplayRecordingAtom,
+  playReplayAtom, toggleReplayPauseAtom, stopReplayAtom,
+  replayDataAtom
+} from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
+import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
 
 interface ZoneProps {
   className?: string
@@ -134,6 +143,7 @@ function Zone({
             return (
               <div
                 key={c.id}
+                data-card-id={c.id}
                 className="absolute"
                 style={{
                   left: `${index * offsetPx}px`,
@@ -477,6 +487,7 @@ function DeckZone({
                           return (
                             <div
                               key={card.id}
+                              data-card-id={card.id}
                               className="absolute h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm transition-all"
                               style={{
                                 left: `${cardPosition}px`,
@@ -517,6 +528,7 @@ function DeckZone({
                   return isCard ? (
                     <div
                       key={(item as GameCard).id}
+                      data-card-id={(item as GameCard).id}
                       className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                     >
                       <DraggableCard card={item as GameCard} className="w-full h-full" onContextMenu={onContextMenu} />
@@ -805,6 +817,7 @@ function GraveZone({
                   return (
                     <div
                       key={card.id}
+                      data-card-id={card.id}
                       className="absolute h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                       style={{
                         top: `${Math.round(cardPosition)}px`,
@@ -826,6 +839,7 @@ function GraveZone({
                 return (
                   <div
                     key={card.id}
+                    data-card-id={card.id}
                     className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                     style={{
                       zIndex: hoveredCardIndex === index ? 100 : index + 1,
@@ -863,6 +877,19 @@ export function GameField() {
     card: GameCard
     position: { x: number; y: number }
   } | null>(null)
+  
+  // Replay atoms
+  const [isRecording] = useAtom(replayRecordingAtom)
+  const [replayStartIndex] = useAtom(replayStartIndexAtom)
+  const [isPlaying] = useAtom(replayPlayingAtom)
+  const [isPaused] = useAtom(replayPausedAtom)
+  const [currentReplayIndex] = useAtom(replayCurrentIndexAtom)
+  const [replayData] = useAtom(replayDataAtom)
+  const [, startRecording] = useAtom(startReplayRecordingAtom)
+  const [, stopRecording] = useAtom(stopReplayRecordingAtom)
+  const [, playReplay] = useAtom(playReplayAtom)
+  const [, togglePause] = useAtom(toggleReplayPauseAtom)
+  const [, stopReplay] = useAtom(stopReplayAtom)
 
   const playerBoard = gameState.players.self
   const opponentBoard = gameState.players.opponent
@@ -988,14 +1015,14 @@ export function GameField() {
   return (
     <>
     <div className="w-full max-w-6xl mx-auto p-2 sm:p-4">
-      {/* Undo/Redo buttons */}
-      <div className="mb-2 flex justify-start gap-2">
+      {/* Undo/Redo and Replay buttons */}
+      <div className="mb-2 flex justify-start gap-2 flex-wrap">
         <button
           onClick={() => undo()}
-          disabled={!canUndo}
+          disabled={!canUndo || isPlaying}
           className={cn(
             "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-            canUndo 
+            canUndo && !isPlaying 
               ? "bg-primary text-primary-foreground hover:bg-primary/90" 
               : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
@@ -1006,10 +1033,10 @@ export function GameField() {
         </button>
         <button
           onClick={() => redo()}
-          disabled={!canRedo}
+          disabled={!canRedo || isPlaying}
           className={cn(
             "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-            canRedo 
+            canRedo && !isPlaying 
               ? "bg-primary text-primary-foreground hover:bg-primary/90" 
               : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
@@ -1018,6 +1045,76 @@ export function GameField() {
           <Redo2 className="w-4 h-4" />
           <span>やり直す</span>
         </button>
+        
+        {/* Replay recording buttons */}
+        {!isPlaying && (
+          <>
+            {!isRecording ? (
+              <button
+                onClick={() => startRecording()}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-500 text-white hover:bg-red-600"
+                aria-label="Start recording"
+              >
+                <Circle className="w-4 h-4" />
+                <span>録画開始</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => stopRecording()}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-600 text-white hover:bg-red-700 animate-pulse"
+                aria-label="Stop recording"
+              >
+                <Square className="w-4 h-4" />
+                <span>録画停止</span>
+              </button>
+            )}
+            
+            {/* Play replay button */}
+            {replayData && replayData.operations.length > 0 && !isRecording && (
+              <button
+                onClick={() => playReplay()}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-green-500 text-white hover:bg-green-600"
+                aria-label="Play replay"
+              >
+                <Play className="w-4 h-4" />
+                <span>リプレイ再生</span>
+              </button>
+            )}
+          </>
+        )}
+        
+        {/* Replay playback controls */}
+        {isPlaying && (
+          <>
+            <button
+              onClick={() => togglePause()}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+              aria-label={isPaused ? "Resume" : "Pause"}
+            >
+              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              <span>{isPaused ? "再開" : "一時停止"}</span>
+            </button>
+            <button
+              onClick={() => stopReplay()}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-gray-500 text-white hover:bg-gray-600"
+              aria-label="Stop replay"
+            >
+              <Square className="w-4 h-4" />
+              <span>停止</span>
+            </button>
+            <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
+              ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+            </div>
+          </>
+        )}
+        
+        {/* Recording status */}
+        {isRecording && (
+          <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-red-600">
+            <Circle className="w-3 h-3 mr-1 animate-pulse fill-current" />
+            録画中 (開始: ステップ {replayStartIndex !== null ? replayStartIndex : 0})
+          </div>
+        )}
       </div>
 
       {/* Opponent's Area */}
@@ -1331,6 +1428,9 @@ export function GameField() {
           onAction={handleContextMenuAction}
         />
       )}
+      
+      {/* Card Animation Overlay */}
+      <CardAnimationOverlay />
     </>
   )
 }

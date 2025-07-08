@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
-import { useSetAtom } from "jotai"
-import { draggedCardAtom } from "@/client/atoms/boardAtoms"
+import { useSetAtom, useAtomValue } from "jotai"
+import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
@@ -15,6 +15,8 @@ interface DraggableCardProps {
 
 export function DraggableCard({ card, className, hoverDirection = "up", style, stackIndex, onContextMenu }: DraggableCardProps) {
   const setDraggedCard = useSetAtom(draggedCardAtom)
+  const isReplayPlaying = useAtomValue(replayPlayingAtom)
+  const cardAnimations = useAtomValue(cardAnimationsAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
@@ -22,6 +24,9 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
+  
+  // Check if this card is currently animating
+  const isAnimating = cardAnimations.some(anim => anim.cardId === card.id)
 
   // Clean up timers on unmount
   useEffect(() => {
@@ -33,6 +38,12 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   }, [])
 
   const handleDragStart = (e: React.DragEvent) => {
+    // Disable dragging during replay
+    if (isReplayPlaying) {
+      e.preventDefault()
+      return
+    }
+    
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
     const cardWithIndex =
       stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
@@ -45,6 +56,12 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Disable touch dragging during replay
+    if (isReplayPlaying) {
+      e.preventDefault()
+      return
+    }
+    
     // Clear any existing long press timer
     if (longPressTimerRef.current != null) {
       clearTimeout(longPressTimerRef.current)
@@ -227,7 +244,8 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
       <div
         ref={cardRef}
         className={cn("transition-all duration-200", className)}
-        draggable
+        draggable={!isReplayPlaying}
+        data-card-id={card.id}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onMouseEnter={() => setIsHovered(true)}
@@ -241,19 +259,20 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
           }
         }}
         style={{
-          cursor: "grab",
-          opacity: isTouching ? 0.5 : 1,
+          cursor: isReplayPlaying ? "not-allowed" : "grab",
+          opacity: isAnimating ? 0 : isTouching ? 0.5 : 1,
+          visibility: isAnimating ? "hidden" : "visible",
           touchAction: isTouching ? "none" : "auto",
           position: "relative",
           transform:
-            isHovered || isTouching
+            (isHovered || isTouching) && !isReplayPlaying
               ? hoverDirection === "left"
                 ? "translateX(-8px)"
                 : hoverDirection === "right"
                   ? "translateX(8px)"
                   : "translateY(-8px)"
               : "translate(0)",
-          zIndex: isHovered || isTouching ? 1000 : 1,
+          zIndex: (isHovered || isTouching) && !isReplayPlaying ? 1000 : 1,
           transition: "transform 0.2s ease",
           ...style,
         }}
