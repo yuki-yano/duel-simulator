@@ -334,14 +334,14 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
     if (!detectedType) return
 
     setIsProcessing(true)
-    
+
     try {
       const img = new Image()
-      
+
       // Promiseで画像の読み込みを待つ
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve()
-        img.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+        img.onerror = () => reject(new Error("画像の読み込みに失敗しました"))
         img.src = imageDataUrl
       })
       const cards: string[] = []
@@ -386,14 +386,14 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
             const cardDataUrl = tempCanvas.toDataURL("image/png")
             cards.push(cardDataUrl)
-            
+
             // Create GameCard object
             const gameCard: GameCard = {
               id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               imageUrl: cardDataUrl,
-              position: 'facedown',
+              position: "facedown",
               rotation: 0,
-              zone: { player: 'self', type: 'deck' },
+              zone: { player: "self", type: "deck" },
               index: mainCardCount,
             }
             mainDeckCards.push(gameCard)
@@ -432,14 +432,14 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
             const cardDataUrl = tempCanvas.toDataURL("image/png")
             cards.push(cardDataUrl)
-            
+
             // Create GameCard object for extra deck
             const gameCard: GameCard = {
               id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               imageUrl: cardDataUrl,
-              position: 'facedown',
+              position: "facedown",
               rotation: 0,
-              zone: { player: 'self', type: 'extraDeck' },
+              zone: { player: "self", type: "extraDeck" },
               index: exCardCount,
             }
             extraDeckCards.push(gameCard)
@@ -470,8 +470,8 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
       onProcessComplete(cards, metadata)
     } catch (error) {
-      console.error('カードの切り出し処理でエラーが発生しました:', error)
-      alert('カードの切り出しに失敗しました。画像を確認してください。')
+      console.error("カードの切り出し処理でエラーが発生しました:", error)
+      alert("カードの切り出しに失敗しました。画像を確認してください。")
     } finally {
       setIsProcessing(false)
     }
@@ -516,8 +516,8 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
               {isOCRProcessing ? "デッキ枚数を読み取り中..." : "デッキ枚数を自動検出"}
             </button>
 
-            {/* Debug toggle */}
-            <label className="flex items-center gap-2 text-xs">
+            {/* Debug toggle - hidden for now */}
+            {/* <label className="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
                 checked={showDebug}
@@ -525,7 +525,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
                 className="rounded"
               />
               OCRデバッグ表示
-            </label>
+            </label> */}
 
             {/* Debug canvas */}
             {showDebug && (

@@ -29,7 +29,7 @@ export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ succe
   })
 
   if (!response.ok) {
-    const error = await response.json() as { error?: string }
+    const error = (await response.json()) as { error?: string }
     throw new Error(error.error ?? "Failed to save deck image")
   }
 
@@ -40,7 +40,7 @@ export async function getDeckImage(hash: string): Promise<DeckImageResponse> {
   const response = await fetch(`/api/deck-images/${hash}`)
 
   if (!response.ok) {
-    const error = await response.json() as { error?: string }
+    const error = (await response.json()) as { error?: string }
     throw new Error(error.error ?? "Failed to get deck image")
   }
 

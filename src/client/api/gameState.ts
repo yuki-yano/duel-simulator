@@ -60,7 +60,7 @@ export async function saveGameState(
   })
 
   if (!response.ok) {
-    const error = await response.json() as { error?: string }
+    const error = (await response.json()) as { error?: string }
     throw new Error(error.error ?? "Failed to save game state")
   }
 
@@ -77,7 +77,7 @@ export async function loadGameState(id: string): Promise<{
   const response = await fetch(`/api/save-states/${id}`)
 
   if (!response.ok) {
-    const error = await response.json() as { error?: string }
+    const error = (await response.json()) as { error?: string }
     throw new Error(error.error ?? "Failed to load game state")
   }
 

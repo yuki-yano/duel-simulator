@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure touch-action allows pinch zoom */
+html, body {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Prevent iOS specific zoom blocking */
+input, select, textarea {
+  font-size: 16px;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -56,14 +66,15 @@
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* タッチデバイスでのスクロールとズームを防ぐ */
-  html, body {
+
+  /* Prevent scrolling and zooming on touch devices */
+  html,
+  body {
     touch-action: pan-x pan-y;
     overscroll-behavior: none;
   }
-  
-  /* ドラッグ可能な要素のタッチ操作を最適化 */
+
+  /* Optimize touch handling for draggable elements */
   [draggable="true"] {
     touch-action: none;
     -webkit-user-drag: none;

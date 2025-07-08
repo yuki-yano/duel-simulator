@@ -99,41 +99,39 @@ export default function Replay() {
         </Card>
 
         {/* Processed Cards Display */}
-        {processedCards.length > 0 && (
-          <div className="max-w-7xl mx-auto mt-8 space-y-4">
-            {/* Main Deck */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">メインデッキ</h3>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                {processedCards.slice(0, deckMetadata?.mainDeckCount ?? 40).map((card, index) => (
-                  <img
-                    key={index}
-                    src={card}
-                    alt={`Main Deck Card ${index + 1}`}
-                    className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
-                  />
-                ))}
-              </div>
-            </Card>
+        {/* {processedCards.length > 0 && (                                                                                    */}
+        {/*   <div className="max-w-7xl mx-auto mt-8 space-y-4">                                                               */}
+        {/*     <Card className="p-6">                                                                                         */}
+        {/*       <h3 className="text-lg font-semibold mb-4">メインデッキ</h3>                                                 */}
+        {/*       <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                                     */}
+        {/*         {processedCards.slice(0, deckMetadata?.mainDeckCount ?? 40).map((card, index) => (                         */}
+        {/*           <img                                                                                                     */}
+        {/*             key={index}                                                                                            */}
+        {/*             src={card}                                                                                             */}
+        {/*             alt={`Main Deck Card ${index + 1}`}                                                                    */}
+        {/*             className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer"   */}
+        {/*           />                                                                                                       */}
+        {/*         ))}                                                                                                        */}
+        {/*       </div>                                                                                                       */}
+        {/*     </Card>                                                                                                        */}
 
-            {/* Extra Deck */}
-            {(deckMetadata?.extraDeckCount ?? 0) > 0 && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">EXデッキ</h3>
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                  {processedCards.slice(-(deckMetadata?.extraDeckCount ?? 15)).map((card, index) => (
-                    <img
-                      key={index}
-                      src={card}
-                      alt={`Extra Deck Card ${index + 1}`}
-                      className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
-                    />
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
+        {/*     {(deckMetadata?.extraDeckCount ?? 0) > 0 && (                                                                  */}
+        {/*       <Card className="p-6">                                                                                       */}
+        {/*         <h3 className="text-lg font-semibold mb-4">EXデッキ</h3>                                                   */}
+        {/*         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                                   */}
+        {/*           {processedCards.slice(-(deckMetadata?.extraDeckCount ?? 15)).map((card, index) => (                      */}
+        {/*             <img                                                                                                   */}
+        {/*               key={index}                                                                                          */}
+        {/*               src={card}                                                                                           */}
+        {/*               alt={`Extra Deck Card ${index + 1}`}                                                                 */}
+        {/*               className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer" */}
+        {/*             />                                                                                                     */}
+        {/*           ))}                                                                                                      */}
+        {/*         </div>                                                                                                     */}
+        {/*       </Card>                                                                                                      */}
+        {/*     )}                                                                                                             */}
+        {/*   </div>                                                                                                           */}
+        {/* )}                                                                                                                 */}
       </div>
     </div>
   )

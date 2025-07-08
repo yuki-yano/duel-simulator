@@ -5,7 +5,13 @@ import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 import { saveGameState, type GameState } from "@client/api/gameState"
 import { useAtom, useAtomValue } from "jotai"
-import { extractedCardsAtom, gameStateAtom, operationsAtom, drawCardAtom, draggedCardAtom } from "@client/atoms/boardAtoms"
+import {
+  extractedCardsAtom,
+  gameStateAtom,
+  operationsAtom,
+  drawCardAtom,
+  draggedCardAtom,
+} from "@client/atoms/boardAtoms"
 
 export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
@@ -14,9 +20,9 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveId, setSaveId] = useState<string | null>(null)
   const extractedCards = useAtomValue(extractedCardsAtom)
-  const [gameState, setGameState] = useAtom(gameStateAtom)
-  const operations = useAtomValue(operationsAtom)
-  const [, drawCard] = useAtom(drawCardAtom)
+  const [_gameState, setGameState] = useAtom(gameStateAtom)
+  const _operations = useAtomValue(operationsAtom)
+  const [, _drawCard] = useAtom(drawCardAtom)
   const [isGameStarted, setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
 
@@ -28,23 +34,23 @@ export default function App() {
     setProcessedCards(cards)
     setDeckMetadata(metadata)
   }
-  
-  // カードが切り出されたら、ゲーム状態に反映
+
+  // When cards are extracted, reflect them in game state
   useEffect(() => {
     if (extractedCards.mainDeck.length > 0 || extractedCards.extraDeck.length > 0) {
-      // カードにzone情報とindexを設定
+      // Set zone information and index for cards
       const mainDeckWithZones = extractedCards.mainDeck.map((card, index) => ({
         ...card,
-        zone: { player: 'self' as const, type: 'deck' as const },
-        index
+        zone: { player: "self" as const, type: "deck" as const },
+        index,
       }))
       const extraDeckWithZones = extractedCards.extraDeck.map((card, index) => ({
         ...card,
-        zone: { player: 'self' as const, type: 'extraDeck' as const },
-        index
+        zone: { player: "self" as const, type: "extraDeck" as const },
+        index,
       }))
-      
-      setGameState(prev => ({
+
+      setGameState((prev) => ({
         ...prev,
         players: {
           ...prev.players,
@@ -52,25 +58,26 @@ export default function App() {
             ...prev.players.self,
             deck: mainDeckWithZones,
             extraDeck: extraDeckWithZones,
-          }
-        }
+          },
+        },
       }))
     }
   }, [extractedCards, setGameState])
-  
-  // タッチドラッグ中のスクロールを防ぐ
+
+  // Prevent scrolling during touch drag
   useEffect(() => {
     const preventScroll = (e: TouchEvent) => {
-      if (draggedCard) {
+      // Only prevent default if dragging a card AND not pinch zooming
+      if (draggedCard && e.touches.length === 1) {
         e.preventDefault()
       }
     }
-    
-    // passive: false を指定してpreventDefaultを有効にする
-    document.addEventListener('touchmove', preventScroll, { passive: false })
-    
+
+    // Specify passive: false to enable preventDefault
+    document.addEventListener("touchmove", preventScroll, { passive: false })
+
     return () => {
-      document.removeEventListener('touchmove', preventScroll)
+      document.removeEventListener("touchmove", preventScroll)
     }
   }, [draggedCard])
 
@@ -123,16 +130,16 @@ export default function App() {
         {/* Game Controls */}
         {processedCards.length > 0 && (
           <div className="max-w-7xl mx-auto mb-4 space-y-2">
-            {!isGameStarted && (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setIsGameStarted(true)}
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold text-lg"
-                >
-                  ゲームを開始
-                </button>
-              </div>
-            )}
+            {/* {!isGameStarted && (                                                                                    */}
+            {/*   <div className="flex justify-center">                                                                 */}
+            {/*     <button                                                                                             */}
+            {/*       onClick={() => setIsGameStarted(true)}                                                            */}
+            {/*       className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold text-lg" */}
+            {/*     >                                                                                                   */}
+            {/*       ゲームを開始                                                                                      */}
+            {/*     </button>                                                                                           */}
+            {/*   </div>                                                                                                */}
+            {/* )}                                                                                                      */}
             {isGameStarted && (
               <div className="flex gap-4 justify-center">
                 <button
@@ -168,41 +175,39 @@ export default function App() {
         </Card>
 
         {/* Processed Cards Display (before game starts) */}
-        {processedCards.length > 0 && !isGameStarted && (
-          <div className="max-w-7xl mx-auto mt-8 space-y-4">
-            {/* Main Deck */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">メインデッキ ({extractedCards.mainDeck.length}枚)</h3>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                {extractedCards.mainDeck.map((card) => (
-                  <img
-                    key={card.id}
-                    src={card.imageUrl}
-                    alt={`Main Deck Card`}
-                    className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"
-                  />
-                ))}
-              </div>
-            </Card>
+        {/* {processedCards.length > 0 && !isGameStarted && (                                                       */}
+        {/*   <div className="max-w-7xl mx-auto mt-8 space-y-4">                                                    */}
+        {/*     <Card className="p-6">                                                                              */}
+        {/*       <h3 className="text-lg font-semibold mb-4">メインデッキ ({extractedCards.mainDeck.length}枚)</h3> */}
+        {/*       <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                          */}
+        {/*         {extractedCards.mainDeck.map((card) => (                                                        */}
+        {/*           <img                                                                                          */}
+        {/*             key={card.id}                                                                               */}
+        {/*             src={card.imageUrl}                                                                         */}
+        {/*             alt={`Main Deck Card`}                                                                      */}
+        {/*             className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"       */}
+        {/*           />                                                                                            */}
+        {/*         ))}                                                                                             */}
+        {/*       </div>                                                                                            */}
+        {/*     </Card>                                                                                             */}
 
-            {/* Extra Deck */}
-            {extractedCards.extraDeck.length > 0 && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">EXデッキ ({extractedCards.extraDeck.length}枚)</h3>
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                  {extractedCards.extraDeck.map((card) => (
-                    <img
-                      key={card.id}
-                      src={card.imageUrl}
-                      alt={`Extra Deck Card`}
-                      className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"
-                    />
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
+        {/*     {extractedCards.extraDeck.length > 0 && (                                                           */}
+        {/*       <Card className="p-6">                                                                            */}
+        {/*         <h3 className="text-lg font-semibold mb-4">EXデッキ ({extractedCards.extraDeck.length}枚)</h3>  */}
+        {/*         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                        */}
+        {/*           {extractedCards.extraDeck.map((card) => (                                                     */}
+        {/*             <img                                                                                        */}
+        {/*               key={card.id}                                                                             */}
+        {/*               src={card.imageUrl}                                                                       */}
+        {/*               alt={`Extra Deck Card`}                                                                   */}
+        {/*               className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"     */}
+        {/*             />                                                                                          */}
+        {/*           ))}                                                                                           */}
+        {/*         </div>                                                                                          */}
+        {/*       </Card>                                                                                           */}
+        {/*     )}                                                                                                  */}
+        {/*   </div>                                                                                                */}
+        {/* )}                                                                                                      */}
       </div>
     </div>
   )
