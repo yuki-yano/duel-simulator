@@ -23,7 +23,7 @@ export default function App() {
   const [_gameState, setGameState] = useAtom(gameStateAtom)
   const _operations = useAtomValue(operationsAtom)
   const [, _drawCard] = useAtom(drawCardAtom)
-  const [isGameStarted, setIsGameStarted] = useState(false)
+  const [isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
 
   const handleImageUpload = (imageDataUrl: string) => {

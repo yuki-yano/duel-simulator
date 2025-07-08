@@ -21,9 +21,8 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
 
   const handleDragStart = (e: React.DragEvent) => {
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
-    const cardWithIndex = stackIndex !== undefined && card.zone
-      ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } }
-      : card
+    const cardWithIndex =
+      stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
     setDraggedCard(cardWithIndex)
     e.dataTransfer.effectAllowed = "move"
   }
@@ -35,9 +34,8 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsTouching(true)
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
-    const cardWithIndex = stackIndex !== undefined && card.zone
-      ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } }
-      : card
+    const cardWithIndex =
+      stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
     setDraggedCard(cardWithIndex)
     // Prevent default to avoid scrolling and text selection
     e.preventDefault()
@@ -50,11 +48,11 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
       const scale = visualViewport?.scale ?? 1
       const offsetX = visualViewport?.offsetLeft ?? 0
       const offsetY = visualViewport?.offsetTop ?? 0
-      
+
       // Convert touch coordinates to visual viewport coordinates
       const x = (touch.clientX - offsetX) / scale
       const y = (touch.clientY - offsetY) / scale
-      
+
       setTouchPosition({ x, y })
     }
 
@@ -66,17 +64,17 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (isTouching && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0]
-      
+
       // Account for visual viewport (zoom) offset
       const visualViewport = window.visualViewport
       const _scale = visualViewport?.scale ?? 1
       const _offsetX = visualViewport?.offsetLeft ?? 0
       const _offsetY = visualViewport?.offsetTop ?? 0
-      
+
       // Convert touch coordinates to document coordinates for elementFromPoint
       const docX = touch.clientX
       const docY = touch.clientY
-      
+
       const element = document.elementFromPoint(docX, docY)
 
       // Trigger drag and drop events on the element under touch point
@@ -115,11 +113,11 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
       const scale = visualViewport?.scale ?? 1
       const offsetX = visualViewport?.offsetLeft ?? 0
       const offsetY = visualViewport?.offsetTop ?? 0
-      
+
       // Convert touch coordinates to visual viewport coordinates
       const x = (touch.clientX - offsetX) / scale
       const y = (touch.clientY - offsetY) / scale
-      
+
       setTouchPosition({ x, y })
     }
   }
@@ -152,8 +150,8 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
               ? hoverDirection === "left"
                 ? "translateX(-8px)"
                 : hoverDirection === "right"
-                ? "translateX(8px)"
-                : "translateY(-8px)"
+                  ? "translateX(8px)"
+                  : "translateY(-8px)"
               : "translate(0)",
           zIndex: isHovered || isTouching ? 1000 : 1,
           transition: "transform 0.2s ease",
@@ -178,8 +176,8 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
           style={{
             left: `${touchPosition.x * (window.visualViewport?.scale ?? 1) + (window.visualViewport?.offsetLeft ?? 0) - 30}px`,
             top: `${touchPosition.y * (window.visualViewport?.scale ?? 1) + (window.visualViewport?.offsetTop ?? 0) - 43}px`,
-            width: '60px',
-            height: '86px',
+            width: "60px",
+            height: "86px",
           }}
         >
           <img

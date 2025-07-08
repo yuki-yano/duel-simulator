@@ -3,11 +3,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "vite build --mode client && vite build",
     "preview": "wrangler pages dev",
     "deploy": "vite build --mode client && vite build && wrangler pages deploy dist",
-    "dev:legacy": "vite --config vite.config.legacy.ts",
+    "dev:client": "vite",
     "dev:server": "wrangler dev src/server/index.ts",
     "wrangler": "wrangler",
     "db:create": "wrangler d1 create duel-simulator",

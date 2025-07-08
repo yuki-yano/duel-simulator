@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Card } from "@/client/components/Card"
-import { createWorker } from "tesseract.js"
+import { createWorker, PSM } from "tesseract.js"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard } from "@/shared/types/game"
@@ -12,143 +12,77 @@ interface DeckImageProcessorProps {
 
 export interface DeckProcessMetadata {
   imageDataUrl: string
-  aspectRatioType: "TYPE_1" | "TYPE_2" | "TYPE_3"
+  deckConfig: DeckConfiguration
   mainDeckCount: number
   extraDeckCount: number
+  sideDeckCount?: number
   sourceWidth: number
   sourceHeight: number
 }
 
-// Aspect ratio types based on solo-mode analysis
-const ASPECT_RATIOS = {
-  TYPE_1: {
-    value: 1.1,
-    mainRows: 4,
-    exRows: 2,
-    label: "タイプ1 (1.1)",
-    // Ratios based on 1080×1187px reference
-    startY: 119 / 1187,
-    cardWidth: 106 / 1080,
-    cardHeight: 154 / 1187,
-    cardGap: 2 / 1080,
-    startYEx: 784 / 1187,
-    deckNum: {
-      x: 220 / 1080, // Expanded to include full text
-      y: 86 / 1187,
-      width: 80 / 1080, // Wider to capture "40枚"
-      height: 23 / 1187,
-    },
-    exDeckNum: {
-      x: 280 / 1080, // Adjusted for "15枚"
-      y: 748 / 1187,
-      width: 80 / 1080, // Wider area
-      height: 23 / 1187,
-    },
-  },
-  TYPE_2: {
-    value: 1.24,
-    mainRows: 5,
-    exRows: 2,
-    label: "タイプ2 (1.24)",
-    // Ratios based on 1080×1341px reference
-    startY: 150 / 1341,
-    cardWidth: 106 / 1080,
-    cardHeight: 154 / 1341,
-    cardGap: 2 / 1080,
-    startYEx: 937 / 1341,
-    deckNum: {
-      x: 220 / 1080,
-      y: 114 / 1341,
-      width: 80 / 1080,
-      height: 23 / 1341,
-    },
-    exDeckNum: {
-      x: 280 / 1080,
-      y: 901 / 1341,
-      width: 80 / 1080,
-      height: 23 / 1341,
-    },
-  },
-  TYPE_3: {
-    value: 1.385,
-    mainRows: 6,
-    exRows: 2,
-    label: "タイプ3 (1.385)",
-    // Ratios based on 1080×1495px reference
-    startY: 181 / 1495,
-    cardWidth: 106 / 1080,
-    cardHeight: 154 / 1495,
-    cardGap: 2 / 1080,
-    startYEx: 1109 / 1495,
-    deckNum: {
-      x: 220 / 1080,
-      y: 145 / 1495,
-      width: 80 / 1080,
-      height: 23 / 1495,
-    },
-    exDeckNum: {
-      x: 280 / 1080,
-      y: 1073 / 1495,
-      width: 80 / 1080,
-      height: 23 / 1495,
-    },
-  },
-} as const
+interface DeckSection {
+  label: string
+  count: number
+  yPosition: number
+  rows: number
+}
 
-type AspectRatioType = keyof typeof ASPECT_RATIOS
+interface DeckConfiguration {
+  mainDeck: DeckSection | null
+  extraDeck: DeckSection | null
+  sideDeck: DeckSection | null
+  cardWidth: number
+  cardHeight: number
+  cardGap: number
+  leftMargin: number
+}
+
+// Position ratios based on image width
+const LAYOUT_RATIOS = {
+  mainDeckTextY: 0.071, // Main deck text is below the deck name (7% of width from top)
+  textToCardsGap: 0.035, // Gap between text and cards (increased to account for text height)
+  sectionGap: 0.004, // Gap between sections (further reduced for extra deck positioning)
+  cardAspectRatio: 1.4665, // Card height/width ratio (increased to compensate for no row gap)
+  rowGap: 0, // No gap between card rows (solo-mode approach)
+  firstRowOffset: 0.002, // Additional offset for the first row of cards
+  cardHorizontalMargin: 0.002, // Horizontal margin for card capture (increased)
+  leftTextX: 0.02, // Text starts at 2% from left
+  textWidth: 0.35, // Text area width is 35% of image width
+  textHeight: 0.035, // Text area height is 3.5% of image width
+}
 
 export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImageProcessorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const debugCanvasRef = useRef<HTMLCanvasElement>(null)
-  const debugExCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [detectedType, setDetectedType] = useState<AspectRatioType | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [deckConfig, setDeckConfig] = useState<DeckConfiguration | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
-  const [deckCount, setDeckCount] = useState<{ main: number | null; extra: number | null }>({
-    main: null,
-    extra: null,
-  })
-  const [isOCRProcessing, setIsOCRProcessing] = useState(false)
-  const [showDebug, setShowDebug] = useState(false)
+  const [showDebug, _setShowDebug] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualCounts, setManualCounts] = useState({ main: 40, extra: 15 })
+  const [ocrDebugCanvases, setOcrDebugCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
+  const [ocrProcessedCanvases, setOcrProcessedCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const setExtractedCards = useSetAtom(extractedCardsAtom)
 
   useEffect(() => {
     if (imageDataUrl) {
-      detectAspectRatio()
+      drawPreview()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageDataUrl])
 
-  const detectAspectRatio = () => {
+  const drawPreview = () => {
     const img = new Image()
     img.onload = () => {
-      const aspectRatio = img.width / img.height
-
-      // Find closest matching aspect ratio
-      let closestType: AspectRatioType = "TYPE_2"
-      let minDiff = Infinity
-
-      Object.entries(ASPECT_RATIOS).forEach(([type, config]) => {
-        const diff = Math.abs(aspectRatio - config.value)
-        if (diff < minDiff) {
-          minDiff = diff
-          closestType = type as AspectRatioType
-        }
-      })
-
-      setDetectedType(closestType)
-
-      // Draw preview on canvas
       const canvas = canvasRef.current
       if (canvas) {
         const ctx = canvas.getContext("2d")
         if (ctx) {
-          // Set canvas size to match image (scaled down for preview)
           const maxWidth = 600
           const scale = Math.min(1, maxWidth / img.width)
           canvas.width = img.width * scale
           canvas.height = img.height * scale
-
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         }
       }
@@ -156,314 +90,459 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
     img.src = imageDataUrl
   }
 
-  const performOCR = async () => {
-    if (!detectedType) return
+  const extractTextFromRegion = async (
+    img: HTMLImageElement,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    debugKey?: "main" | "extra" | "side",
+  ): Promise<string> => {
+    // Create a canvas for the specific region
+    const regionCanvas = document.createElement("canvas")
+    const scale = 4 // Upscale more for better OCR
+    regionCanvas.width = width * scale
+    regionCanvas.height = height * scale
 
-    setIsOCRProcessing(true)
-    const config = ASPECT_RATIOS[detectedType]
+    const ctx = regionCanvas.getContext("2d")
+    if (!ctx) return ""
+
+    // Enable better image interpolation
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = "high"
+
+    // Draw the specific region with scaling
+    ctx.drawImage(img, x, y, width, height, 0, 0, regionCanvas.width, regionCanvas.height)
+
+    // Apply preprocessing for better OCR
+    const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height)
+    const data = imageData.data
+
+    // First pass: Detect background color (most common color)
+    const colorCounts = new Map<string, number>()
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114)
+      const key = Math.round(gray / 10) * 10 // Group similar colors
+      colorCounts.set(key.toString(), (colorCounts.get(key.toString()) ?? 0) + 1)
+    }
+
+    // Find the most common color (likely background)
+    let bgColor = 255
+    let maxCount = 0
+    for (const [color, count] of colorCounts) {
+      if (count > maxCount) {
+        maxCount = count
+        bgColor = parseInt(color)
+      }
+    }
+
+    // Second pass: Adaptive thresholding based on background
+    const threshold = bgColor > 128 ? bgColor - 40 : bgColor + 40
+
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+
+      // Invert if dark background
+      let value: number
+      if (bgColor < 128) {
+        // Dark background, light text
+        value = gray > threshold ? 255 : 0
+      } else {
+        // Light background, dark text
+        value = gray < threshold ? 0 : 255
+      }
+
+      data[i] = value
+      data[i + 1] = value
+      data[i + 2] = value
+    }
+
+    ctx.putImageData(imageData, 0, 0)
+
+    // Store processed image for debug
+    const processedDataUrl = regionCanvas.toDataURL()
+
+    // Save processed canvas for debug display if debugKey provided
+    if (debugKey && showDebug) {
+      setOcrProcessedCanvases((prev) => ({ ...prev, [debugKey]: processedDataUrl }))
+    }
+
+    // Perform OCR on this region
+    const worker = await createWorker("jpn", 1, {
+      logger: () => {}, // Silent logger for region OCR
+    })
+
+    // Set OCR parameters for better number recognition
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
+    })
+
+    const result = await worker.recognize(regionCanvas)
+    await worker.terminate()
+
+    return result.data.text
+  }
+
+  const analyzeDeckStructure = async () => {
+    setIsAnalyzing(true)
+    setOcrDebugCanvases({}) // Clear previous debug canvases
+    setOcrProcessedCanvases({}) // Clear previous processed canvases
     const img = new Image()
 
     img.onload = async () => {
       try {
-        const worker = await createWorker("jpn") // Use Japanese for neuron format
+        const deckSections: DeckSection[] = []
 
-        // Extract deck count area with larger margin
-        const deckCanvas = document.createElement("canvas")
-        const deckCtx = deckCanvas.getContext("2d")
-        if (deckCtx) {
-          // Expand the area slightly for better OCR
-          const margin = 5
-          const deckNumX = Math.max(0, config.deckNum.x * img.width - margin)
-          const deckNumY = Math.max(0, config.deckNum.y * img.height - margin)
-          const deckNumWidth = config.deckNum.width * img.width + margin * 2
-          const deckNumHeight = config.deckNum.height * img.height + margin * 2
+        // Calculate positions based on image width
+        const textX = img.width * LAYOUT_RATIOS.leftTextX
+        const textWidth = img.width * LAYOUT_RATIOS.textWidth
+        const textHeight = img.width * LAYOUT_RATIOS.textHeight
 
-          // Create larger canvas for upscaling
-          const scale = 3 // Upscale for better OCR
-          deckCanvas.width = deckNumWidth * scale
-          deckCanvas.height = deckNumHeight * scale
+        // Try to find main deck text - try multiple positions
+        const mainDeckY = img.width * LAYOUT_RATIOS.mainDeckTextY
+        let mainDeckText = await extractTextFromRegion(img, textX, mainDeckY, textWidth, textHeight, "main")
 
-          // Enable image smoothing for better quality
-          deckCtx.imageSmoothingEnabled = true
-          deckCtx.imageSmoothingQuality = "high"
+        console.log("Main deck OCR (attempt 1):", mainDeckText)
 
-          // Draw with white background for better contrast
-          deckCtx.fillStyle = "white"
-          deckCtx.fillRect(0, 0, deckCanvas.width, deckCanvas.height)
-
-          deckCtx.drawImage(
+        // If first attempt fails, try slightly different position
+        if (!mainDeckText.match(/\d+/)) {
+          mainDeckText = await extractTextFromRegion(
             img,
-            deckNumX,
-            deckNumY,
-            deckNumWidth,
-            deckNumHeight,
-            0,
-            0,
-            deckCanvas.width,
-            deckCanvas.height,
+            textX - img.width * 0.02, // Slightly more to the left
+            mainDeckY - img.width * 0.01, // Slightly higher
+            textWidth + img.width * 0.04, // Wider area
+            textHeight + img.width * 0.01, // Taller area
           )
+          console.log("Main deck OCR (attempt 2):", mainDeckText)
+        }
 
-          // Apply image preprocessing for better OCR
-          const imageData = deckCtx.getImageData(0, 0, deckCanvas.width, deckCanvas.height)
-          const data = imageData.data
-
-          // Convert to grayscale and increase contrast
-          for (let i = 0; i < data.length; i += 4) {
-            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-            // Apply threshold to make it black and white
-            const value = gray > 128 ? 255 : 0
-            data[i] = value
-            data[i + 1] = value
-            data[i + 2] = value
+        // Save debug canvas
+        if (showDebug) {
+          const debugCanvas = document.createElement("canvas")
+          debugCanvas.width = textWidth
+          debugCanvas.height = textHeight
+          const debugCtx = debugCanvas.getContext("2d")
+          if (debugCtx) {
+            debugCtx.drawImage(img, textX, mainDeckY, textWidth, textHeight, 0, 0, textWidth, textHeight)
+            setOcrDebugCanvases((prev) => ({ ...prev, main: debugCanvas.toDataURL() }))
           }
+        }
 
-          deckCtx.putImageData(imageData, 0, 0)
+        // More flexible regex patterns
+        let mainDeckMatch = mainDeckText.match(/(\d+)\s*枚/)
+        if (!mainDeckMatch) {
+          // Try to find just numbers
+          mainDeckMatch = mainDeckText.match(/(\d+)/)
+        }
+        if (mainDeckMatch) {
+          const count = parseInt(mainDeckMatch[1])
+          const rows = Math.ceil(count / 10)
+          deckSections.push({
+            label: "main",
+            count,
+            yPosition: mainDeckY,
+            rows,
+          })
+        }
 
-          // Show debug canvas
-          if (showDebug && debugCanvasRef.current) {
-            const debugCtx = debugCanvasRef.current.getContext("2d")
-            if (debugCtx) {
-              debugCanvasRef.current.width = deckCanvas.width
-              debugCanvasRef.current.height = deckCanvas.height
-              debugCtx.clearRect(0, 0, deckCanvas.width, deckCanvas.height)
-              debugCtx.drawImage(deckCanvas, 0, 0)
-              console.log("Main deck debug canvas size:", deckCanvas.width, "x", deckCanvas.height)
-            }
-          }
+        // Calculate card dimensions
+        const cardsPerRow = 10
+        const totalGapRatio = 0.02
+        const leftMarginRatio = 0.002 // Reduced left margin to start capturing more to the left
+        const rightMarginRatio = 0.002 // Reduced right margin to capture more to the right
+        const cardAreaWidth = img.width * (1 - totalGapRatio - leftMarginRatio - rightMarginRatio)
+        const cardWidth = cardAreaWidth / cardsPerRow
+        const cardHeight = cardWidth * LAYOUT_RATIOS.cardAspectRatio
+        const cardGap = (img.width * totalGapRatio) / (cardsPerRow - 1)
 
-          const mainResult = await worker.recognize(deckCanvas)
-          const mainText = mainResult.data.text.trim()
-          console.log("Main deck OCR result (raw):", mainText)
+        // Try to find extra deck text
+        if (deckSections.length > 0) {
+          const mainSection = deckSections[0]
+          // Calculate extra deck position - include tiny row gaps
+          const mainDeckHeight =
+            img.width * LAYOUT_RATIOS.firstRowOffset +
+            mainSection.rows * cardHeight +
+            (mainSection.rows - 1) * img.width * LAYOUT_RATIOS.rowGap
+          const extraDeckY =
+            mainDeckY + img.width * LAYOUT_RATIOS.textToCardsGap + mainDeckHeight + img.width * LAYOUT_RATIOS.sectionGap
 
-          // Extract numbers from the text (handles Japanese text like "40枚")
-          const mainMatch = mainText.match(/\d+/)
-          let mainCount = mainMatch ? parseInt(mainMatch[0]) : NaN
-          console.log("Main deck extracted number:", mainCount)
+          const extraDeckText = await extractTextFromRegion(img, textX, extraDeckY, textWidth, textHeight, "extra")
 
-          // Validate and fix common OCR errors for main deck
-          // Main deck is typically 40-60 cards
-          if (mainCount >= 4 && mainCount <= 6) {
-            mainCount = mainCount * 10 // 4 -> 40, 5 -> 50, 6 -> 60
-          } else if (mainCount >= 35 && mainCount <= 65) {
-            // Valid range, keep as is
-          } else if (mainCount < 20) {
-            // Suspiciously low, might be missing a digit
-            console.log(`OCR detected unusually low main deck count: ${mainCount}`)
-          }
+          console.log("Extra deck OCR:", extraDeckText)
 
-          // Extract extra deck count area
-          const exCanvas = document.createElement("canvas")
-          const exCtx = exCanvas.getContext("2d")
-          if (exCtx) {
-            const exNumX = Math.max(0, config.exDeckNum.x * img.width - margin)
-            const exNumY = Math.max(0, config.exDeckNum.y * img.height - margin)
-            const exNumWidth = config.exDeckNum.width * img.width + margin * 2
-            const exNumHeight = config.exDeckNum.height * img.height + margin * 2
-
-            exCanvas.width = exNumWidth * scale
-            exCanvas.height = exNumHeight * scale
-
-            exCtx.imageSmoothingEnabled = true
-            exCtx.imageSmoothingQuality = "high"
-            exCtx.fillStyle = "white"
-            exCtx.fillRect(0, 0, exCanvas.width, exCanvas.height)
-
-            exCtx.drawImage(img, exNumX, exNumY, exNumWidth, exNumHeight, 0, 0, exCanvas.width, exCanvas.height)
-
-            // Apply same preprocessing
-            const exImageData = exCtx.getImageData(0, 0, exCanvas.width, exCanvas.height)
-            const exData = exImageData.data
-
-            for (let i = 0; i < exData.length; i += 4) {
-              const gray = exData[i] * 0.299 + exData[i + 1] * 0.587 + exData[i + 2] * 0.114
-              const value = gray > 128 ? 255 : 0
-              exData[i] = value
-              exData[i + 1] = value
-              exData[i + 2] = value
-            }
-
-            exCtx.putImageData(exImageData, 0, 0)
-
-            // Show extra deck debug canvas
-            if (showDebug && debugExCanvasRef.current) {
-              const debugExCtx = debugExCanvasRef.current.getContext("2d")
-              if (debugExCtx) {
-                debugExCanvasRef.current.width = exCanvas.width
-                debugExCanvasRef.current.height = exCanvas.height
-                debugExCtx.drawImage(exCanvas, 0, 0)
-              }
-            }
-
-            const exResult = await worker.recognize(exCanvas)
-            const exText = exResult.data.text.trim()
-            console.log("Extra deck OCR result (raw):", exText)
-
-            // Extract numbers from the text (handles Japanese text like "15枚")
-            const exMatch = exText.match(/\d+/)
-            const exCount = exMatch ? parseInt(exMatch[0]) : NaN
-            console.log("Extra deck extracted number:", exCount)
-
-            // Validate extra deck count (usually 0-15)
-            // Only convert single digit 1 to 10 (common OCR error)
-            if (exCount === 1) {
-              // Check if it's likely to be 10 or 15 based on context
-              // For now, we'll keep 1 as 1 and let user adjust if needed
-              // exCount = 10  // Commented out - too aggressive
-            }
-
-            setDeckCount({
-              main: isNaN(mainCount) ? null : Math.min(mainCount, config.mainRows * 10),
-              extra: isNaN(exCount) ? null : Math.min(exCount, config.exRows * 10),
+          const extraDeckMatch = extraDeckText.match(/(\d+)\s*枚/)
+          if (extraDeckMatch) {
+            const count = parseInt(extraDeckMatch[1])
+            const rows = Math.ceil(count / 10)
+            deckSections.push({
+              label: "extra",
+              count,
+              yPosition: extraDeckY,
+              rows,
             })
           }
         }
 
-        await worker.terminate()
+        // Check if no deck sections found
+        if (deckSections.length === 0) {
+          console.warn("No deck sections found in OCR. Switching to manual mode.")
+          setManualMode(true)
+          setIsAnalyzing(false)
+          return
+        }
+
+        // Create deck configuration
+        const config: DeckConfiguration = {
+          mainDeck: null,
+          extraDeck: null,
+          sideDeck: null,
+          cardWidth,
+          cardHeight,
+          cardGap,
+          leftMargin: img.width * leftMarginRatio,
+        }
+
+        // Assign sections to deck types
+        for (const section of deckSections) {
+          switch (section.label) {
+            case "main":
+              config.mainDeck = section
+              break
+            case "extra":
+              config.extraDeck = section
+              break
+            case "side":
+              config.sideDeck = section
+              break
+          }
+        }
+
+        setDeckConfig(config)
+
+        // Show debug information
+        if (showDebug && debugCanvasRef.current) {
+          const debugCtx = debugCanvasRef.current.getContext("2d")
+          if (debugCtx) {
+            debugCanvasRef.current.width = img.width
+            debugCanvasRef.current.height = img.height
+            debugCtx.drawImage(img, 0, 0)
+
+            // Draw detected sections
+            debugCtx.strokeStyle = "red"
+            debugCtx.lineWidth = 3
+            debugCtx.font = "30px Arial"
+            debugCtx.fillStyle = "red"
+
+            for (const section of deckSections) {
+              const startY =
+                section.yPosition + img.width * LAYOUT_RATIOS.textToCardsGap + img.width * LAYOUT_RATIOS.firstRowOffset
+              const height = section.rows * cardHeight + (section.rows - 1) * img.width * LAYOUT_RATIOS.rowGap
+
+              debugCtx.strokeRect(config.leftMargin, startY, img.width - config.leftMargin * 2, height)
+              debugCtx.fillText(`${section.label}: ${section.count} cards`, config.leftMargin, startY - 10)
+            }
+          }
+        }
       } catch (error) {
-        console.error("OCR failed:", error)
-        setDeckCount({ main: null, extra: null })
+        console.error("Failed to analyze deck structure:", error)
+        alert("デッキ構造の解析に失敗しました。")
+        setManualMode(true)
       }
 
-      setIsOCRProcessing(false)
+      setIsAnalyzing(false)
     }
 
     img.src = imageDataUrl
   }
 
   const processImage = async () => {
-    if (!detectedType) return
+    if (!deckConfig) {
+      alert("先にデッキ構造を解析してください。")
+      return
+    }
 
     setIsProcessing(true)
 
     try {
       const img = new Image()
 
-      // Promiseで画像の読み込みを待つ
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve()
         img.onerror = () => reject(new Error("画像の読み込みに失敗しました"))
         img.src = imageDataUrl
       })
+
       const cards: string[] = []
       const mainDeckCards: GameCard[] = []
       const extraDeckCards: GameCard[] = []
-      const config = ASPECT_RATIOS[detectedType]
-      const cols = 10
+      const sideDeckCards: GameCard[] = []
 
-      // Calculate dimensions based on image size and ratios
-      const cardWidth = config.cardWidth * img.width
-      const cardHeight = config.cardHeight * img.height
-      const cardGap = config.cardGap * img.width
-      const startY = config.startY * img.height
-      const startYEx = config.startYEx * img.height
+      const { cardWidth, cardHeight, cardGap, leftMargin } = deckConfig
+      const cardsPerRow = 10
 
-      // Process main deck cards
-      let mainCardCount = 0
-      const maxMainCards = deckCount.main ?? config.mainRows * cols
+      // Process main deck
+      if (deckConfig.mainDeck) {
+        const { yPosition, count, rows } = deckConfig.mainDeck
+        const startY = yPosition + img.width * LAYOUT_RATIOS.textToCardsGap + img.width * LAYOUT_RATIOS.firstRowOffset
 
-      for (let row = 0; row < config.mainRows; row++) {
-        for (let col = 0; col < cols; col++) {
-          if (mainCardCount >= maxMainCards) break
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cardsPerRow; col++) {
+            const cardIndex = row * cardsPerRow + col
+            if (cardIndex >= count) break
 
-          const tempCanvas = document.createElement("canvas")
-          tempCanvas.width = cardWidth
-          tempCanvas.height = cardHeight
+            const tempCanvas = document.createElement("canvas")
+            tempCanvas.width = cardWidth
+            tempCanvas.height = cardHeight
 
-          const ctx = tempCanvas.getContext("2d")
-          if (ctx) {
-            // Extract card from source image using ratio-based coordinates
-            ctx.drawImage(
-              img,
-              col * (cardWidth + cardGap), // source x
-              startY + row * cardHeight, // source y
-              cardWidth, // source width
-              cardHeight, // source height
-              0, // dest x
-              0, // dest y
-              cardWidth, // dest width
-              cardHeight, // dest height
-            )
+            const ctx = tempCanvas.getContext("2d")
+            if (ctx) {
+              const x = leftMargin + col * (cardWidth + cardGap)
+              const y = startY + row * (cardHeight + img.width * LAYOUT_RATIOS.rowGap)
+              const horizontalMargin = img.width * LAYOUT_RATIOS.cardHorizontalMargin
 
-            const cardDataUrl = tempCanvas.toDataURL("image/png")
-            cards.push(cardDataUrl)
+              ctx.drawImage(
+                img,
+                x - horizontalMargin,
+                y,
+                cardWidth + horizontalMargin * 2,
+                cardHeight,
+                0,
+                0,
+                cardWidth,
+                cardHeight,
+              )
 
-            // Create GameCard object
-            const gameCard: GameCard = {
-              id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              imageUrl: cardDataUrl,
-              position: "facedown",
-              rotation: 0,
-              zone: { player: "self", type: "deck" },
-              index: mainCardCount,
+              const cardDataUrl = tempCanvas.toDataURL("image/png")
+              cards.push(cardDataUrl)
+
+              const gameCard: GameCard = {
+                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                imageUrl: cardDataUrl,
+                position: "facedown",
+                rotation: 0,
+                zone: { player: "self", type: "deck" },
+                index: cardIndex,
+              }
+              mainDeckCards.push(gameCard)
             }
-            mainDeckCards.push(gameCard)
-            mainCardCount++
           }
         }
-        if (mainCardCount >= maxMainCards) break
       }
 
-      // Process extra deck cards
-      let exCardCount = 0
-      // If OCR hasn't been run, default to 15 for extra deck (standard max)
-      const maxExCards = deckCount.extra !== null ? deckCount.extra : 15
+      // Process extra deck
+      if (deckConfig.extraDeck) {
+        const { yPosition, count, rows } = deckConfig.extraDeck
+        const startY = yPosition + img.width * LAYOUT_RATIOS.textToCardsGap + img.width * LAYOUT_RATIOS.firstRowOffset
 
-      for (let row = 0; row < config.exRows; row++) {
-        for (let col = 0; col < cols; col++) {
-          if (exCardCount >= maxExCards) break
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cardsPerRow; col++) {
+            const cardIndex = row * cardsPerRow + col
+            if (cardIndex >= count) break
 
-          const tempCanvas = document.createElement("canvas")
-          tempCanvas.width = cardWidth
-          tempCanvas.height = cardHeight
+            const tempCanvas = document.createElement("canvas")
+            tempCanvas.width = cardWidth
+            tempCanvas.height = cardHeight
 
-          const ctx = tempCanvas.getContext("2d")
-          if (ctx) {
-            ctx.drawImage(
-              img,
-              col * (cardWidth + cardGap),
-              startYEx + row * cardHeight,
-              cardWidth,
-              cardHeight,
-              0,
-              0,
-              cardWidth,
-              cardHeight,
-            )
+            const ctx = tempCanvas.getContext("2d")
+            if (ctx) {
+              const x = leftMargin + col * (cardWidth + cardGap)
+              const y = startY + row * (cardHeight + img.width * LAYOUT_RATIOS.rowGap)
+              const horizontalMargin = img.width * LAYOUT_RATIOS.cardHorizontalMargin
 
-            const cardDataUrl = tempCanvas.toDataURL("image/png")
-            cards.push(cardDataUrl)
+              ctx.drawImage(
+                img,
+                x - horizontalMargin,
+                y,
+                cardWidth + horizontalMargin * 2,
+                cardHeight,
+                0,
+                0,
+                cardWidth,
+                cardHeight,
+              )
 
-            // Create GameCard object for extra deck
-            const gameCard: GameCard = {
-              id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              imageUrl: cardDataUrl,
-              position: "facedown",
-              rotation: 0,
-              zone: { player: "self", type: "extraDeck" },
-              index: exCardCount,
+              const cardDataUrl = tempCanvas.toDataURL("image/png")
+              cards.push(cardDataUrl)
+
+              const gameCard: GameCard = {
+                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                imageUrl: cardDataUrl,
+                position: "facedown",
+                rotation: 0,
+                zone: { player: "self", type: "extraDeck" },
+                index: cardIndex,
+              }
+              extraDeckCards.push(gameCard)
             }
-            extraDeckCards.push(gameCard)
-            exCardCount++
           }
         }
-        if (exCardCount >= maxExCards) break
+      }
+
+      // Process side deck if present
+      if (deckConfig.sideDeck) {
+        const { yPosition, count, rows } = deckConfig.sideDeck
+        const startY = yPosition + img.width * LAYOUT_RATIOS.textToCardsGap + img.width * LAYOUT_RATIOS.firstRowOffset
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cardsPerRow; col++) {
+            const cardIndex = row * cardsPerRow + col
+            if (cardIndex >= count) break
+
+            const tempCanvas = document.createElement("canvas")
+            tempCanvas.width = cardWidth
+            tempCanvas.height = cardHeight
+
+            const ctx = tempCanvas.getContext("2d")
+            if (ctx) {
+              const x = leftMargin + col * (cardWidth + cardGap)
+              const y = startY + row * (cardHeight + img.width * LAYOUT_RATIOS.rowGap)
+              const horizontalMargin = img.width * LAYOUT_RATIOS.cardHorizontalMargin
+
+              ctx.drawImage(
+                img,
+                x - horizontalMargin,
+                y,
+                cardWidth + horizontalMargin * 2,
+                cardHeight,
+                0,
+                0,
+                cardWidth,
+                cardHeight,
+              )
+
+              const cardDataUrl = tempCanvas.toDataURL("image/png")
+              cards.push(cardDataUrl)
+
+              // Side deck cards can be stored as a separate collection
+              // or marked with a special flag
+              sideDeckCards.push({
+                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                imageUrl: cardDataUrl,
+                position: "facedown",
+                rotation: 0,
+                zone: { player: "self", type: "deck" }, // Temporarily use deck type
+                index: cardIndex,
+              })
+            }
+          }
+        }
       }
 
       setProcessedCards(cards)
-      setIsProcessing(false)
 
-      // Store extracted cards in Jotai atoms
+      // Store extracted cards
       setExtractedCards({
         mainDeck: mainDeckCards,
         extraDeck: extraDeckCards,
       })
 
-      // Create metadata for saving
+      // Create metadata
       const metadata: DeckProcessMetadata = {
         imageDataUrl,
-        aspectRatioType: detectedType,
-        mainDeckCount: mainCardCount,
-        extraDeckCount: exCardCount,
+        deckConfig,
+        mainDeckCount: mainDeckCards.length,
+        extraDeckCount: extraDeckCards.length,
+        sideDeckCount: sideDeckCards.length,
         sourceWidth: img.width,
         sourceHeight: img.height,
       }
@@ -471,7 +550,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
       onProcessComplete(cards, metadata)
     } catch (error) {
       console.error("カードの切り出し処理でエラーが発生しました:", error)
-      alert("カードの切り出しに失敗しました。画像を確認してください。")
+      alert("カードの切り出しに失敗しました。")
     } finally {
       setIsProcessing(false)
     }
@@ -487,99 +566,200 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
           <canvas ref={canvasRef} className="w-full" />
         </div>
 
-        {/* Aspect Ratio Detection */}
-        {detectedType && (
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm">
-              検出されたレイアウト: <strong>{ASPECT_RATIOS[detectedType].label}</strong>
-            </p>
-            <p className="text-xs text-gray-600 mt-1">メインデッキ: {ASPECT_RATIOS[detectedType].mainRows}行 × 10列</p>
-            <p className="text-xs text-gray-600">EXデッキ: {ASPECT_RATIOS[detectedType].exRows}行 × 10列</p>
-          </div>
-        )}
+        {/* Debug Canvas - Hidden */}
+        {showDebug && (
+          <>
+            <div className="border rounded-lg overflow-hidden bg-gray-100 p-2">
+              <p className="text-xs text-gray-600 mb-1">検出されたデッキ領域:</p>
+              <canvas ref={debugCanvasRef} className="w-full" style={{ maxHeight: "400px", objectFit: "contain" }} />
+            </div>
 
-        {/* OCR Section */}
-        {detectedType && (
-          <div className="space-y-2">
-            <button
-              onClick={performOCR}
-              disabled={isOCRProcessing}
-              className={`
-                w-full py-2 px-4 rounded-lg font-medium transition-colors
-                ${
-                  isOCRProcessing
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-green-500 text-white hover:bg-green-600"
-                }
-              `}
-            >
-              {isOCRProcessing ? "デッキ枚数を読み取り中..." : "デッキ枚数を自動検出"}
-            </button>
-
-            {/* Debug toggle - hidden for now */}
-            {/* <label className="flex items-center gap-2 text-xs">
-              <input
-                type="checkbox"
-                checked={showDebug}
-                onChange={(e) => setShowDebug(e.target.checked)}
-                className="rounded"
-              />
-              OCRデバッグ表示
-            </label> */}
-
-            {/* Debug canvas */}
-            {showDebug && (
-              <div className="space-y-2">
-                <div className="border rounded p-2 bg-gray-100">
-                  <p className="text-xs text-gray-600 mb-1">メインデッキ OCR対象画像:</p>
-                  <canvas
-                    ref={debugCanvasRef}
-                    className="border bg-white"
-                    style={{ maxWidth: "100%", height: "auto" }}
-                  />
-                </div>
-                <div className="border rounded p-2 bg-gray-100">
-                  <p className="text-xs text-gray-600 mb-1">EXデッキ OCR対象画像:</p>
-                  <canvas
-                    ref={debugExCanvasRef}
-                    className="border bg-white"
-                    style={{ maxWidth: "100%", height: "auto" }}
-                  />
+            {/* OCR Debug Images */}
+            {(ocrDebugCanvases.main != null || ocrDebugCanvases.extra != null || ocrDebugCanvases.side != null) && (
+              <div className="border rounded-lg bg-gray-100 p-2 space-y-2">
+                <p className="text-xs text-gray-600">OCR対象領域:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ocrDebugCanvases.main != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">メインデッキ (元画像):</p>
+                      <img src={ocrDebugCanvases.main} alt="Main deck OCR area" className="border" />
+                    </div>
+                  )}
+                  {ocrProcessedCanvases.main != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">メインデッキ (処理済み):</p>
+                      <img src={ocrProcessedCanvases.main} alt="Main deck processed" className="border" />
+                    </div>
+                  )}
+                  {ocrDebugCanvases.extra != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">エクストラデッキ (元画像):</p>
+                      <img src={ocrDebugCanvases.extra} alt="Extra deck OCR area" className="border" />
+                    </div>
+                  )}
+                  {ocrProcessedCanvases.extra != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">エクストラデッキ (処理済み):</p>
+                      <img src={ocrProcessedCanvases.extra} alt="Extra deck processed" className="border" />
+                    </div>
+                  )}
+                  {ocrDebugCanvases.side != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">サイドデッキ (元画像):</p>
+                      <img src={ocrDebugCanvases.side} alt="Side deck OCR area" className="border" />
+                    </div>
+                  )}
+                  {ocrProcessedCanvases.side != null && (
+                    <div>
+                      <p className="text-xs text-gray-500">サイドデッキ (処理済み):</p>
+                      <img src={ocrProcessedCanvases.side} alt="Side deck processed" className="border" />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
+          </>
+        )}
 
-            {(deckCount.main !== null || deckCount.extra !== null) && (
-              <div className="bg-green-50 p-3 rounded-lg space-y-2">
-                <p className="text-sm font-medium">検出されたデッキ枚数:</p>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-600 w-20">メインデッキ:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={ASPECT_RATIOS[detectedType].mainRows * 10}
-                      value={deckCount.main ?? 0}
-                      onChange={(e) => setDeckCount((prev) => ({ ...prev, main: parseInt(e.target.value) || 0 }))}
-                      className="w-16 px-2 py-1 text-xs border rounded"
-                    />
-                    <span className="text-xs text-gray-600">枚</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-600 w-20">EXデッキ:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={ASPECT_RATIOS[detectedType].exRows * 10}
-                      value={deckCount.extra ?? 0}
-                      onChange={(e) => setDeckCount((prev) => ({ ...prev, extra: parseInt(e.target.value) || 0 }))}
-                      className="w-16 px-2 py-1 text-xs border rounded"
-                    />
-                    <span className="text-xs text-gray-600">枚</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500">※ OCRの精度が低い場合は手動で調整してください</p>
+        {/* Analyze Button */}
+        <button
+          onClick={analyzeDeckStructure}
+          disabled={isAnalyzing}
+          className={`
+            w-full py-2 px-4 rounded-lg font-medium transition-colors
+            ${
+              isAnalyzing
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-green-500 text-white hover:bg-green-600"
+            }
+          `}
+        >
+          {isAnalyzing ? "デッキ構造を解析中..." : "デッキ構造を自動解析"}
+        </button>
+
+        {/* Manual mode toggle */}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={manualMode}
+            onChange={(e) => setManualMode(e.target.checked)}
+            className="rounded"
+          />
+          手動でデッキ枚数を設定
+        </label>
+
+        {/* Manual deck count input */}
+        {manualMode && (
+          <div className="bg-yellow-50 p-3 rounded-lg space-y-2">
+            <p className="text-sm font-medium">デッキ枚数を手動で設定:</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-24">メインデッキ:</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={manualCounts.main}
+                  onChange={(e) => setManualCounts((prev) => ({ ...prev, main: parseInt(e.target.value) || 0 }))}
+                  className="w-16 px-2 py-1 text-xs border rounded"
+                />
+                <span className="text-xs text-gray-600">枚</span>
               </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-24">エクストラデッキ:</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="15"
+                  value={manualCounts.extra}
+                  onChange={(e) => setManualCounts((prev) => ({ ...prev, extra: parseInt(e.target.value) || 0 }))}
+                  className="w-16 px-2 py-1 text-xs border rounded"
+                />
+                <span className="text-xs text-gray-600">枚</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const img = new Image()
+                img.onload = () => {
+                  // Calculate card dimensions
+                  const cardsPerRow = 10
+                  const totalGapRatio = 0.02
+                  const leftMarginRatio = 0.002
+                  const rightMarginRatio = 0.002
+                  const cardAreaWidth = img.width * (1 - totalGapRatio - leftMarginRatio - rightMarginRatio)
+                  const cardWidth = cardAreaWidth / cardsPerRow
+                  const cardHeight = cardWidth * LAYOUT_RATIOS.cardAspectRatio
+                  const cardGap = (img.width * totalGapRatio) / (cardsPerRow - 1)
+
+                  const mainDeckY = img.width * LAYOUT_RATIOS.mainDeckTextY
+                  const mainDeckRows = Math.ceil(manualCounts.main / 10)
+
+                  const mainDeckHeight =
+                    img.width * LAYOUT_RATIOS.firstRowOffset +
+                    mainDeckRows * cardHeight +
+                    (mainDeckRows - 1) * img.width * LAYOUT_RATIOS.rowGap
+                  const extraDeckY =
+                    mainDeckY +
+                    img.width * LAYOUT_RATIOS.textToCardsGap +
+                    mainDeckHeight +
+                    img.width * LAYOUT_RATIOS.sectionGap
+                  const extraDeckRows = Math.ceil(manualCounts.extra / 10)
+
+                  const config: DeckConfiguration = {
+                    mainDeck:
+                      manualCounts.main > 0
+                        ? {
+                            label: "main",
+                            count: manualCounts.main,
+                            yPosition: mainDeckY,
+                            rows: mainDeckRows,
+                          }
+                        : null,
+                    extraDeck:
+                      manualCounts.extra > 0
+                        ? {
+                            label: "extra",
+                            count: manualCounts.extra,
+                            yPosition: extraDeckY,
+                            rows: extraDeckRows,
+                          }
+                        : null,
+                    sideDeck: null,
+                    cardWidth,
+                    cardHeight,
+                    cardGap,
+                    leftMargin: img.width * leftMarginRatio,
+                  }
+                  setDeckConfig(config)
+                }
+                img.src = imageDataUrl
+              }}
+              className="w-full mt-2 py-1 px-3 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+            >
+              設定を適用
+            </button>
+          </div>
+        )}
+
+        {/* Deck Configuration Display */}
+        {deckConfig && (
+          <div className="bg-blue-50 p-3 rounded-lg space-y-2">
+            <p className="text-sm font-medium">検出されたデッキ構成:</p>
+            {deckConfig.mainDeck && (
+              <p className="text-xs">
+                メインデッキ: {deckConfig.mainDeck.count}枚 ({deckConfig.mainDeck.rows}行)
+              </p>
+            )}
+            {deckConfig.extraDeck && (
+              <p className="text-xs">
+                エクストラデッキ: {deckConfig.extraDeck.count}枚 ({deckConfig.extraDeck.rows}行)
+              </p>
+            )}
+            {deckConfig.sideDeck && (
+              <p className="text-xs">
+                サイドデッキ: {deckConfig.sideDeck.count}枚 ({deckConfig.sideDeck.rows}行)
+              </p>
             )}
           </div>
         )}
@@ -587,21 +767,17 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
         {/* Process Button */}
         <button
           onClick={processImage}
-          disabled={!detectedType || isProcessing}
+          disabled={!deckConfig || isProcessing}
           className={`
             w-full py-2 px-4 rounded-lg font-medium transition-colors
             ${
-              !detectedType || isProcessing
+              !deckConfig || isProcessing
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }
           `}
         >
-          {isProcessing
-            ? "処理中..."
-            : deckCount.main === null && deckCount.extra === null
-              ? "カードを切り出す（OCR未実行）"
-              : "カードを切り出す"}
+          {isProcessing ? "処理中..." : "カードを切り出す"}
         </button>
 
         {/* Processed Cards Count */}

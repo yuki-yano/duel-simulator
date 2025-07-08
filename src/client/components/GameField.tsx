@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useAtom, useAtomValue } from "jotai"
@@ -31,7 +31,17 @@ interface GraveZoneProps {
   isOpponent?: boolean
 }
 
-function Zone({ className, label, children, type = "monster", isOpponent = false, zone, card, cards, onDrop }: ZoneProps) {
+function Zone({
+  className,
+  label,
+  children,
+  type = "monster",
+  isOpponent = false,
+  zone,
+  card,
+  cards,
+  onDrop,
+}: ZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
   const typeStyles = {
@@ -90,11 +100,20 @@ function Zone({ className, label, children, type = "monster", isOpponent = false
       )}
       {/* Display cards - either single card or multiple cards */}
       {cards && cards.length > 0 ? (
-        <div className="relative w-full h-full" style={{
-          // Add padding to accommodate stacked cards
-          paddingRight: cards.length > 1 ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px` : 0,
-          paddingBottom: cards.length > 1 ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px` : 0,
-        }}>
+        <div
+          className="relative w-full h-full"
+          style={{
+            // Add padding to accommodate stacked cards
+            paddingRight:
+              cards.length > 1
+                ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
+                : 0,
+            paddingBottom:
+              cards.length > 1
+                ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
+                : 0,
+          }}
+        >
           {cards.map((c, index) => {
             // Calculate offset based on screen size
             let offsetPx: number
@@ -107,7 +126,7 @@ function Zone({ className, label, children, type = "monster", isOpponent = false
             } else {
               offsetPx = 8 // Mobile: 8px offset
             }
-            
+
             return (
               <div
                 key={c.id}
@@ -176,7 +195,7 @@ function DeckZone({
   }
 
   const cardsPerRowLimit = getCardsPerRowLimit()
-  
+
   // Show all cards for deck
   const maxDisplay = orientation === "horizontal" ? 60 : 30
   const displayCount = Math.min(cardCount, maxDisplay)
@@ -188,15 +207,15 @@ function DeckZone({
   if (orientation === "horizontal" && displayCards.length > cardsPerRowLimit) {
     rowCount = Math.ceil(displayCards.length / cardsPerRowLimit)
   }
-  
+
   // Distribute cards evenly across rows
   const getCardsPerRow = (rowIndex: number) => {
     if (rowCount === 1) return displayCards.length
-    
+
     // Distribute cards as evenly as possible
     const baseCardsPerRow = Math.floor(displayCards.length / rowCount)
     const remainingCards = displayCards.length % rowCount
-    
+
     // Add one extra card to the first 'remainingCards' rows
     return rowIndex < remainingCards ? baseCardsPerRow + 1 : baseCardsPerRow
   }
@@ -225,7 +244,7 @@ function DeckZone({
         const relativeY = e.clientY - rect.top
         const rowHeight = rect.height / rowCount
         const currentRow = Math.min(Math.floor(relativeY / rowHeight), rowCount - 1)
-        
+
         // Calculate actual cards per row for the current row with even distribution
         let rowStartIdx = 0
         for (let i = 0; i < currentRow; i++) {
@@ -364,7 +383,8 @@ function DeckZone({
         return "h-[244px] sm:h-[308px] md:h-[344px]"
       } else {
         // For 4+ rows, calculate dynamically with tighter spacing
-        const cardHeight = window.innerWidth >= 1024 ? 112 : window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+        const cardHeight =
+          window.innerWidth >= 1024 ? 112 : window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
         const gap = 4 // gap between rows
         const paddingY = window.innerWidth >= 640 ? 12 : 8 // total vertical padding
         const totalHeight = cardHeight * rowCount + gap * (rowCount - 1) + paddingY
@@ -392,17 +412,14 @@ function DeckZone({
         </span>
         {cardCount > 0 ? (
           <div
-            className={cn(
-              "relative h-full w-full flex items-center justify-start overflow-visible",
-              "mt-1 sm:mt-2",
-            )}
+            className={cn("relative h-full w-full flex items-center justify-start overflow-visible", "mt-1 sm:mt-2")}
           >
             {containerWidth > 0 ? (
               <div
                 className={cn(
                   "relative h-full flex flex-col justify-center overflow-visible",
                   rowCount === 1 ? "py-0.5 sm:py-1" : "py-0.5",
-                  rowCount > 2 ? "gap-0.5" : "gap-1"
+                  rowCount > 2 ? "gap-0.5" : "gap-1",
                 )}
                 style={{ width: availableWidth }}
               >
@@ -578,7 +595,7 @@ function GraveZone({
   const containerRef = useRef<HTMLDivElement>(null)
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   // Initialize with estimated height based on rows to prevent animation
-  const getInitialHeight = () => {
+  const getInitialHeight = useCallback(() => {
     if (isOpponent) {
       // 2 rows for opponent
       if (window.innerWidth >= 1024) return 232 // lg: h-28 * 2 + gap
@@ -591,7 +608,7 @@ function GraveZone({
       if (window.innerWidth >= 640) return 252 // sm: h-20 * 3 + gap
       return 174 // mobile: h-14 * 3 + gap
     }
-  }
+  }, [isOpponent])
   const [containerHeight, setContainerHeight] = useState(getInitialHeight())
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null)
 
@@ -693,10 +710,10 @@ function GraveZone({
   useEffect(() => {
     const updateHeight = () => {
       // If the container ref exists and className includes 'h-full', use container's actual height
-      if (containerRef.current && className?.includes("h-full")) {
+      if (containerRef.current != null && className?.includes("h-full") === true) {
         const actualHeight = containerRef.current.offsetHeight
         setContainerHeight(actualHeight)
-      } else if (style?.height && typeof style.height === "string") {
+      } else if (style?.height != null && typeof style.height === "string") {
         // If height is explicitly set in style, use that
         const heightValue = parseInt(style.height.replace("px", ""), 10)
         if (!isNaN(heightValue)) {
@@ -726,7 +743,7 @@ function GraveZone({
       window.removeEventListener("resize", updateHeight)
       observer.disconnect()
     }
-  }, [className, style?.height, isOpponent])
+  }, [className, style?.height, isOpponent, getInitialHeight])
 
   const typeStyles = {
     grave: "bg-red-500/5 border-red-500/30 hover:border-red-500/50",
@@ -941,19 +958,19 @@ export function GameField() {
         {isOpponentFieldOpen && (
           <div className="space-y-2 mb-2">
             {/* Opponent's Deck & Extra Deck (Top) - viewed from opponent's perspective */}
-            <DeckZone 
-              type="extra" 
-              isOpponent={true} 
-              cardCount={opponentBoard.extraDeck.length} 
+            <DeckZone
+              type="extra"
+              isOpponent={true}
+              cardCount={opponentBoard.extraDeck.length}
               cards={opponentBoard.extraDeck}
-              onDrop={handleCardDrop} 
+              onDrop={handleCardDrop}
             />
-            <DeckZone 
-              type="deck" 
-              isOpponent={true} 
-              cardCount={opponentBoard.deck.length} 
+            <DeckZone
+              type="deck"
+              isOpponent={true}
+              cardCount={opponentBoard.deck.length}
               cards={opponentBoard.deck}
-              onDrop={handleCardDrop} 
+              onDrop={handleCardDrop}
             />
 
             {/* Opponent's Hand */}
@@ -998,13 +1015,14 @@ export function GameField() {
                   onDrop={handleCardDrop}
                   isOpponent={true}
                   style={{
-                    height: opponentGraveHeight
-                      ? `${opponentGraveHeight}px`
-                      : window.innerWidth >= 768
-                        ? "200px"
-                        : window.innerWidth >= 640
-                          ? "168px"
-                          : "116px",
+                    height:
+                      opponentGraveHeight != null
+                        ? `${opponentGraveHeight}px`
+                        : window.innerWidth >= 768
+                          ? "200px"
+                          : window.innerWidth >= 640
+                            ? "168px"
+                            : "116px",
                     width:
                       window.innerWidth >= 1024
                         ? "93px"
@@ -1023,13 +1041,14 @@ export function GameField() {
                   onDrop={handleCardDrop}
                   isOpponent={true}
                   style={{
-                    height: opponentGraveHeight
-                      ? `${opponentGraveHeight}px`
-                      : window.innerWidth >= 768
-                        ? "200px"
-                        : window.innerWidth >= 640
-                          ? "168px"
-                          : "116px",
+                    height:
+                      opponentGraveHeight != null
+                        ? `${opponentGraveHeight}px`
+                        : window.innerWidth >= 768
+                          ? "200px"
+                          : window.innerWidth >= 640
+                            ? "168px"
+                            : "116px",
                     width:
                       window.innerWidth >= 1024
                         ? "93px"
@@ -1104,13 +1123,14 @@ export function GameField() {
             <div
               className="flex gap-1 sm:gap-2"
               style={{
-                marginTop: playerGraveMarginTop
-                  ? `${playerGraveMarginTop}px`
-                  : window.innerWidth >= 768
-                    ? "-116px"
-                    : window.innerWidth >= 640
-                      ? "-84px"
-                      : "-58px",
+                marginTop:
+                  playerGraveMarginTop != null
+                    ? `${playerGraveMarginTop}px`
+                    : window.innerWidth >= 768
+                      ? "-116px"
+                      : window.innerWidth >= 640
+                        ? "-84px"
+                        : "-58px",
                 zIndex: 10,
                 position: "relative",
               }}
@@ -1122,13 +1142,14 @@ export function GameField() {
                 zone={{ player: "self", type: "graveyard" }}
                 onDrop={handleCardDrop}
                 style={{
-                  height: playerGraveHeight
-                    ? `${playerGraveHeight}px`
-                    : window.innerWidth >= 768
-                      ? "348px"
-                      : window.innerWidth >= 640
-                        ? "252px"
-                        : "174px",
+                  height:
+                    playerGraveHeight != null
+                      ? `${playerGraveHeight}px`
+                      : window.innerWidth >= 768
+                        ? "348px"
+                        : window.innerWidth >= 640
+                          ? "252px"
+                          : "174px",
                   width:
                     window.innerWidth >= 1024
                       ? "93px"
@@ -1146,13 +1167,14 @@ export function GameField() {
                 zone={{ player: "self", type: "banished" }}
                 onDrop={handleCardDrop}
                 style={{
-                  height: playerGraveHeight
-                    ? `${playerGraveHeight}px`
-                    : window.innerWidth >= 768
-                      ? "348px"
-                      : window.innerWidth >= 640
-                        ? "252px"
-                        : "174px",
+                  height:
+                    playerGraveHeight != null
+                      ? `${playerGraveHeight}px`
+                      : window.innerWidth >= 768
+                        ? "348px"
+                        : window.innerWidth >= 640
+                          ? "252px"
+                          : "174px",
                   width:
                     window.innerWidth >= 1024
                       ? "93px"

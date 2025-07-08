@@ -33,8 +33,7 @@ app.get("/api/health", (c) => {
 // Save deck image with metadata
 app.post("/api/deck-images", async (c) => {
   try {
-    const { hash, imageData, aspectRatioType, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } =
-      await c.req.json()
+    const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } = await c.req.json()
     const db = createDb(c.env.DB)
 
     // Save image to R2 (convert base64 to ArrayBuffer)
@@ -55,7 +54,7 @@ app.post("/api/deck-images", async (c) => {
       .insert(schema.deckImages)
       .values({
         hash,
-        aspectRatioType,
+        aspectRatioType: "TYPE_1", // Dummy value for legacy schema
         mainDeckCount,
         extraDeckCount,
         sourceWidth,

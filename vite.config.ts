@@ -23,10 +23,10 @@ export default defineConfig(({ mode }) => {
             entryFileNames: "static/[name].js",
             chunkFileNames: "static/[name]-[hash].js",
             assetFileNames: (assetInfo) => {
-              if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-                return 'static/[name].css'
+              if (assetInfo.name && assetInfo.name.endsWith(".css")) {
+                return "static/[name].css"
               }
-              return 'static/[name]-[hash].[ext]'
+              return "static/[name]-[hash].[ext]"
             },
           },
         },

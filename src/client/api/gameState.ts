@@ -36,7 +36,6 @@ export async function saveGameState(
     await saveDeckImage({
       hash: imageHash,
       imageData: deckMetadata.imageDataUrl,
-      aspectRatioType: deckMetadata.aspectRatioType,
       mainDeckCount: deckMetadata.mainDeckCount,
       extraDeckCount: deckMetadata.extraDeckCount,
       sourceWidth: deckMetadata.sourceWidth,

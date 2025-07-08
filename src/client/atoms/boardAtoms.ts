@@ -3,15 +3,21 @@ import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation, Gam
 
 // Initial player board
 const createInitialPlayerBoard = (): PlayerBoard => ({
-  monsterZones: Array(5).fill(null).map(() => []),
-  spellTrapZones: Array(5).fill(null).map(() => []),
+  monsterZones: Array(5)
+    .fill(null)
+    .map(() => []),
+  spellTrapZones: Array(5)
+    .fill(null)
+    .map(() => []),
   fieldZone: null,
   graveyard: [],
   banished: [],
   extraDeck: [],
   deck: [],
   hand: [],
-  extraMonsterZones: Array(2).fill(null).map(() => []),
+  extraMonsterZones: Array(2)
+    .fill(null)
+    .map(() => []),
   lifePoints: 8000,
 })
 
@@ -220,7 +226,7 @@ function getCardAtPosition(player: PlayerBoard, zone: ZoneId): Card | null {
       if (zone.index !== undefined) {
         const cards = player.monsterZones[zone.index]
         // If card has a specific index within the stack, use that
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         return cards.length > cardIndex ? cards[cardIndex] : null
       }
       return null
@@ -228,7 +234,7 @@ function getCardAtPosition(player: PlayerBoard, zone: ZoneId): Card | null {
       if (zone.index !== undefined) {
         const cards = player.spellTrapZones[zone.index]
         // If card has a specific index within the stack, use that
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         return cards.length > cardIndex ? cards[cardIndex] : null
       }
       return null
@@ -238,7 +244,7 @@ function getCardAtPosition(player: PlayerBoard, zone: ZoneId): Card | null {
       if (zone.index !== undefined) {
         const cards = player.extraMonsterZones[zone.index]
         // If card has a specific index within the stack, use that
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         return cards.length > cardIndex ? cards[cardIndex] : null
       }
       return null
@@ -265,7 +271,7 @@ function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
         const newZones = [...player.monsterZones]
         const cards = [...newZones[zone.index]]
         // Remove the specific card by its index in the stack
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         if (cardIndex < cards.length) {
           cards.splice(cardIndex, 1)
         }
@@ -278,7 +284,7 @@ function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
         const newZones = [...player.spellTrapZones]
         const cards = [...newZones[zone.index]]
         // Remove the specific card by its index in the stack
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         if (cardIndex < cards.length) {
           cards.splice(cardIndex, 1)
         }
@@ -293,7 +299,7 @@ function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
         const newZones = [...player.extraMonsterZones]
         const cards = [...newZones[zone.index]]
         // Remove the specific card by its index in the stack
-        const cardIndex = (zone as any).cardIndex ?? 0
+        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
         if (cardIndex < cards.length) {
           cards.splice(cardIndex, 1)
         }

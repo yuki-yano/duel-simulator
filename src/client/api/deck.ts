@@ -1,7 +1,6 @@
 export interface SaveDeckImageRequest {
   hash: string
   imageData: string
-  aspectRatioType: "TYPE_1" | "TYPE_2" | "TYPE_3"
   mainDeckCount: number
   extraDeckCount: number
   sourceWidth: number
@@ -10,7 +9,6 @@ export interface SaveDeckImageRequest {
 
 export interface DeckImageResponse {
   hash: string
-  aspectRatioType: "TYPE_1" | "TYPE_2" | "TYPE_3"
   mainDeckCount: number
   extraDeckCount: number
   sourceWidth: number

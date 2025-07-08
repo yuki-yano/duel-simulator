@@ -36,12 +36,16 @@ app.get("/", async (c) => {
     <meta content="Yu-Gi-Oh! Duel Simulator" property="og:title" />
     <meta content="website" property="og:type" />
     <meta content="ja_JP" property="og:locale" />
-    ${import.meta.env.PROD ? `
+    ${
+      import.meta.env.PROD
+        ? `
     <script src="/static/main.js" type="module"></script>
     <link rel="stylesheet" href="/static/main.css" />
-    ` : `
+    `
+        : `
     <script src="/src/client/main.tsx" type="module"></script>
-    `}
+    `
+    }
   </head>
   <body>
     <div id="root"></div>
@@ -71,7 +75,7 @@ app.post("/api/game-states", async (c) => {
       id,
       sessionId: id, // Using id as sessionId for now
       stateJson: JSON.stringify(body),
-      deckImageHash: body.deckImageHash || "default", // Add proper handling later
+      deckImageHash: body.deckImageHash ?? "default", // Add proper handling later
       createdAt: new Date().toISOString(),
     })
 
@@ -85,7 +89,7 @@ app.post("/api/game-states", async (c) => {
       {
         error: "Failed to create game state",
       },
-      500
+      500,
     )
   }
 })
@@ -96,11 +100,7 @@ app.get("/api/game-states/:id", async (c) => {
     const id = c.req.param("id")
     const db = createDb(c.env.DB)
 
-    const result = await db
-      .select()
-      .from(schema.savedStates)
-      .where(eq(schema.savedStates.id, id))
-      .limit(1)
+    const result = await db.select().from(schema.savedStates).where(eq(schema.savedStates.id, id)).limit(1)
 
     if (result.length === 0) {
       return c.json({ error: "Game state not found" }, 404)
@@ -119,7 +119,7 @@ app.get("/api/game-states/:id", async (c) => {
       {
         error: "Failed to fetch game state",
       },
-      500
+      500,
     )
   }
 })
@@ -148,7 +148,7 @@ app.put("/api/game-states/:id", async (c) => {
       {
         error: "Failed to update game state",
       },
-      500
+      500,
     )
   }
 })
@@ -158,7 +158,7 @@ app.post("/api/images/upload", async (c) => {
   try {
     const formData = await c.req.formData()
     const file = formData.get("file") as File
-    if (!file) {
+    if (file == null) {
       return c.json({ error: "No file provided" }, 400)
     }
 
@@ -184,7 +184,7 @@ app.post("/api/images/upload", async (c) => {
       {
         error: "Failed to upload image",
       },
-      500
+      500,
     )
   }
 })
@@ -210,7 +210,7 @@ app.get("/api/images/:fileName", async (c) => {
       {
         error: "Failed to fetch image",
       },
-      500
+      500,
     )
   }
 })

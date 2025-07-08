@@ -10,8 +10,8 @@ export default function Replay() {
   const { id } = useParams<{ id: string }>()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
-  const [processedCards, setProcessedCards] = useState<string[]>([])
+  const [_deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
+  const [_processedCards, setProcessedCards] = useState<string[]>([])
   const [_gameState, setGameState] = useState<GameState | null>(null)
 
   useEffect(() => {
@@ -34,11 +34,19 @@ export default function Replay() {
       // Set deck metadata
       const metadata: DeckProcessMetadata = {
         imageDataUrl: deckData.imageDataUrl,
-        aspectRatioType: deckData.aspectRatioType,
         mainDeckCount: deckData.mainDeckCount,
         extraDeckCount: deckData.extraDeckCount,
         sourceWidth: deckData.sourceWidth,
         sourceHeight: deckData.sourceHeight,
+        deckConfig: {
+          mainDeck: null,
+          extraDeck: null,
+          sideDeck: null,
+          cardWidth: 0,
+          cardHeight: 0,
+          cardGap: 0,
+          leftMargin: 0,
+        },
       }
       setDeckMetadata(metadata)
 
