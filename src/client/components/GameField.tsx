@@ -37,7 +37,7 @@ function Zone({ className, label, children, type = "monster", isOpponent = false
         className,
       )}
     >
-      {label !== undefined && label !== "" && (
+      {label != null && label !== "" && (
         <span className="absolute top-0.5 left-0.5 text-[8px] sm:text-[10px] md:text-xs text-muted-foreground font-medium">
           {label}
         </span>

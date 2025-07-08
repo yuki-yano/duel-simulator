@@ -30,14 +30,15 @@ app.get("/api/health", (c) => {
   })
 })
 
-// Save deck image
+// Save deck image with metadata
 app.post("/api/deck-images", async (c) => {
   try {
-    const { hash, imageData } = await c.req.json()
+    const { hash, imageData, aspectRatioType, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } =
+      await c.req.json()
     const db = createDb(c.env.DB)
 
     // Save image to R2 (convert base64 to ArrayBuffer)
-    const binaryString = atob(imageData)
+    const binaryString = atob(imageData.replace(/^data:image\/\w+;base64,/, ""))
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i)
@@ -54,6 +55,11 @@ app.post("/api/deck-images", async (c) => {
       .insert(schema.deckImages)
       .values({
         hash,
+        aspectRatioType,
+        mainDeckCount,
+        extraDeckCount,
+        sourceWidth,
+        sourceHeight,
         createdAt: new Date().toISOString(),
       })
       .onConflictDoNothing()
@@ -120,6 +126,52 @@ app.get("/api/save-states/:id", async (c) => {
     return c.json(result)
   } catch {
     return c.json({ error: "Failed to get state" }, 500)
+  }
+})
+
+// Get deck image metadata
+app.get("/api/deck-images/:hash", async (c) => {
+  try {
+    const hash = c.req.param("hash")
+    const db = createDb(c.env.DB)
+
+    // Get metadata from DB
+    const metadata = await db.select().from(schema.deckImages).where(eq(schema.deckImages.hash, hash)).get()
+
+    if (!metadata) {
+      return c.json({ error: "Deck image not found" }, 404)
+    }
+
+    // Get image from R2
+    const object = await c.env.BUCKET.get(`deck-images/${hash}`)
+
+    if (!object) {
+      return c.json({ error: "Deck image file not found" }, 404)
+    }
+
+    // Convert ArrayBuffer to base64
+    const arrayBuffer = await object.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+    let binary = ""
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    const base64 = btoa(binary)
+    const imageDataUrl = `data:image/png;base64,${base64}`
+
+    return c.json({
+      ...metadata,
+      imageDataUrl,
+    })
+  } catch (error) {
+    console.error("Failed to get deck image:", error)
+    return c.json(
+      {
+        error: "Failed to get deck image",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    )
   }
 })
 
