@@ -48,6 +48,12 @@ importers:
       '@eslint/js':
         specifier: ^9.30.1
         version: 9.30.1
+      '@hono/vite-cloudflare-pages':
+        specifier: ^0.4.2
+        version: 0.4.2(hono@4.8.4)
+      '@hono/vite-dev-server':
+        specifier: ^0.20.0
+        version: 0.20.0(hono@4.8.4)(miniflare@4.20250617.5)(wrangler@4.23.0(@cloudflare/workers-types@4.20250705.0))
       '@types/node':
         specifier: ^24.0.10
         version: 24.0.10
@@ -737,6 +743,31 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
+
+  '@hono/node-server@1.15.0':
+    resolution: {integrity: sha512-MjmK4l5N4dQpZ9OSWN0tCj7ejuc7WvuWMzSKtc89bnknJykAeHxzRigXBTYZk85H6Awrii6RM59iUiUluApu2A==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
+
+  '@hono/vite-cloudflare-pages@0.4.2':
+    resolution: {integrity: sha512-fvSmWNtL7rMTa6tfj0dJNu0UStp8veb2r1BfutoKtJ6GaTzO1sR5ElQw9jIYo46oTBcx8+i/9+NzyGR56awtrQ==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: '*'
+
+  '@hono/vite-dev-server@0.20.0':
+    resolution: {integrity: sha512-Qkp9jh4R0q5VnUTBIoaeyh0M6nZWMWPaj5sHa0JJIS3Wu0UPi+Trc5JQTv0tKfYkrnAwOSQXW17pI1815o/5lQ==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: '*'
+      miniflare: '*'
+      wrangler: '*'
+    peerDependenciesMeta:
+      miniflare:
+        optional: true
+      wrangler:
+        optional: true
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -3192,6 +3223,23 @@ snapshots:
       levn: 0.4.1
 
   '@fastify/busboy@2.1.1': {}
+
+  '@hono/node-server@1.15.0(hono@4.8.4)':
+    dependencies:
+      hono: 4.8.4
+
+  '@hono/vite-cloudflare-pages@0.4.2(hono@4.8.4)':
+    dependencies:
+      hono: 4.8.4
+
+  '@hono/vite-dev-server@0.20.0(hono@4.8.4)(miniflare@4.20250617.5)(wrangler@4.23.0(@cloudflare/workers-types@4.20250705.0))':
+    dependencies:
+      '@hono/node-server': 1.15.0(hono@4.8.4)
+      hono: 4.8.4
+      minimatch: 9.0.5
+    optionalDependencies:
+      miniflare: 4.20250617.5
+      wrangler: 4.23.0(@cloudflare/workers-types@4.20250705.0)
 
   '@humanfs/core@0.19.1': {}
 
