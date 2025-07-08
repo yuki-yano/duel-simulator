@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { Card } from "@/client/components/Card"
 import { createWorker } from "tesseract.js"
+import { useSetAtom } from "jotai"
+import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
+import type { Card as GameCard } from "@/shared/types/game"
 
 interface DeckImageProcessorProps {
   imageDataUrl: string
@@ -107,6 +110,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
   })
   const [isOCRProcessing, setIsOCRProcessing] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
+  const setExtractedCards = useSetAtom(extractedCardsAtom)
 
   useEffect(() => {
     if (imageDataUrl) {
@@ -326,14 +330,23 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
     img.src = imageDataUrl
   }
 
-  const processImage = () => {
+  const processImage = async () => {
     if (!detectedType) return
 
     setIsProcessing(true)
-    const img = new Image()
-
-    img.onload = () => {
+    
+    try {
+      const img = new Image()
+      
+      // Promiseで画像の読み込みを待つ
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+        img.src = imageDataUrl
+      })
       const cards: string[] = []
+      const mainDeckCards: GameCard[] = []
+      const extraDeckCards: GameCard[] = []
       const config = ASPECT_RATIOS[detectedType]
       const cols = 10
 
@@ -371,7 +384,19 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
               cardHeight, // dest height
             )
 
-            cards.push(tempCanvas.toDataURL("image/png"))
+            const cardDataUrl = tempCanvas.toDataURL("image/png")
+            cards.push(cardDataUrl)
+            
+            // Create GameCard object
+            const gameCard: GameCard = {
+              id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              imageUrl: cardDataUrl,
+              position: 'facedown',
+              rotation: 0,
+              zone: { player: 'self', type: 'deck' },
+              index: mainCardCount,
+            }
+            mainDeckCards.push(gameCard)
             mainCardCount++
           }
         }
@@ -382,7 +407,6 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
       let exCardCount = 0
       // If OCR hasn't been run, default to 15 for extra deck (standard max)
       const maxExCards = deckCount.extra !== null ? deckCount.extra : 15
-      console.log("Processing extra deck - deckCount.extra:", deckCount.extra, "maxExCards:", maxExCards)
 
       for (let row = 0; row < config.exRows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -406,7 +430,19 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
               cardHeight,
             )
 
-            cards.push(tempCanvas.toDataURL("image/png"))
+            const cardDataUrl = tempCanvas.toDataURL("image/png")
+            cards.push(cardDataUrl)
+            
+            // Create GameCard object for extra deck
+            const gameCard: GameCard = {
+              id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              imageUrl: cardDataUrl,
+              position: 'facedown',
+              rotation: 0,
+              zone: { player: 'self', type: 'extraDeck' },
+              index: exCardCount,
+            }
+            extraDeckCards.push(gameCard)
             exCardCount++
           }
         }
@@ -415,6 +451,12 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
       setProcessedCards(cards)
       setIsProcessing(false)
+
+      // Store extracted cards in Jotai atoms
+      setExtractedCards({
+        mainDeck: mainDeckCards,
+        extraDeck: extraDeckCards,
+      })
 
       // Create metadata for saving
       const metadata: DeckProcessMetadata = {
@@ -427,9 +469,12 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
       }
 
       onProcessComplete(cards, metadata)
+    } catch (error) {
+      console.error('カードの切り出し処理でエラーが発生しました:', error)
+      alert('カードの切り出しに失敗しました。画像を確認してください。')
+    } finally {
+      setIsProcessing(false)
     }
-
-    img.src = imageDataUrl
   }
 
   return (

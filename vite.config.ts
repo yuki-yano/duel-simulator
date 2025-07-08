@@ -13,6 +13,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: true, // ネットワーク上の他のデバイスからアクセス可能にする
     proxy: {
       "/api": {
         target: "http://localhost:8787",

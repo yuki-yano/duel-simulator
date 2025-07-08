@@ -56,4 +56,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* タッチデバイスでのスクロールとズームを防ぐ */
+  html, body {
+    touch-action: pan-x pan-y;
+    overscroll-behavior: none;
+  }
+  
+  /* ドラッグ可能な要素のタッチ操作を最適化 */
+  [draggable="true"] {
+    touch-action: none;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
 }

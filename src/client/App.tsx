@@ -1,9 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@client/components/Card"
 import { GameField } from "@client/components/GameField"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 import { saveGameState, type GameState } from "@client/api/gameState"
+import { useAtom, useAtomValue } from "jotai"
+import { extractedCardsAtom, gameStateAtom, operationsAtom, drawCardAtom, draggedCardAtom } from "@client/atoms/boardAtoms"
 
 export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
@@ -11,6 +13,12 @@ export default function App() {
   const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveId, setSaveId] = useState<string | null>(null)
+  const extractedCards = useAtomValue(extractedCardsAtom)
+  const [gameState, setGameState] = useAtom(gameStateAtom)
+  const operations = useAtomValue(operationsAtom)
+  const [, drawCard] = useAtom(drawCardAtom)
+  const [isGameStarted, setIsGameStarted] = useState(false)
+  const draggedCard = useAtomValue(draggedCardAtom)
 
   const handleImageUpload = (imageDataUrl: string) => {
     setUploadedImage(imageDataUrl)
@@ -20,6 +28,51 @@ export default function App() {
     setProcessedCards(cards)
     setDeckMetadata(metadata)
   }
+  
+  // カードが切り出されたら、ゲーム状態に反映
+  useEffect(() => {
+    if (extractedCards.mainDeck.length > 0 || extractedCards.extraDeck.length > 0) {
+      // カードにzone情報とindexを設定
+      const mainDeckWithZones = extractedCards.mainDeck.map((card, index) => ({
+        ...card,
+        zone: { player: 'self' as const, type: 'deck' as const },
+        index
+      }))
+      const extraDeckWithZones = extractedCards.extraDeck.map((card, index) => ({
+        ...card,
+        zone: { player: 'self' as const, type: 'extraDeck' as const },
+        index
+      }))
+      
+      setGameState(prev => ({
+        ...prev,
+        players: {
+          ...prev.players,
+          self: {
+            ...prev.players.self,
+            deck: mainDeckWithZones,
+            extraDeck: extraDeckWithZones,
+          }
+        }
+      }))
+    }
+  }, [extractedCards, setGameState])
+  
+  // タッチドラッグ中のスクロールを防ぐ
+  useEffect(() => {
+    const preventScroll = (e: TouchEvent) => {
+      if (draggedCard) {
+        e.preventDefault()
+      }
+    }
+    
+    // passive: false を指定してpreventDefaultを有効にする
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+    
+    return () => {
+      document.removeEventListener('touchmove', preventScroll)
+    }
+  }, [draggedCard])
 
   const handleSaveGame = async () => {
     if (!deckMetadata) {
@@ -69,25 +122,39 @@ export default function App() {
 
         {/* Game Controls */}
         {processedCards.length > 0 && (
-          <div className="max-w-7xl mx-auto mb-4 flex gap-4 justify-center">
-            <button
-              onClick={handleSaveGame}
-              disabled={isSaving}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-            >
-              {isSaving ? "保存中..." : "ゲームを保存"}
-            </button>
-            {saveId !== null && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>リプレイURL:</span>
-                <a
-                  href={`/replay/${saveId}`}
-                  className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono text-blue-600"
-                  target="_blank"
-                  rel="noopener noreferrer"
+          <div className="max-w-7xl mx-auto mb-4 space-y-2">
+            {!isGameStarted && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setIsGameStarted(true)}
+                  className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold text-lg"
                 >
-                  {window.location.origin}/replay/{saveId}
-                </a>
+                  ゲームを開始
+                </button>
+              </div>
+            )}
+            {isGameStarted && (
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleSaveGame}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {isSaving ? "保存中..." : "ゲームを保存"}
+                </button>
+                {saveId !== null && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>リプレイURL:</span>
+                    <a
+                      href={`/replay/${saveId}`}
+                      className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono text-blue-600"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {window.location.origin}/replay/{saveId}
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -100,38 +167,40 @@ export default function App() {
           </CardContent>
         </Card>
 
-        {/* Processed Cards Display (temporary) */}
-        {processedCards.length > 0 && (
+        {/* Processed Cards Display (before game starts) */}
+        {processedCards.length > 0 && !isGameStarted && (
           <div className="max-w-7xl mx-auto mt-8 space-y-4">
             {/* Main Deck */}
             <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">メインデッキ</h3>
+              <h3 className="text-lg font-semibold mb-4">メインデッキ ({extractedCards.mainDeck.length}枚)</h3>
               <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                {processedCards.slice(0, -15).map((card, index) => (
+                {extractedCards.mainDeck.map((card) => (
                   <img
-                    key={index}
-                    src={card}
-                    alt={`Main Deck Card ${index + 1}`}
-                    className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
+                    key={card.id}
+                    src={card.imageUrl}
+                    alt={`Main Deck Card`}
+                    className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"
                   />
                 ))}
               </div>
             </Card>
 
             {/* Extra Deck */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">EXデッキ</h3>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                {processedCards.slice(-15).map((card, index) => (
-                  <img
-                    key={index}
-                    src={card}
-                    alt={`Extra Deck Card ${index + 1}`}
-                    className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
-                  />
-                ))}
-              </div>
-            </Card>
+            {extractedCards.extraDeck.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">EXデッキ ({extractedCards.extraDeck.length}枚)</h3>
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                  {extractedCards.extraDeck.map((card) => (
+                    <img
+                      key={card.id}
+                      src={card.imageUrl}
+                      alt={`Extra Deck Card`}
+                      className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"
+                    />
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         )}
       </div>
