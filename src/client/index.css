@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure touch-action allows pinch zoom */
+/* Disable pinch zoom */
 html,
 body {
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: pan-x pan-y;
 }
 
 /* Prevent iOS specific zoom blocking */

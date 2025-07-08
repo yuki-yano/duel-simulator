@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useSetAtom } from "jotai"
 import { draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard } from "@/shared/types/game"
@@ -10,14 +10,27 @@ interface DraggableCardProps {
   hoverDirection?: "up" | "left" | "right"
   style?: React.CSSProperties
   stackIndex?: number
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
 }
 
-export function DraggableCard({ card, className, hoverDirection = "up", style, stackIndex }: DraggableCardProps) {
+export function DraggableCard({ card, className, hoverDirection = "up", style, stackIndex, onContextMenu }: DraggableCardProps) {
   const setDraggedCard = useSetAtom(draggedCardAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+  const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current != null) {
+        clearTimeout(longPressTimerRef.current)
+      }
+    }
+  }, [])
 
   const handleDragStart = (e: React.DragEvent) => {
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
@@ -32,28 +45,54 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    setIsTouching(true)
-    // If the card has a zone and stackIndex is provided, update the zone with cardIndex
-    const cardWithIndex =
-      stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
-    setDraggedCard(cardWithIndex)
-    // Prevent default to avoid scrolling and text selection
+    // Clear any existing long press timer
+    if (longPressTimerRef.current != null) {
+      clearTimeout(longPressTimerRef.current)
+    }
+
+    // Prevent default to avoid scrolling, text selection, and iOS context menu
     e.preventDefault()
     e.stopPropagation()
 
     if (e.touches.length > 0) {
       const touch = e.touches[0]
-      // Account for visual viewport (zoom) offset
-      const visualViewport = window.visualViewport
-      const scale = visualViewport?.scale ?? 1
-      const offsetX = visualViewport?.offsetLeft ?? 0
-      const offsetY = visualViewport?.offsetTop ?? 0
+      
+      // Store initial touch position for detecting movement
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY }
+      
+      // Calculate offset from touch point to card center
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect()
+        const cardCenterX = rect.left + rect.width / 2
+        const cardCenterY = rect.top + rect.height / 2
+        
+        
+        // Store the offset from touch point to card center
+        dragOffsetRef.current = {
+          x: cardCenterX - touch.clientX,
+          y: cardCenterY - touch.clientY
+        }
+      } else {
+        // Fallback if card ref is not available
+        dragOffsetRef.current = { x: 0, y: 0 }
+      }
+      
+      // Set up long press detection (1000ms = 1 second)
+      longPressTimerRef.current = setTimeout(() => {
+        if (touchStartPosRef.current && onContextMenu) {
+          // Trigger custom context menu
+          onContextMenu(e, card)
+        }
+      }, 1000)
 
-      // Convert touch coordinates to visual viewport coordinates
-      const x = (touch.clientX - offsetX) / scale
-      const y = (touch.clientY - offsetY) / scale
+      // Start dragging immediately
+      setIsTouching(true)
+      const cardWithIndex =
+        stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
+      setDraggedCard(cardWithIndex)
 
-      setTouchPosition({ x, y })
+      // Get current touch position in client coordinates
+      setTouchPosition({ x: touch.clientX, y: touch.clientY })
     }
 
     // Disable body scrolling
@@ -62,43 +101,88 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    // Clear long press timer
+    if (longPressTimerRef.current != null) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+
     if (isTouching && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0]
 
-      // Account for visual viewport (zoom) offset
-      const visualViewport = window.visualViewport
-      const _scale = visualViewport?.scale ?? 1
-      const _offsetX = visualViewport?.offsetLeft ?? 0
-      const _offsetY = visualViewport?.offsetTop ?? 0
+      // Temporarily hide the dragging card to get the correct element
+      setTouchPosition(null)
 
-      // Convert touch coordinates to document coordinates for elementFromPoint
-      const docX = touch.clientX
-      const docY = touch.clientY
+      // Small delay to ensure the dragging card is hidden
+      setTimeout(() => {
+        // Use clientX/clientY directly for elementFromPoint
+        const element = document.elementFromPoint(touch.clientX, touch.clientY)
 
-      const element = document.elementFromPoint(docX, docY)
+        // Trigger drag and drop events on the element under touch point
+        if (element) {
+          // Walk up the DOM tree to find a droppable zone
+          let targetElement: Element | null = element
+          let foundDroppable = false
+          
+          while (targetElement && !foundDroppable) {
+            // Check if this element or its parent has drag event handlers
+            if ((targetElement as HTMLElement).ondrop || (targetElement as HTMLElement).ondragover || 
+                targetElement.classList.contains('zone') ||
+                targetElement.classList.contains('deck-zone') ||
+                targetElement.classList.contains('grave-zone')) {
+              foundDroppable = true
+              break
+            }
+            targetElement = targetElement.parentElement
+          }
+          
+          if (foundDroppable && targetElement) {
+            // Create and dispatch dragenter, dragover, and drop events
+            const dragOverEvent = new DragEvent("dragover", {
+              bubbles: true,
+              cancelable: true,
+              dataTransfer: new DataTransfer(),
+              clientX: touch.clientX,
+              clientY: touch.clientY,
+            })
+            targetElement.dispatchEvent(dragOverEvent)
 
-      // Trigger drag and drop events on the element under touch point
-      if (element) {
-        // Create and dispatch dragenter, dragover, and drop events
-        const dragOverEvent = new DragEvent("dragover", {
-          bubbles: true,
-          cancelable: true,
-          dataTransfer: new DataTransfer(),
-        })
-        element.dispatchEvent(dragOverEvent)
-
-        const dropEvent = new DragEvent("drop", {
-          bubbles: true,
-          cancelable: true,
-          dataTransfer: new DataTransfer(),
-        })
-        element.dispatchEvent(dropEvent)
-      }
+            // Small delay to ensure dragOver is processed before drop
+            setTimeout(() => {
+              const dropEvent = new DragEvent("drop", {
+                bubbles: true,
+                cancelable: true,
+                dataTransfer: new DataTransfer(),
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+              })
+              targetElement.dispatchEvent(dropEvent)
+              
+              // Clear dragged card after drop event is processed
+              setTimeout(() => {
+                setDraggedCard(null)
+              }, 0)
+            }, 10)
+          } else {
+            // No droppable zone found, clear dragged card
+            setDraggedCard(null)
+          }
+        } else {
+          // No element found at touch point, clear dragged card
+          setDraggedCard(null)
+        }
+        
+        setIsTouching(false)
+        // Don't clear dragged card here - it's handled above
+      }, 0)
+    } else {
+      setIsTouching(false)
+      setDraggedCard(null)
+      setTouchPosition(null)
     }
-
-    setIsTouching(false)
-    setDraggedCard(null)
-    setTouchPosition(null)
+    
+    touchStartPosRef.current = null
+    dragOffsetRef.current = null
 
     // Restore body scrolling
     document.body.style.overflow = ""
@@ -108,17 +192,33 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isTouching && e.touches.length > 0) {
       const touch = e.touches[0]
-      // Account for visual viewport (zoom) offset
-      const visualViewport = window.visualViewport
-      const scale = visualViewport?.scale ?? 1
-      const offsetX = visualViewport?.offsetLeft ?? 0
-      const offsetY = visualViewport?.offsetTop ?? 0
-
-      // Convert touch coordinates to visual viewport coordinates
-      const x = (touch.clientX - offsetX) / scale
-      const y = (touch.clientY - offsetY) / scale
-
-      setTouchPosition({ x, y })
+      
+      // Cancel long press if finger moved more than 10 pixels
+      if (longPressTimerRef.current != null && touchStartPosRef.current != null) {
+        const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x)
+        const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y)
+        if (deltaX > 10 || deltaY > 10) {
+          clearTimeout(longPressTimerRef.current)
+          longPressTimerRef.current = null
+        }
+      }
+      
+      
+      // Use clientX/clientY (viewport coordinates)
+      setTouchPosition({ x: touch.clientX, y: touch.clientY })
+      
+      // Fire dragOver event on the element under the touch point
+      const element = document.elementFromPoint(touch.clientX, touch.clientY)
+      if (element) {
+        const dragOverEvent = new DragEvent("dragover", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: new DataTransfer(),
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        })
+        element.dispatchEvent(dragOverEvent)
+      }
     }
   }
 
@@ -167,29 +267,47 @@ export function DraggableCard({ card, className, hoverDirection = "up", style, s
           )}
           style={{
             transform: `rotate(${card.rotation}deg)`,
+            WebkitUserSelect: "none",
+            userSelect: "none",
+            WebkitTouchCallout: "none",
           }}
+          onContextMenu={(e) => e.preventDefault()}
         />
       </div>
-      {isTouching && touchPosition && (
-        <div
-          className="fixed pointer-events-none z-[9999]"
-          style={{
-            left: `${touchPosition.x * (window.visualViewport?.scale ?? 1) + (window.visualViewport?.offsetLeft ?? 0) - 30}px`,
-            top: `${touchPosition.y * (window.visualViewport?.scale ?? 1) + (window.visualViewport?.offsetTop ?? 0) - 43}px`,
-            width: "60px",
-            height: "86px",
-          }}
-        >
+      {isTouching && touchPosition && dragOffsetRef.current && (() => {
+        // Use fixed size for drag image
+        const dragImageWidth = 60
+        const dragImageHeight = 86
+        
+        // Simple positioning without any pinch zoom adjustments
+        const displayX = touchPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
+        const displayY = touchPosition.y + dragOffsetRef.current.y - dragImageHeight / 2
+        
+        return (
+          <div
+            className="fixed pointer-events-none z-[9999]"
+            style={{
+              left: `${displayX}px`,
+              top: `${displayY}px`,
+              width: `${dragImageWidth}px`,
+              height: `${dragImageHeight}px`,
+              pointerEvents: "none",
+            }}
+          >
           <img
             src={card.imageUrl}
             alt="Dragging card"
             className="w-full h-full object-cover rounded shadow-xl"
             style={{
               transform: `rotate(${card.rotation}deg)`,
+              WebkitUserSelect: "none",
+              userSelect: "none",
+              WebkitTouchCallout: "none",
             }}
           />
-        </div>
-      )}
+          </div>
+        )
+      })()}
     </>
   )
 }

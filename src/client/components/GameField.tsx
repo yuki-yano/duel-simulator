@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, Undo2, Redo2 } from "lucide-react"
 import { useAtom, useAtomValue } from "jotai"
-import { gameStateAtom, hoveredZoneAtom, draggedCardAtom, moveCardAtom } from "@/client/atoms/boardAtoms"
+import { gameStateAtom, hoveredZoneAtom, draggedCardAtom, moveCardAtom, undoAtom, redoAtom, canUndoAtom, canRedoAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
+import { CardContextMenu } from "@/client/components/CardContextMenu"
 
 interface ZoneProps {
   className?: string
@@ -17,6 +18,7 @@ interface ZoneProps {
   card?: GameCard | null
   cards?: GameCard[]
   onDrop?: (fromZone: ZoneId, toZone: ZoneId) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
 }
 
 interface GraveZoneProps {
@@ -29,6 +31,7 @@ interface GraveZoneProps {
   zone?: ZoneId
   onDrop?: (fromZone: ZoneId, toZone: ZoneId) => void
   isOpponent?: boolean
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
 }
 
 function Zone({
@@ -41,6 +44,7 @@ function Zone({
   card,
   cards,
   onDrop,
+  onContextMenu,
 }: ZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -84,7 +88,7 @@ function Zone({
   return (
     <div
       className={cn(
-        "relative h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
+        "zone relative h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
         typeStyles[type],
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
         className,
@@ -144,6 +148,7 @@ function Zone({
                   stackIndex={index}
                   className="w-full h-full"
                   hoverDirection={index === 0 ? "up" : "right"}
+                  onContextMenu={onContextMenu}
                 />
               </div>
             )
@@ -156,7 +161,7 @@ function Zone({
           )}
         </div>
       ) : card ? (
-        <DraggableCard card={card} className="w-full h-full" />
+        <DraggableCard card={card} className="w-full h-full" onContextMenu={onContextMenu} />
       ) : null}
       {children}
     </div>
@@ -170,6 +175,7 @@ interface DeckZoneProps {
   orientation?: "horizontal" | "vertical"
   cards?: GameCard[]
   onDrop?: (fromZone: ZoneId, toZone: ZoneId) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
 }
 
 function DeckZone({
@@ -179,6 +185,7 @@ function DeckZone({
   cards = [],
   onDrop,
   isOpponent = false,
+  onContextMenu,
 }: DeckZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -397,7 +404,7 @@ function DeckZone({
       <div
         ref={containerRef}
         className={cn(
-          "relative w-full rounded-lg border-2 border-dashed overflow-visible",
+          "deck-zone relative w-full rounded-lg border-2 border-dashed overflow-visible",
           rowCount === 1 ? "p-1 pb-1.5 sm:p-2 sm:pb-2 md:pb-3" : rowCount === 2 ? "p-1 sm:p-1.5" : "p-0.5 sm:p-1",
           containerHeight,
           zoneStyles[type],
@@ -478,7 +485,7 @@ function DeckZone({
                               onMouseEnter={() => setHoveredCardIndex(globalIndex)}
                               onMouseLeave={() => setHoveredCardIndex(null)}
                             >
-                              <DraggableCard card={card} className="w-full h-full" />
+                              <DraggableCard card={card} className="w-full h-full" onContextMenu={onContextMenu} />
                             </div>
                           )
                         }
@@ -512,7 +519,7 @@ function DeckZone({
                       key={(item as GameCard).id}
                       className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                     >
-                      <DraggableCard card={item as GameCard} className="w-full h-full" />
+                      <DraggableCard card={item as GameCard} className="w-full h-full" onContextMenu={onContextMenu} />
                     </div>
                   ) : (
                     <div
@@ -589,6 +596,7 @@ function GraveZone({
   zone,
   onDrop,
   isOpponent = false,
+  onContextMenu,
 }: GraveZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -750,11 +758,6 @@ function GraveZone({
     banish: "bg-slate-500/5 border-slate-500/30 hover:border-slate-500/50",
   }
 
-  const _cardStyles = {
-    grave: "from-red-500/30 to-red-600/30",
-    banish: "from-slate-500/30 to-slate-600/30",
-  }
-
   const isHovered =
     hoveredZone != null && zone != null && hoveredZone.player === zone.player && hoveredZone.type === zone.type
 
@@ -762,7 +765,7 @@ function GraveZone({
     <div
       ref={containerRef}
       className={cn(
-        "relative rounded-md border-2 border-dashed h-full flex flex-col transition-colors overflow-visible",
+        "grave-zone relative rounded-md border-2 border-dashed h-full flex flex-col transition-colors overflow-visible",
         typeStyles[type],
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
         window.innerWidth >= 1024
@@ -811,7 +814,7 @@ function GraveZone({
                       onMouseEnter={() => setHoveredCardIndex(index)}
                       onMouseLeave={() => setHoveredCardIndex(null)}
                     >
-                      <DraggableCard card={card} className="w-full h-full" hoverDirection="left" />
+                      <DraggableCard card={card} className="w-full h-full" hoverDirection="left" onContextMenu={onContextMenu} />
                     </div>
                   )
                 })}
@@ -830,7 +833,7 @@ function GraveZone({
                     onMouseEnter={() => setHoveredCardIndex(index)}
                     onMouseLeave={() => setHoveredCardIndex(null)}
                   >
-                    <DraggableCard card={card} className="w-full h-full" hoverDirection="left" />
+                    <DraggableCard card={card} className="w-full h-full" hoverDirection="left" onContextMenu={onContextMenu} />
                   </div>
                 )
               })}
@@ -852,6 +855,14 @@ export function GameField() {
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
+  const [, undo] = useAtom(undoAtom)
+  const [, redo] = useAtom(redoAtom)
+  const canUndo = useAtomValue(canUndoAtom)
+  const canRedo = useAtomValue(canRedoAtom)
+  const [contextMenu, setContextMenu] = useState<{
+    card: GameCard
+    position: { x: number; y: number }
+  } | null>(null)
 
   const playerBoard = gameState.players.self
   const opponentBoard = gameState.players.opponent
@@ -873,6 +884,49 @@ export function GameField() {
       moveCard({ zone: from }, { zone: to })
     }
   }
+
+  const handleCardContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent, card: GameCard) => {
+    e.preventDefault()
+    const position = 'touches' in e 
+      ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      : { x: e.clientX, y: e.clientY }
+    setContextMenu({ card, position })
+  }, [])
+
+  const handleContextMenuAction = useCallback((action: string, card: GameCard) => {
+    // TODO: Implement card actions
+    console.log(`Action: ${action} on card:`, card)
+    
+    // Example: Rotate card
+    if (action === "rotate" && card.zone) {
+      // This will need to be implemented in the game state
+      console.log("Rotating card")
+    }
+  }, [])
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Z for undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo) {
+          undo()
+        }
+      }
+      // Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y for redo
+      if (((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) || 
+          ((e.metaKey || e.ctrlKey) && e.key === 'y')) {
+        e.preventDefault()
+        if (canRedo) {
+          redo()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canUndo, canRedo, undo, redo])
 
   // Calculate grave zone positions dynamically
   useEffect(() => {
@@ -932,7 +986,40 @@ export function GameField() {
   }, [isOpponentFieldOpen])
 
   return (
+    <>
     <div className="w-full max-w-6xl mx-auto p-2 sm:p-4">
+      {/* Undo/Redo buttons */}
+      <div className="mb-2 flex justify-start gap-2">
+        <button
+          onClick={() => undo()}
+          disabled={!canUndo}
+          className={cn(
+            "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+            canUndo 
+              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+          aria-label="Undo"
+        >
+          <Undo2 className="w-4 h-4" />
+          <span>元に戻す</span>
+        </button>
+        <button
+          onClick={() => redo()}
+          disabled={!canRedo}
+          className={cn(
+            "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+            canRedo 
+              ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+          aria-label="Redo"
+        >
+          <Redo2 className="w-4 h-4" />
+          <span>やり直す</span>
+        </button>
+      </div>
+
       {/* Opponent's Area */}
       <div className="mb-2">
         <div className="flex items-center justify-start mb-1">
@@ -964,6 +1051,7 @@ export function GameField() {
               cardCount={opponentBoard.extraDeck.length}
               cards={opponentBoard.extraDeck}
               onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
             />
             <DeckZone
               type="deck"
@@ -971,6 +1059,7 @@ export function GameField() {
               cardCount={opponentBoard.deck.length}
               cards={opponentBoard.deck}
               onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
             />
 
             {/* Opponent's Hand */}
@@ -980,6 +1069,7 @@ export function GameField() {
               cardCount={opponentBoard.hand.length}
               cards={opponentBoard.hand}
               onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
             />
           </div>
         )}
@@ -1004,6 +1094,7 @@ export function GameField() {
                   zone={{ player: "opponent", type: "spellTrapZone", index }}
                   cards={opponentBoard.spellTrapZones[index]}
                   onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
                 />
               ))}
               <div className="row-span-2 flex gap-1 sm:gap-2" style={{ zIndex: 10, position: "relative" }}>
@@ -1014,6 +1105,7 @@ export function GameField() {
                   zone={{ player: "opponent", type: "graveyard" }}
                   onDrop={handleCardDrop}
                   isOpponent={true}
+                  onContextMenu={handleCardContextMenu}
                   style={{
                     height:
                       opponentGraveHeight != null
@@ -1040,6 +1132,7 @@ export function GameField() {
                   zone={{ player: "opponent", type: "banished" }}
                   onDrop={handleCardDrop}
                   isOpponent={true}
+                  onContextMenu={handleCardContextMenu}
                   style={{
                     height:
                       opponentGraveHeight != null
@@ -1067,6 +1160,7 @@ export function GameField() {
                 zone={{ player: "opponent", type: "fieldZone" }}
                 card={opponentBoard.fieldZone}
                 onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
               />
               {[0, 1, 2, 3, 4].map((index) => (
                 <Zone
@@ -1076,6 +1170,7 @@ export function GameField() {
                   zone={{ player: "opponent", type: "monsterZone", index }}
                   cards={opponentBoard.monsterZones[index]}
                   onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
                 />
               ))}
             </>
@@ -1087,6 +1182,7 @@ export function GameField() {
             zone={{ player: "self", type: "extraMonsterZone", index: 0 }}
             cards={playerBoard.extraMonsterZones[0]}
             onDrop={handleCardDrop}
+            onContextMenu={handleCardContextMenu}
           />
           <Zone
             className={cn("col-start-5", isOpponentFieldOpen ? "row-start-3" : "row-start-1")}
@@ -1094,6 +1190,7 @@ export function GameField() {
             zone={{ player: "self", type: "extraMonsterZone", index: 1 }}
             cards={playerBoard.extraMonsterZones[1]}
             onDrop={handleCardDrop}
+            onContextMenu={handleCardContextMenu}
           />
           {/* Player's Field + Monster Zones */}
           <Zone
@@ -1102,6 +1199,7 @@ export function GameField() {
             zone={{ player: "self", type: "fieldZone" }}
             card={playerBoard.fieldZone}
             onDrop={handleCardDrop}
+            onContextMenu={handleCardContextMenu}
           />
           {[0, 1, 2, 3, 4].map((index) => (
             <Zone
@@ -1111,6 +1209,7 @@ export function GameField() {
               zone={{ player: "self", type: "monsterZone", index }}
               cards={playerBoard.monsterZones[index]}
               onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
             />
           ))}
           {/* Player's Grave/Banish (spanning monster and spell rows) */}
@@ -1141,6 +1240,7 @@ export function GameField() {
                 cards={playerBoard.graveyard}
                 zone={{ player: "self", type: "graveyard" }}
                 onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
                 style={{
                   height:
                     playerGraveHeight != null
@@ -1166,6 +1266,7 @@ export function GameField() {
                 cards={playerBoard.banished}
                 zone={{ player: "self", type: "banished" }}
                 onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
                 style={{
                   height:
                     playerGraveHeight != null
@@ -1201,6 +1302,7 @@ export function GameField() {
               zone={{ player: "self", type: "spellTrapZone", index }}
               cards={playerBoard.spellTrapZones[index]}
               onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
             />
           ))}
         </div>
@@ -1208,15 +1310,27 @@ export function GameField() {
 
       {/* Player's Hand, Deck & Extra Deck (Bottom) */}
       <div className="space-y-2">
-        <DeckZone type="hand" cardCount={playerBoard.hand.length} cards={playerBoard.hand} onDrop={handleCardDrop} />
-        <DeckZone type="deck" cardCount={playerBoard.deck.length} cards={playerBoard.deck} onDrop={handleCardDrop} />
+        <DeckZone type="hand" cardCount={playerBoard.hand.length} cards={playerBoard.hand} onDrop={handleCardDrop} onContextMenu={handleCardContextMenu} />
+        <DeckZone type="deck" cardCount={playerBoard.deck.length} cards={playerBoard.deck} onDrop={handleCardDrop} onContextMenu={handleCardContextMenu} />
         <DeckZone
           type="extra"
           cardCount={playerBoard.extraDeck.length}
           cards={playerBoard.extraDeck}
           onDrop={handleCardDrop}
+          onContextMenu={handleCardContextMenu}
         />
       </div>
     </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <CardContextMenu
+          card={contextMenu.card}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextMenuAction}
+        />
+      )}
+    </>
   )
 }

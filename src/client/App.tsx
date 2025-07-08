@@ -8,6 +8,7 @@ import { useAtom, useAtomValue } from "jotai"
 import {
   extractedCardsAtom,
   gameStateAtom,
+  resetHistoryAtom,
   operationsAtom,
   drawCardAtom,
   draggedCardAtom,
@@ -20,11 +21,27 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveId, setSaveId] = useState<string | null>(null)
   const extractedCards = useAtomValue(extractedCardsAtom)
-  const [_gameState, setGameState] = useAtom(gameStateAtom)
+  const gameState = useAtomValue(gameStateAtom)
+  const [, resetHistory] = useAtom(resetHistoryAtom)
   const _operations = useAtomValue(operationsAtom)
   const [, _drawCard] = useAtom(drawCardAtom)
   const [isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
+  
+  // Disable pinch zoom on mount
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault()
+      }
+    }
+    
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [])
 
   const handleImageUpload = (imageDataUrl: string) => {
     setUploadedImage(imageDataUrl)
@@ -50,19 +67,23 @@ export default function App() {
         index,
       }))
 
-      setGameState((prev) => ({
-        ...prev,
+      const newState = {
+        ...gameState,
         players: {
-          ...prev.players,
+          ...gameState.players,
           self: {
-            ...prev.players.self,
+            ...gameState.players.self,
             deck: mainDeckWithZones,
             extraDeck: extraDeckWithZones,
           },
         },
-      }))
+      }
+      
+      // Reset history with deck loaded state as initial state
+      resetHistory(newState)
     }
-  }, [extractedCards, setGameState])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractedCards]) // Intentionally excluding gameState and resetHistory to prevent infinite loop
 
   // Prevent scrolling during touch drag
   useEffect(() => {
@@ -90,13 +111,13 @@ export default function App() {
     setIsSaving(true)
     try {
       // TODO: Get actual game state from GameField
-      const gameState: GameState = {
+      const saveData: GameState = {
         cards: processedCards,
         field: {},
         turn: 1,
       }
 
-      const result = await saveGameState(gameState, deckMetadata)
+      const result = await saveGameState(saveData, deckMetadata)
       setSaveId(result.id)
       const replayUrl = `${window.location.origin}/replay/${result.id}`
       alert(`ゲームを保存しました！\n\nリプレイURL:\n${replayUrl}`)

@@ -1,4 +1,5 @@
 import { atom } from "jotai"
+import type { Atom, WritableAtom } from "jotai"
 import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation, GamePhase } from "../../shared/types/game"
 
 // Initial player board
@@ -38,6 +39,10 @@ export const gameStateAtom = atom<GameState>(createInitialGameState())
 // Operation history atom
 export const operationsAtom = atom<GameOperation[]>([])
 
+// History for undo/redo
+export const gameHistoryAtom = atom<GameState[]>([createInitialGameState()])
+export const gameHistoryIndexAtom = atom<number>(0)
+
 // UI state atoms
 export const selectedCardAtom = atom<Card | null>(null)
 export const draggedCardAtom = atom<Card | null>(null)
@@ -58,12 +63,87 @@ export const currentPhaseAtom = atom<GamePhase, [GamePhase], void>(
   (get) => get(gameStateAtom).phase,
   (get, set, newPhase: GamePhase) => {
     const state = get(gameStateAtom)
-    set(gameStateAtom, {
+    const newState = {
       ...state,
       phase: newPhase,
-    })
+    }
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
   },
 )
+
+// Helper to add state to history
+type Getter = <Value>(atom: Atom<Value>) => Value
+type Setter = <Value, Args extends unknown[], Result>(
+  atom: WritableAtom<Value, Args, Result>,
+  ...args: Args
+) => Result
+
+const addToHistory = (get: Getter, set: Setter, newState: GameState) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  
+  // Remove future history if we're in the middle of the history
+  const newHistory = [...history.slice(0, currentIndex + 1), newState]
+  
+  // Limit history size to prevent memory issues
+  const limitedHistory = newHistory.slice(-50)
+  
+  set(gameHistoryAtom, limitedHistory)
+  set(gameHistoryIndexAtom, limitedHistory.length - 1)
+}
+
+// Set game state with history atom
+export const setGameStateWithHistoryAtom = atom(null, (get, set, newState: GameState) => {
+  set(gameStateAtom, newState)
+  addToHistory(get, set, newState)
+})
+
+// Reset history with new initial state
+export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
+  set(gameStateAtom, newState)
+  set(gameHistoryAtom, [newState])
+  set(gameHistoryIndexAtom, 0)
+})
+
+// Undo atom
+export const undoAtom = atom(null, (get, set) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  
+  if (currentIndex > 0) {
+    const newIndex = currentIndex - 1
+    const previousState = history[newIndex]
+    set(gameStateAtom, previousState)
+    set(gameHistoryIndexAtom, newIndex)
+  }
+})
+
+// Redo atom
+export const redoAtom = atom(null, (get, set) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  
+  if (currentIndex < history.length - 1) {
+    const newIndex = currentIndex + 1
+    const nextState = history[newIndex]
+    set(gameStateAtom, nextState)
+    set(gameHistoryIndexAtom, newIndex)
+  }
+})
+
+// Can undo/redo atoms
+export const canUndoAtom = atom((get) => {
+  const currentIndex = get(gameHistoryIndexAtom)
+  return currentIndex > 0
+})
+
+export const canRedoAtom = atom((get) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  return currentIndex < history.length - 1
+})
+
 
 // Card move action
 export const moveCardAtom = atom(null, (get, set, from: Position, to: Position) => {
@@ -72,6 +152,7 @@ export const moveCardAtom = atom(null, (get, set, from: Position, to: Position) 
 
   if (newState !== state) {
     set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
 
     // Record operation
     const operation: GameOperation = {
@@ -95,6 +176,7 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
 
   if (newState !== state) {
     set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
 
     const operation: GameOperation = {
       id: crypto.randomUUID(),
@@ -146,6 +228,7 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
   }
 
   set(gameStateAtom, newState)
+  addToHistory(get, set, newState)
 
   // Record draw operation for each card
   drawnCards.forEach((card) => {
