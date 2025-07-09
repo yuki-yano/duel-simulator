@@ -23,13 +23,23 @@ export const deckImages = sqliteTable(
 export const savedStates = sqliteTable(
   "saved_states",
   {
-    id: text("id").primaryKey(),
+    id: text("id").primaryKey(), // 8文字のnanoid
     sessionId: text("session_id").notNull(),
-    stateJson: text("state_json").notNull(),
+    stateJson: text("state_json").notNull(), // ReplaySaveDataをJSON化（imageUrl削除済み）
     deckImageHash: text("deck_image_hash")
       .notNull()
       .references(() => deckImages.hash),
+
+    // 新規追加フィールド
+    title: text("title").notNull(), // リプレイタイトル
+    description: text("description"), // 説明（NULL可）
+    type: text("type").notNull(), // "replay" or "snapshot"
+    version: text("version").notNull(), // データ形式バージョン
+    deckConfig: text("deck_config").notNull(), // デッキ構成情報（JSON化）
+    deckCardIds: text("deck_card_ids").notNull(), // デッキカードのIDマッピング（JSON化）
+
     createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at"), // 将来の編集機能用
   },
   (table) => {
     return {

@@ -15,6 +15,7 @@ export interface DeckImageResponse {
   sourceHeight: number
   createdAt: string
   imageDataUrl: string
+  imageUrl?: string
 }
 
 export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ success: boolean; hash: string }> {
@@ -53,4 +54,9 @@ export async function calculateImageHash(imageData: string): Promise<string> {
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
   return hashHex
+}
+
+// Get direct image URL for caching
+export function getDeckImageUrl(hash: string): string {
+  return `/api/deck-images/${hash}/image`
 }

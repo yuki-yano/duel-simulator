@@ -1,6 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause, Shield, Eye, EyeOff, RotateCcw } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronUp,
+  Undo2,
+  Redo2,
+  Circle,
+  Square,
+  Play,
+  Pause,
+  Shield,
+  EyeOff,
+  RotateCcw,
+} from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   Dialog,
@@ -42,11 +54,18 @@ import {
   flipCardAtom,
   resetToInitialStateAtom,
   initialStateAfterDeckLoadAtom,
+  deckMetadataAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
 import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
+import { SaveReplayDialog } from "@/client/components/SaveReplayDialog"
+import { ShareUrlDisplay } from "@/client/components/ShareUrlDisplay"
+import { saveReplayData } from "@/client/api/gameState"
+import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
+import type { ReplaySaveData } from "@/shared/types/game"
+import type { DeckConfiguration } from "./DeckImageProcessor"
 
 interface ZoneProps {
   className?: string
@@ -774,9 +793,8 @@ function GraveZone({
     e.preventDefault()
     if (draggedCard && onDrop && draggedCard.zone && zone) {
       // Check if the source is from graveyard/banished
-      const isFromGraveOrBanished = 
-        draggedCard.zone.type === "graveyard" || draggedCard.zone.type === "banished"
-      
+      const isFromGraveOrBanished = draggedCard.zone.type === "graveyard" || draggedCard.zone.type === "banished"
+
       // Only use dropIndex if moving within graveyard/banished zones
       const targetZone: ZoneId = {
         ...zone,
@@ -873,7 +891,7 @@ function GraveZone({
                   const maxPosition = usableHeight - cardHeightPx
                   const effectiveCardHeight =
                     orderedDisplayCards.length > 1 ? maxPosition / (orderedDisplayCards.length - 1) : 0
-                  
+
                   // Position cards from bottom to top (reverse the position)
                   const reversedIndex = orderedDisplayCards.length - 1 - index
                   const cardPosition = Math.min(reversedIndex * effectiveCardHeight, maxPosition)
@@ -958,7 +976,7 @@ export function GameFieldContent() {
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | "reset" | null>(null)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
-  const [isTouchDevice] = useState(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0)
+  const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, undo] = useAtom(undoAtom)
@@ -978,12 +996,17 @@ export function GameFieldContent() {
     position: { x: number; y: number }
     cardElement?: HTMLElement | null
   } | null>(null)
-  
+
   // Recording confirmation dialog state
   const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
-  
+
   // Reset confirmation dialog state
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
+
+  // Save replay dialog state
+  const [showSaveReplayDialog, setShowSaveReplayDialog] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string>("")
+  const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -999,6 +1022,7 @@ export function GameFieldContent() {
   const [, playReplay] = useAtom(playReplayAtom)
   const [, togglePause] = useAtom(toggleReplayPauseAtom)
   const [, stopReplay] = useAtom(stopReplayAtom)
+  const deckMetadata = useAtomValue(deckMetadataAtom)
 
   const playerBoard = gameState.players.self
   const opponentBoard = gameState.players.opponent
@@ -1016,14 +1040,14 @@ export function GameFieldContent() {
       console.error("No dragged card available for drop operation")
       return
     }
-    
+
     // Prepare options with separate mobile toggle states
     const options = {
-      shiftKey: shiftKey || false,
-      defenseMode: mobileDefenseMode,
-      faceDownMode: mobileFaceDownMode
+      shiftKey: shiftKey === true,
+      defenseMode: mobileDefenseMode === true,
+      faceDownMode: mobileFaceDownMode === true,
     }
-    
+
     if (draggedCard.zone && draggedCard.index !== undefined) {
       // draggedCardのzone情報にindexを含める
       const fromWithIndex = { ...from, index: draggedCard.index }
@@ -1039,7 +1063,7 @@ export function GameFieldContent() {
     e.preventDefault()
     const position =
       "touches" in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
-    
+
     // Store the card element that was clicked
     const cardElement = (e.target as HTMLElement).closest('[draggable="true"]') as HTMLElement | null
     setContextMenu({ card, position, cardElement })
@@ -1091,6 +1115,62 @@ export function GameFieldContent() {
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [canUndo, canRedo, undo, redo])
+
+  // Handle replay save
+  const handleSaveReplay = useCallback(
+    async (title: string, description?: string) => {
+      if (!replayData || !deckMetadata) {
+        console.error("No replay data or deck metadata available")
+        return
+      }
+
+      try {
+        // Calculate deck image hash
+        const imageHash = await calculateImageHash(deckMetadata.imageDataUrl)
+
+        // First, save the deck image to ensure it exists in the database
+        await saveDeckImage({
+          hash: imageHash,
+          imageData: deckMetadata.imageDataUrl,
+          mainDeckCount: deckMetadata.mainDeckCount,
+          extraDeckCount: deckMetadata.extraDeckCount,
+          sourceWidth: deckMetadata.sourceWidth,
+          sourceHeight: deckMetadata.sourceHeight,
+        })
+
+        // Create ReplaySaveData
+        const saveData: ReplaySaveData = {
+          version: "1.0",
+          type: "replay",
+          data: {
+            initialState: replayData.startSnapshot,
+            operations: replayData.operations,
+            deckImageHash: imageHash,
+            deckCardIds: deckMetadata.deckCardIds,
+          },
+          metadata: {
+            title,
+            description,
+            createdAt: Date.now(),
+            duration: replayData.endTime !== undefined ? replayData.endTime - replayData.startTime : 0,
+            operationCount: replayData.operations.length,
+          },
+        }
+
+        // Save replay
+        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds)
+
+        // Show share URL dialog
+        setShareUrl(response.shareUrl)
+        setShowSaveReplayDialog(false)
+        setShowShareUrlDialog(true)
+      } catch (error) {
+        console.error("Failed to save replay:", error)
+        alert("リプレイの保存に失敗しました")
+      }
+    },
+    [replayData, deckMetadata],
+  )
 
   // Calculate grave zone positions dynamically
   useEffect(() => {
@@ -1182,7 +1262,10 @@ export function GameFieldContent() {
               ) : (
                 <>
                   <button
-                    onClick={() => stopRecording()}
+                    onClick={() => {
+                      stopRecording()
+                      setShowSaveReplayDialog(true)
+                    }}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-600 text-white hover:bg-red-700 animate-pulse"
                     aria-label="Stop recording"
                   >
@@ -1190,7 +1273,8 @@ export function GameFieldContent() {
                     <span>録画停止</span>
                   </button>
                   <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
-                    録画中: {operations.filter(op => op.timestamp >= (replayData?.startTime || Date.now())).length} 操作
+                    録画中: {operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length}{" "}
+                    操作
                   </div>
                 </>
               )}
@@ -1206,17 +1290,13 @@ export function GameFieldContent() {
                     <Play className="w-4 h-4" />
                     <span>リプレイ再生</span>
                   </button>
-                  
+
                   {/* Replay speed control */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs sm:text-sm text-muted-foreground">速度:</span>
                     <div className="w-20 sm:w-24">
                       <Slider
-                        value={[
-                          replaySpeed === 0.5 ? 0 :
-                          replaySpeed === 1 ? 1 :
-                          replaySpeed === 2 ? 2 : 3
-                        ]}
+                        value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
                         onValueChange={(value) => {
                           const speeds = [0.5, 1, 2, 3]
                           setReplaySpeed(speeds[value[0]])
@@ -1227,9 +1307,7 @@ export function GameFieldContent() {
                         className="cursor-pointer"
                       />
                     </div>
-                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">
-                      {replaySpeed}x
-                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
                   </div>
                 </>
               )}
@@ -1273,7 +1351,15 @@ export function GameFieldContent() {
         {/* Undo/Redo buttons */}
         <div className="mb-2 flex flex-col gap-2">
           <div className="flex flex-row justify-start gap-2">
-            <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" && !isTouchDevice ? true : false}>
+            <Tooltip
+              open={
+                undoDescription !== null &&
+                canUndo === true &&
+                isPlaying === false &&
+                hoveredButton === "undo" &&
+                isTouchDevice === false
+              }
+            >
               <TooltipTrigger asChild>
                 <button
                   onClick={() => undo()}
@@ -1292,13 +1378,21 @@ export function GameFieldContent() {
                   <span>元に戻す</span>
                 </button>
               </TooltipTrigger>
-              {undoDescription && (
+              {undoDescription !== null && (
                 <TooltipContent>
                   <p>{undoDescription}</p>
                 </TooltipContent>
               )}
             </Tooltip>
-            <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" && !isTouchDevice ? true : false}>
+            <Tooltip
+              open={
+                redoDescription !== null &&
+                canRedo === true &&
+                isPlaying === false &&
+                hoveredButton === "redo" &&
+                isTouchDevice === false
+              }
+            >
               <TooltipTrigger asChild>
                 <button
                   onClick={() => redo()}
@@ -1317,7 +1411,7 @@ export function GameFieldContent() {
                   <span>やり直す</span>
                 </button>
               </TooltipTrigger>
-              {redoDescription && (
+              {redoDescription !== null && (
                 <TooltipContent>
                   <p>{redoDescription}</p>
                 </TooltipContent>
@@ -1344,7 +1438,7 @@ export function GameFieldContent() {
               <span>リセット</span>
             </button>
           </div>
-          
+
           {/* Mobile quick action buttons - only show on small screens */}
           <div className="flex sm:hidden flex-row justify-start gap-2">
             <button
@@ -1389,7 +1483,7 @@ export function GameFieldContent() {
               onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
               className={cn(
                 "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                "bg-secondary text-secondary-foreground hover:bg-secondary/90",
               )}
               aria-label={isOpponentFieldOpen ? "Hide opponent field" : "Show opponent field"}
             >
@@ -1736,8 +1830,7 @@ export function GameFieldContent() {
           <DialogHeader>
             <DialogTitle>録画データの上書き確認</DialogTitle>
             <DialogDescription>
-              既に録画されたリプレイデータが存在します。
-              新しい録画を開始すると、現在のリプレイデータは上書きされます。
+              既に録画されたリプレイデータが存在します。 新しい録画を開始すると、現在のリプレイデータは上書きされます。
               続行しますか？
             </DialogDescription>
           </DialogHeader>
@@ -1767,8 +1860,7 @@ export function GameFieldContent() {
           <DialogHeader>
             <DialogTitle>ゲーム状態のリセット確認</DialogTitle>
             <DialogDescription>
-              現在のゲーム状態をリセットして、デッキ読み込み直後の状態に戻します。
-              この操作は元に戻すことができません。
+              現在のゲーム状態をリセットして、デッキ読み込み直後の状態に戻します。 この操作は元に戻すことができません。
               続行しますか？
             </DialogDescription>
           </DialogHeader>
@@ -1791,6 +1883,50 @@ export function GameFieldContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Save Replay Dialog */}
+      {replayData && (
+        <SaveReplayDialog
+          isOpen={showSaveReplayDialog}
+          onOpenChange={setShowSaveReplayDialog}
+          replayData={replayData}
+          onSave={handleSaveReplay}
+          onCancel={() => setShowSaveReplayDialog(false)}
+        />
+      )}
+
+      {/* Share URL Dialog */}
+      <ShareUrlDisplay
+        isOpen={showShareUrlDialog}
+        onOpenChange={setShowShareUrlDialog}
+        shareUrl={shareUrl}
+        onClose={() => setShowShareUrlDialog(false)}
+      />
+
+      {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
+      <div
+        className={cn(
+          "hidden md:block fixed bottom-4 right-4 max-w-xs",
+          isTouchDevice && "md:hidden lg:hidden", // Hide on touch devices regardless of screen size
+        )}
+      >
+        <div className="bg-gray-800/90 text-white rounded-lg p-3 text-xs">
+          <div className="font-semibold mb-1">操作ヒント</div>
+          <div className="space-y-1 text-gray-300">
+            <div>
+              • <span className="text-yellow-400">Shift + ドラッグ</span>:
+            </div>
+            <div className="ml-4 text-xs">- モンスター: 表側守備表示</div>
+            <div className="ml-4 text-xs">- 魔法・罠: セット</div>
+            <div>
+              • <span className="text-gray-400">右クリック</span>: カードメニュー
+            </div>
+            <div>
+              • <span className="text-gray-400">Ctrl/Cmd + Z/Y</span>: 元に戻す/やり直し
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   )
 }

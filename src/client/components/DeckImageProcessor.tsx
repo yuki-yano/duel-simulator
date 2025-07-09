@@ -3,7 +3,7 @@ import { Card } from "@/client/components/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
-import type { Card as GameCard } from "@/shared/types/game"
+import type { Card as GameCard, DeckCardIdsMapping } from "@/shared/types/game"
 
 interface DeckImageProcessorProps {
   imageDataUrl: string
@@ -18,16 +18,17 @@ export interface DeckProcessMetadata {
   sideDeckCount?: number
   sourceWidth: number
   sourceHeight: number
+  deckCardIds: DeckCardIdsMapping
 }
 
-interface DeckSection {
+export interface DeckSection {
   label: string
   count: number
   yPosition: number
   rows: number
 }
 
-interface DeckConfiguration {
+export interface DeckConfiguration {
   mainDeck: DeckSection | null
   extraDeck: DeckSection | null
   sideDeck: DeckSection | null
@@ -374,6 +375,12 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
       const extraDeckCards: GameCard[] = []
       const sideDeckCards: GameCard[] = []
 
+      // カードIDマッピング用
+      const deckCardIds: DeckCardIdsMapping = {
+        mainDeck: {},
+        extraDeck: {},
+      }
+
       const { cardWidth, cardHeight, cardGap, leftMargin } = deckConfig
       const cardsPerRow = 10
 
@@ -412,8 +419,9 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
               const cardDataUrl = tempCanvas.toDataURL("image/png")
               cards.push(cardDataUrl)
 
+              const cardId = `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
               const gameCard: GameCard = {
-                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: cardId,
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
@@ -421,6 +429,9 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
                 index: cardIndex,
               }
               mainDeckCards.push(gameCard)
+
+              // カードIDマッピングに追加
+              deckCardIds.mainDeck[cardIndex] = cardId
             }
           }
         }
@@ -461,8 +472,9 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
               const cardDataUrl = tempCanvas.toDataURL("image/png")
               cards.push(cardDataUrl)
 
+              const cardId = `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
               const gameCard: GameCard = {
-                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: cardId,
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
@@ -470,6 +482,9 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
                 index: cardIndex,
               }
               extraDeckCards.push(gameCard)
+
+              // カードIDマッピングに追加
+              deckCardIds.extraDeck[cardIndex] = cardId
             }
           }
         }
@@ -542,6 +557,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
         sideDeckCount: sideDeckCards.length,
         sourceWidth: img.width,
         sourceHeight: img.height,
+        deckCardIds,
       }
 
       onProcessComplete(cards, metadata)

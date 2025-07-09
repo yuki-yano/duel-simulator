@@ -13,6 +13,7 @@ import {
   drawCardAtom,
   draggedCardAtom,
   initialStateAfterDeckLoadAtom,
+  deckMetadataAtom,
 } from "@client/atoms/boardAtoms"
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
   const [isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
   const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
+  const [, setDeckMetadataAtom] = useAtom(deckMetadataAtom)
 
   // Disable pinch zoom on mount
   useEffect(() => {
@@ -52,6 +54,16 @@ export default function App() {
   const handleProcessComplete = (cards: string[], metadata: DeckProcessMetadata) => {
     setProcessedCards(cards)
     setDeckMetadata(metadata)
+    // Save deck metadata to global atom for replay saving
+    setDeckMetadataAtom({
+      imageDataUrl: metadata.imageDataUrl,
+      deckConfig: metadata.deckConfig,
+      mainDeckCount: metadata.mainDeckCount,
+      extraDeckCount: metadata.extraDeckCount,
+      sourceWidth: metadata.sourceWidth,
+      sourceHeight: metadata.sourceHeight,
+      deckCardIds: metadata.deckCardIds,
+    })
   }
 
   // When cards are extracted, reflect them in game state
@@ -83,7 +95,7 @@ export default function App() {
 
       // Reset history with deck loaded state as initial state
       resetHistory(newState)
-      
+
       // Save initial state for reset functionality
       setInitialStateAfterDeckLoad(newState)
     }

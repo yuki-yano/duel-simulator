@@ -4,13 +4,14 @@ compatibility_date = "2024-12-01"
 
 # Environment variables
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 # D1 Database binding for Pages
 [[d1_databases]]
 binding = "DB"
 database_name = "duel-simulator"
-database_id = "1cb9b5cb-8700-4921-9312-add657a08fe5"
+database_id = "f2589fd9-5372-4356-b73f-537d9ecef222"
+migrations_dir = "db/migrations"
 
 # R2 Storage binding for Pages
 [[r2_buckets]]

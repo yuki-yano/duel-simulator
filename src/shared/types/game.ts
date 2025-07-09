@@ -36,7 +36,7 @@ export interface ZoneId {
 export interface Position {
   zone: ZoneId
   index?: number
-  cardId: string  // IDベースでカードを特定するため（必須）
+  cardId: string // IDベースでカードを特定するため（必須）
 }
 
 export interface PlayerBoard {
@@ -87,5 +87,28 @@ export interface SavedState {
     originalStartIndex?: number
     originalEndIndex?: number
     deckImageHash?: string
+  }
+}
+
+export interface DeckCardIdsMapping {
+  mainDeck: { [index: number]: string } // index -> cardId
+  extraDeck: { [index: number]: string } // index -> cardId
+}
+
+export interface ReplaySaveData {
+  version: "1.0"
+  type: "replay"
+  data: {
+    initialState: GameState
+    operations: GameOperation[]
+    deckImageHash: string
+    deckCardIds: DeckCardIdsMapping // カードIDマッピング
+  }
+  metadata: {
+    title: string
+    description?: string
+    createdAt: number
+    duration: number
+    operationCount: number
   }
 }

@@ -1,0 +1,59 @@
+import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
+
+interface ShareUrlDisplayProps {
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  shareUrl: string
+  onClose: () => void
+}
+
+export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, onClose }: ShareUrlDisplayProps) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error("Failed to copy:", error)
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>リプレイを保存しました！</DialogTitle>
+          <DialogDescription>以下のURLを共有すると、他の人がリプレイを見ることができます。</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="flex-1 h-10 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
+              onClick={(e) => e.currentTarget.select()}
+            />
+            <button
+              onClick={handleCopy}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2"
+            >
+              {copied ? "コピーしました！" : "コピー"}
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-300 bg-white hover:bg-gray-100 h-10 px-4 py-2"
+          >
+            閉じる
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

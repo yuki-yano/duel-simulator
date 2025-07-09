@@ -395,7 +395,7 @@ export function DraggableCard({
           // Use fixed size for drag image
           const baseWidth = 60
           const baseHeight = 86
-          
+
           // Adjust container size based on rotation
           const isRotated = card.rotation === -90 || card.rotation === 90
           const dragImageWidth = isRotated ? baseHeight : baseWidth
@@ -416,14 +416,14 @@ export function DraggableCard({
                 pointerEvents: "none",
               }}
             >
-              <div 
+              <div
                 className="relative"
                 style={{
                   width: `${baseWidth}px`,
                   height: `${baseHeight}px`,
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
                   transform: `translate(-50%, -50%) rotate(${card.rotation}deg)`,
                 }}
               >
@@ -441,11 +441,7 @@ export function DraggableCard({
                   onContextMenu={(e) => e.preventDefault()}
                 />
                 {/* Face down overlay for drag image */}
-                {card.faceDown === true && (
-                  <div
-                    className="absolute inset-0 rounded pointer-events-none bg-black/40"
-                  />
-                )}
+                {card.faceDown === true && <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />}
               </div>
             </div>
           )

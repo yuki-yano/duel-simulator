@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         rollupOptions: {
-          input: ["./src/client/main.tsx"],
+          input: "./index.html",
           output: {
             entryFileNames: "static/[name].js",
             chunkFileNames: "static/[name]-[hash].js",
@@ -31,14 +31,24 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+      server: {
+        proxy: {
+          "/api": {
+            target: "http://localhost:8787",
+            changeOrigin: true,
+          },
+        },
+      },
     }
   } else {
     return {
       plugins: [
-        pages(),
+        pages({
+          entry: "src/server/index.ts",
+        }),
         devServer({
           adapter,
-          entry: "src/index.tsx",
+          entry: "src/server/index.ts",
         }),
       ],
       resolve: {

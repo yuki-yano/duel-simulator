@@ -1,16 +1,22 @@
 import { saveDeckImage, calculateImageHash } from "./deck"
-import type { DeckProcessMetadata } from "@/client/components/DeckImageProcessor"
+import type { DeckProcessMetadata, DeckConfiguration } from "@/client/components/DeckImageProcessor"
+import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
 
 export interface SaveGameStateRequest {
   sessionId?: string
   stateJson: string
   deckImageHash: string
+  title: string
+  description?: string
+  type?: "replay" | "snapshot"
+  version?: string
 }
 
 export interface SaveGameStateResponse {
   success: boolean
   id: string
   sessionId: string
+  shareUrl: string
 }
 
 export interface GameState {
@@ -72,12 +78,50 @@ export async function loadGameState(id: string): Promise<{
   stateJson: string
   deckImageHash: string
   createdAt: string
+  title: string
+  description?: string
+  type: string
+  version: string
+  deckConfig: string
+  deckCardIds: string
 }> {
   const response = await fetch(`/api/save-states/${id}`)
 
   if (!response.ok) {
     const error = (await response.json()) as { error?: string }
     throw new Error(error.error ?? "Failed to load game state")
+  }
+
+  return response.json()
+}
+
+// Save replay data
+export async function saveReplayData(
+  replayData: ReplaySaveData,
+  deckImageHash: string,
+  deckConfig: DeckConfiguration,
+  deckCardIds: DeckCardIdsMapping,
+): Promise<SaveGameStateResponse> {
+  const response = await fetch("/api/save-states", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      stateJson: JSON.stringify(replayData),
+      deckImageHash,
+      title: replayData.metadata.title,
+      description: replayData.metadata.description,
+      type: replayData.type,
+      version: replayData.version,
+      deckConfig,
+      deckCardIds,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = (await response.json()) as { error?: string }
+    throw new Error(error.error ?? "Failed to save replay")
   }
 
   return response.json()

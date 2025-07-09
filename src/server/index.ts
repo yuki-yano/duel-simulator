@@ -3,6 +3,7 @@ import { cors } from "hono/cors"
 import { logger } from "hono/logger"
 import { createDb, schema } from "./db"
 import { eq } from "drizzle-orm"
+import { customAlphabet } from "nanoid"
 
 type Bindings = {
   DB: D1Database
@@ -13,6 +14,12 @@ type Bindings = {
 // Generate UUID v4
 function generateUUID(): string {
   return crypto.randomUUID()
+}
+
+// Generate 8-character ID for replays (avoiding confusing characters)
+const nanoid = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz", 8)
+function generateReplayId(): string {
+  return nanoid()
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -46,6 +53,7 @@ app.post("/api/deck-images", async (c) => {
     await c.env.BUCKET.put(`deck-images/${hash}`, bytes.buffer, {
       httpMetadata: {
         contentType: "image/png",
+        cacheControl: "public, max-age=31536000, immutable",
       },
     })
 
@@ -79,24 +87,84 @@ app.post("/api/deck-images", async (c) => {
 // Save game state
 app.post("/api/save-states", async (c) => {
   try {
-    const { sessionId, stateJson, deckImageHash } = await c.req.json()
+    const {
+      sessionId,
+      stateJson,
+      deckImageHash,
+      title,
+      description,
+      type = "replay",
+      version = "1.0",
+      deckConfig,
+      deckCardIds,
+    } = await c.req.json()
     const db = createDb(c.env.DB)
-    const id = generateUUID()
+    const id = generateReplayId() // Use 8-character ID for replays
     // Auto-generate sessionId if not provided
     const finalSessionId = sessionId ?? generateUUID()
+
+    // Parse the state JSON and remove imageUrl from all cards
+    const parsedState = JSON.parse(stateJson)
+
+    // Use deckCardIds from request or extract from state data
+    const finalDeckCardIds = deckCardIds ?? parsedState.data?.deckCardIds ?? { mainDeck: {}, extraDeck: {} }
+
+    // Function to clean imageUrl from cards
+    const cleanImageUrls = (obj: any): any => {
+      if (Array.isArray(obj)) {
+        return obj.map(cleanImageUrls)
+      }
+      if (obj && typeof obj === "object") {
+        const cleaned = { ...obj }
+        // Remove imageUrl if it exists
+        if ("imageUrl" in cleaned && typeof cleaned.imageUrl === "string" && cleaned.imageUrl.startsWith("data:")) {
+          delete cleaned.imageUrl
+        }
+        // Recursively clean nested objects
+        for (const key in cleaned) {
+          cleaned[key] = cleanImageUrls(cleaned[key])
+        }
+        return cleaned
+      }
+      return obj
+    }
+
+    const cleanedState = cleanImageUrls(parsedState)
+    const cleanedStateJson = JSON.stringify(cleanedState)
+
+    // Validate required fields
+    if (!title) {
+      throw new Error("Title is required")
+    }
+    if (!deckConfig) {
+      throw new Error("Deck configuration is required")
+    }
 
     await db.insert(schema.savedStates).values({
       id,
       sessionId: finalSessionId,
-      stateJson,
+      stateJson: cleanedStateJson, // Store cleaned data
       deckImageHash,
+      title,
+      description,
+      type,
+      version,
+      deckConfig: JSON.stringify(deckConfig), // Store deck configuration
+      deckCardIds: JSON.stringify(finalDeckCardIds), // Store deck card IDs mapping
       createdAt: new Date().toISOString(),
     })
+
+    // Generate share URL
+    // In development, use the frontend URL (Vite port)
+    const origin =
+      c.env.ENVIRONMENT === "development" ? "http://localhost:5173" : c.req.url.replace(/\/api\/save-states$/, "")
+    const shareUrl = `${origin}/replay/${id}`
 
     return c.json({
       success: true,
       id,
       sessionId: finalSessionId,
+      shareUrl,
     })
   } catch (error) {
     console.error("Failed to save state:", error)
@@ -167,6 +235,36 @@ app.get("/api/deck-images/:hash", async (c) => {
     return c.json(
       {
         error: "Failed to get deck image",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    )
+  }
+})
+
+// Get deck image file directly (for caching)
+app.get("/api/deck-images/:hash/image", async (c) => {
+  try {
+    const hash = c.req.param("hash")
+
+    // Get image from R2
+    const object = await c.env.BUCKET.get(`deck-images/${hash}`)
+
+    if (!object) {
+      return c.json({ error: "Deck image not found" }, 404)
+    }
+
+    // Set cache headers for 1 year (images are immutable by hash)
+    c.header("Cache-Control", "public, max-age=31536000, immutable")
+    c.header("Content-Type", "image/png")
+
+    // Return the image directly
+    return c.body(object.body)
+  } catch (error) {
+    console.error("Failed to get deck image file:", error)
+    return c.json(
+      {
+        error: "Failed to get deck image file",
         details: error instanceof Error ? error.message : String(error),
       },
       500,
