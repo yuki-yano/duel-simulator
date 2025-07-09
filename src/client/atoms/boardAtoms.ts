@@ -604,19 +604,19 @@ function findMovedCards(
       }
       // Hand
       const handCard = board.hand.find((c) => c.id === cardId)
-      if (handCard) return { card: handCard, zone: { player, type: "hand", index: handCard.index } }
+      if (handCard) return { card: handCard, zone: { player, type: "hand" } }
       // Deck
       const deckCard = board.deck.find((c) => c.id === cardId)
-      if (deckCard) return { card: deckCard, zone: { player, type: "deck", index: deckCard.index } }
+      if (deckCard) return { card: deckCard, zone: { player, type: "deck" } }
       // Graveyard
       const graveyardCard = board.graveyard.find((c) => c.id === cardId)
-      if (graveyardCard) return { card: graveyardCard, zone: { player, type: "graveyard", index: graveyardCard.index } }
+      if (graveyardCard) return { card: graveyardCard, zone: { player, type: "graveyard" } }
       // Banished
       const banishedCard = board.banished.find((c) => c.id === cardId)
-      if (banishedCard) return { card: banishedCard, zone: { player, type: "banished", index: banishedCard.index } }
+      if (banishedCard) return { card: banishedCard, zone: { player, type: "banished" } }
       // Extra deck
       const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
-      if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck", index: extraDeckCard.index } }
+      if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck" } }
     }
     return null
   }
@@ -677,18 +677,44 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
 
   switch (operation.type) {
     case "move":
-      if (operation.from && operation.to) {
+      if (operation.from && operation.to && operation.cardId) {
+        // Reconstruct Position objects from the new operation structure
+        const fromPosition: Position = {
+          zone: {
+            player: operation.from.player,
+            type: operation.from.zoneType,
+            index: operation.from.zoneIndex,
+          },
+          cardId: operation.cardId,
+        }
+        const toPosition: Position = {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.insertPosition === "last" ? undefined : operation.to.insertPosition,
+          },
+          cardId: operation.cardId,
+        }
         // Perform the move operation with options (for shift key state)
         const options = operation.metadata as
           | { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean }
           | undefined
-        const result = performCardMove(newState, operation.from, operation.to, options)
+        const result = performCardMove(newState, fromPosition, toPosition, options)
         return result || newState // Return newState if performCardMove returns undefined
       }
       break
     case "rotate":
-      if (operation.to && typeof operation.metadata?.angle === "number") {
-        const result = performCardRotation(newState, operation.to, operation.metadata.angle)
+      if (operation.to && typeof operation.metadata?.angle === "number" && operation.cardId) {
+        // Reconstruct Position object
+        const position: Position = {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.zoneIndex,
+          },
+          cardId: operation.cardId,
+        }
+        const result = performCardRotation(newState, position, operation.metadata.angle)
         return result || newState // Return newState if performCardRotation returns undefined
       }
       break
@@ -699,8 +725,17 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       // Activate operations don't change state, only visual effects
       break
     case "toggleHighlight":
-      if (operation.to) {
-        const result = performCardHighlightToggle(newState, operation.to)
+      if (operation.to && operation.cardId) {
+        // Reconstruct Position object
+        const position: Position = {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.zoneIndex,
+          },
+          cardId: operation.cardId,
+        }
+        const result = performCardHighlightToggle(newState, position)
         return result || newState // Return newState if performCardHighlightToggle returns undefined
       }
       break
@@ -990,13 +1025,23 @@ export const moveCardAtom = atom(
       set(gameStateAtom, newState)
       addToHistory(get, set, newState)
 
-      // Record operation
+      // Record operation with new structure
       const operation: GameOperation = {
         id: uuidv4(),
         timestamp: Date.now(),
         type: "move",
-        from,
-        to,
+        cardId: from.cardId,
+        from: {
+          player: from.zone.player,
+          zoneType: from.zone.type,
+          zoneIndex: from.zone.index,
+        },
+        to: {
+          player: to.zone.player,
+          zoneType: to.zone.type,
+          zoneIndex: to.zone.index,
+          insertPosition: to.zone.index, // Use the zone index as insert position
+        },
         player: from.zone.player,
         metadata: options,
       }
@@ -1026,7 +1071,12 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
       id: uuidv4(),
       timestamp: Date.now(),
       type: "rotate",
-      to: position,
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
       player: position.zone.player,
       metadata: { angle },
     }
@@ -1052,7 +1102,12 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
       id: uuidv4(),
       timestamp: Date.now(),
       type: "changePosition",
-      to: position,
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
       player: position.zone.player,
       metadata: { flip: true },
     }
@@ -1077,7 +1132,12 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
       id: uuidv4(),
       timestamp: Date.now(),
       type: "toggleHighlight",
-      to: position,
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
       player: position.zone.player,
     }
     set(operationsAtom, [...get(operationsAtom), operation])
@@ -1126,7 +1186,12 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
       id: uuidv4(),
       timestamp: Date.now(),
       type: "activate",
-      to: positionWithCardId,
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
       player: position.zone.player,
     }
 
@@ -1199,15 +1264,11 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
   const drawnCards = playerBoard.deck.slice(0, count)
   const remainingDeck = playerBoard.deck.slice(count)
 
-  // Update indices of remaining deck cards
-  const newDeck = remainingDeck.map((card, idx) => ({ ...card, index: idx }))
+  // Remaining deck cards (no index property needed)
+  const newDeck = [...remainingDeck]
 
-  // Set new zone info and index for drawn cards
-  const drawnCardsWithZone = drawnCards.map((card, idx) => ({
-    ...card,
-    zone: { player, type: "hand" as const },
-    index: playerBoard.hand.length + idx,
-  }))
+  // Drawn cards (no zone/index properties needed)
+  const drawnCardsWithZone = [...drawnCards]
 
   const newHand = [...playerBoard.hand, ...drawnCardsWithZone]
 
@@ -1227,14 +1288,21 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
   addToHistory(get, set, newState)
 
   // Record draw operation for each card
-  drawnCards.forEach((card) => {
+  drawnCards.forEach((card, index) => {
     const operation: GameOperation = {
       id: uuidv4(),
       timestamp: Date.now(),
       type: "draw",
-      from: { zone: { player, type: "deck" }, cardId: card.id },
-      to: { zone: { player, type: "hand" }, cardId: card.id },
-      card,
+      cardId: card.id,
+      from: {
+        player,
+        zoneType: "deck",
+      },
+      to: {
+        player,
+        zoneType: "hand",
+        insertPosition: "last",
+      },
       player,
     }
     set(operationsAtom, [...get(operationsAtom), operation])
@@ -1330,19 +1398,25 @@ function performCardMove(
 
   const updatedCard = {
     ...card,
-    zone: to.zone,
-    index: to.zone.index,
     rotation,
     faceDown,
   }
 
-  // Remove card from source location
-  const newFromPlayer = removeCardFromZone(fromPlayer, actualFromZone)
+  // Remove card from source location using card ID
+  const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id)
+
+  // Determine if this is a cross-zone move
+  const isCrossZoneMove = actualFromZone.type !== to.zone.type
+  
+  // For cross-zone moves, always add to the end (ignore specified index)
+  const targetZone = isCrossZoneMove 
+    ? { ...to.zone, index: undefined } // Clear index for cross-zone moves
+    : to.zone // Keep index for same-zone moves (e.g., reordering hand)
 
   // Add card to new location
   const newToPlayer = addCardToZone(
     from.zone.player === to.zone.player ? newFromPlayer : toPlayer,
-    to.zone,
+    targetZone,
     updatedCard,
   )
 
@@ -1523,6 +1597,104 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
   return null
 }
 
+// Helper function: Remove card from zone by ID
+function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string): PlayerBoard {
+  switch (zone.type) {
+    case "monsterZone":
+      if (zone.index !== undefined) {
+        const newZones = [...player.monsterZones]
+        const cards = [...newZones[zone.index]]
+        const cardIndex = cards.findIndex(c => c.id === cardId)
+        if (cardIndex !== -1) {
+          cards.splice(cardIndex, 1)
+        }
+        newZones[zone.index] = cards
+        return { ...player, monsterZones: newZones }
+      }
+      break
+    case "spellTrapZone":
+      if (zone.index !== undefined) {
+        const newZones = [...player.spellTrapZones]
+        const cards = [...newZones[zone.index]]
+        const cardIndex = cards.findIndex(c => c.id === cardId)
+        if (cardIndex !== -1) {
+          cards.splice(cardIndex, 1)
+        }
+        newZones[zone.index] = cards
+        return { ...player, spellTrapZones: newZones }
+      }
+      break
+    case "fieldZone":
+      if (player.fieldZone?.id === cardId) {
+        return { ...player, fieldZone: null }
+      }
+      break
+    case "extraMonsterZone":
+      if (zone.index !== undefined) {
+        const newZones = [...player.extraMonsterZones]
+        const cards = [...newZones[zone.index]]
+        const cardIndex = cards.findIndex(c => c.id === cardId)
+        if (cardIndex !== -1) {
+          cards.splice(cardIndex, 1)
+        }
+        newZones[zone.index] = cards
+        return { ...player, extraMonsterZones: newZones }
+      }
+      break
+    case "hand": {
+      const index = player.hand.findIndex(c => c.id === cardId)
+      if (index !== -1) {
+        const newHand = [...player.hand]
+        newHand.splice(index, 1)
+        // Cards no longer need index property
+        return { ...player, hand: newHand }
+      }
+      break
+    }
+    case "deck": {
+      const index = player.deck.findIndex(c => c.id === cardId)
+      if (index !== -1) {
+        const newDeck = [...player.deck]
+        newDeck.splice(index, 1)
+        // Cards no longer need index property
+        return { ...player, deck: newDeck }
+      }
+      break
+    }
+    case "graveyard": {
+      const index = player.graveyard.findIndex(c => c.id === cardId)
+      if (index !== -1) {
+        const newGraveyard = [...player.graveyard]
+        newGraveyard.splice(index, 1)
+        // Cards no longer need index property
+        return { ...player, graveyard: newGraveyard }
+      }
+      break
+    }
+    case "banished": {
+      const index = player.banished.findIndex(c => c.id === cardId)
+      if (index !== -1) {
+        const newBanished = [...player.banished]
+        newBanished.splice(index, 1)
+        // Cards no longer need index property
+        return { ...player, banished: newBanished }
+      }
+      break
+    }
+    case "extraDeck": {
+      const index = player.extraDeck.findIndex(c => c.id === cardId)
+      if (index !== -1) {
+        const newExtraDeck = [...player.extraDeck]
+        newExtraDeck.splice(index, 1)
+        // Cards no longer need index property
+        return { ...player, extraDeck: newExtraDeck }
+      }
+      break
+    }
+  }
+  return player
+}
+
 // Helper function: Remove card from zone
 function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
   switch (zone.type) {
@@ -1571,45 +1743,40 @@ function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
       if (zone.index !== undefined) {
         const newHand = [...player.hand]
         newHand.splice(zone.index, 1)
-        // Update indices of remaining cards
-        const updatedHand = newHand.map((card, idx) => ({ ...card, index: idx }))
-        return { ...player, hand: updatedHand }
+        // Cards no longer need index property
+        return { ...player, hand: newHand }
       }
       break
     case "deck":
       if (zone.index !== undefined) {
         const newDeck = [...player.deck]
         newDeck.splice(zone.index, 1)
-        // Update indices of remaining cards
-        const updatedDeck = newDeck.map((card, idx) => ({ ...card, index: idx }))
-        return { ...player, deck: updatedDeck }
+        // Cards no longer need index property
+        return { ...player, deck: newDeck }
       }
       break
     case "graveyard":
       if (zone.index !== undefined) {
         const newGraveyard = [...player.graveyard]
         newGraveyard.splice(zone.index, 1)
-        // Update indices of remaining cards
-        const updatedGraveyard = newGraveyard.map((card, idx) => ({ ...card, index: idx }))
-        return { ...player, graveyard: updatedGraveyard }
+        // Cards no longer need index property
+        return { ...player, graveyard: newGraveyard }
       }
       break
     case "banished":
       if (zone.index !== undefined) {
         const newBanished = [...player.banished]
         newBanished.splice(zone.index, 1)
-        // Update indices of remaining cards
-        const updatedBanished = newBanished.map((card, idx) => ({ ...card, index: idx }))
-        return { ...player, banished: updatedBanished }
+        // Cards no longer need index property
+        return { ...player, banished: newBanished }
       }
       break
     case "extraDeck":
       if (zone.index !== undefined) {
         const newExtraDeck = [...player.extraDeck]
         newExtraDeck.splice(zone.index, 1)
-        // Update indices of remaining cards
-        const updatedExtraDeck = newExtraDeck.map((card, idx) => ({ ...card, index: idx }))
-        return { ...player, extraDeck: updatedExtraDeck }
+        // Cards no longer need index property
+        return { ...player, extraDeck: newExtraDeck }
       }
       break
   }
@@ -1658,75 +1825,65 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.hand.length) {
         const newHand = [...player.hand]
-        const newCard = { ...card, zone, index: zone.index }
-        newHand.splice(zone.index, 0, newCard)
-        // Update indices of all cards after insertion point
-        const updatedHand = newHand.map((c, idx) => ({ ...c, index: idx }))
-        return { ...player, hand: updatedHand }
+        // Insert card at specified position
+        newHand.splice(zone.index, 0, card)
+        // Cards no longer need index property
+        return { ...player, hand: newHand }
       } else {
         // Otherwise append to end
-        const newCard = { ...card, zone, index: player.hand.length }
-        return { ...player, hand: [...player.hand, newCard] }
+        return { ...player, hand: [...player.hand, card] }
       }
     }
     case "deck": {
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.deck.length) {
         const newDeck = [...player.deck]
-        const newCard = { ...card, zone, index: zone.index }
-        newDeck.splice(zone.index, 0, newCard)
-        // Update indices of all cards after insertion point
-        const updatedDeck = newDeck.map((c, idx) => ({ ...c, index: idx }))
-        return { ...player, deck: updatedDeck }
+        // Insert card at specified position
+        newDeck.splice(zone.index, 0, card)
+        // Cards no longer need index property
+        return { ...player, deck: newDeck }
       } else {
         // Otherwise append to end
-        const newCard = { ...card, zone, index: player.deck.length }
-        return { ...player, deck: [...player.deck, newCard] }
+        return { ...player, deck: [...player.deck, card] }
       }
     }
     case "graveyard": {
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.graveyard.length) {
         const newGraveyard = [...player.graveyard]
-        const newCard = { ...card, zone, index: zone.index }
-        newGraveyard.splice(zone.index, 0, newCard)
-        // Update indices of all cards after insertion point
-        const updatedGraveyard = newGraveyard.map((c, idx) => ({ ...c, index: idx }))
-        return { ...player, graveyard: updatedGraveyard }
+        // Insert card at specified position
+        newGraveyard.splice(zone.index, 0, card)
+        // Cards no longer need index property
+        return { ...player, graveyard: newGraveyard }
       } else {
         // Otherwise append to end
-        const newCard = { ...card, zone, index: player.graveyard.length }
-        return { ...player, graveyard: [...player.graveyard, newCard] }
+        return { ...player, graveyard: [...player.graveyard, card] }
       }
     }
     case "banished": {
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.banished.length) {
         const newBanished = [...player.banished]
-        const newCard = { ...card, zone, index: zone.index }
-        newBanished.splice(zone.index, 0, newCard)
-        // Update indices of all cards after insertion point
-        const updatedBanished = newBanished.map((c, idx) => ({ ...c, index: idx }))
-        return { ...player, banished: updatedBanished }
+        // Insert card at specified position
+        newBanished.splice(zone.index, 0, card)
+        // Cards no longer need index property
+        return { ...player, banished: newBanished }
       } else {
         // Otherwise append to end
-        const newCard = { ...card, zone, index: player.banished.length }
-        return { ...player, banished: [...player.banished, newCard] }
+        return { ...player, banished: [...player.banished, card] }
       }
     }
     case "extraDeck": {
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.extraDeck.length) {
         const newExtraDeck = [...player.extraDeck]
-        const newCard = { ...card, zone, index: zone.index }
-        newExtraDeck.splice(zone.index, 0, newCard)
-        // Update indices of all cards after insertion point
-        const updatedExtraDeck = newExtraDeck.map((c, idx) => ({ ...c, index: idx }))
-        return { ...player, extraDeck: updatedExtraDeck }
+        // Insert card at specified position
+        newExtraDeck.splice(zone.index, 0, card)
+        // Cards no longer need index property
+        return { ...player, extraDeck: newExtraDeck }
       } else {
         // Otherwise append to end
-        const newCard = { ...card, zone, index: player.extraDeck.length }
-        return { ...player, extraDeck: [...player.extraDeck, newCard] }
+        return { ...player, extraDeck: [...player.extraDeck, card] }
       }
     }
   }

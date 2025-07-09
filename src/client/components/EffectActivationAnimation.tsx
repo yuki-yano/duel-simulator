@@ -102,7 +102,7 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
       <style>
         {`
           [data-card-id="${position.zone?.cardId ?? ""}"] {
-            transform: ${isVisible ? `rotate(${cardRotation}deg) scale(1.05)` : `rotate(${cardRotation}deg) scale(1)`} !important;
+            transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
             transition: transform 0.3s ease-out !important;
             z-index: ${isVisible ? "9997" : "auto"} !important;
             position: relative !important;

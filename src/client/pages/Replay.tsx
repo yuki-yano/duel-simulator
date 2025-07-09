@@ -5,6 +5,8 @@ import { GameField } from "@client/components/GameField"
 import { loadGameState } from "@client/api/gameState"
 import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
 import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
+import { DeckImageProcessor } from "@client/components/DeckImageProcessor"
+import { AutoPlayDialog } from "@client/components/AutoPlayDialog"
 import { useSetAtom } from "jotai"
 import {
   replayDataAtom,
@@ -22,6 +24,9 @@ export default function Replay() {
   const [error, setError] = useState<string | null>(null)
   const [title, setTitle] = useState<string>("")
   const [description, setDescription] = useState<string>("")
+  const [showDeckProcessor, setShowDeckProcessor] = useState(false)
+  const [deckImage, setDeckImage] = useState<string | null>(null)
+  const [showAutoPlayDialog, setShowAutoPlayDialog] = useState(false)
 
   const setReplayData = useSetAtom(replayDataAtom)
   const setGameState = useSetAtom(gameStateAtom)
@@ -39,18 +44,7 @@ export default function Replay() {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let isCancelled = false
 
-    const loadAndPlay = async () => {
-      await loadReplay()
-      if (!isCancelled) {
-        timeoutId = setTimeout(() => {
-          if (!isCancelled) {
-            void playReplay()
-          }
-        }, 500)
-      }
-    }
-
-    void loadAndPlay()
+    void loadReplay()
 
     // Cleanup function to cancel timeout and stop replay
     return () => {
@@ -114,6 +108,9 @@ export default function Replay() {
         endTime: Date.now() + replaySaveData.metadata.duration,
       })
 
+      // Set deck image for display
+      setDeckImage(deckData.imageDataUrl)
+      setShowDeckProcessor(true)
       setIsLoading(false)
     } catch (error) {
       console.error("Failed to load replay:", error)
@@ -146,6 +143,30 @@ export default function Replay() {
     )
   }
 
+  // Handle deck process complete (dummy handler for replay mode)
+  const handleProcessComplete = () => {
+    // Processing is already done, this is just for UI consistency
+  }
+
+  // Handle replay start
+  const handleReplayStart = () => {
+    // First show the game field
+    setShowDeckProcessor(false)
+    // Show auto play dialog
+    setShowAutoPlayDialog(true)
+  }
+
+  // Handle auto play start
+  const handleAutoPlayStart = () => {
+    setShowAutoPlayDialog(false)
+    void playReplay()
+  }
+
+  // Handle auto play cancel
+  const handleAutoPlayCancel = () => {
+    setShowAutoPlayDialog(false)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8">
@@ -160,12 +181,35 @@ export default function Replay() {
           </p>
         </div>
 
+        {/* Deck Image Processor for replay mode */}
+        {showDeckProcessor && deckImage && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <DeckImageProcessor 
+              imageDataUrl={deckImage} 
+              onProcessComplete={handleProcessComplete}
+              isReplayMode={true}
+              onReplayStart={handleReplayStart}
+            />
+          </div>
+        )}
+
         {/* Game Field */}
-        <Card className="max-w-7xl mx-auto">
-          <CardContent>
-            <GameField />
-          </CardContent>
-        </Card>
+        {!showDeckProcessor && (
+          <Card className="max-w-7xl mx-auto">
+            <CardContent>
+              <GameField />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Auto Play Dialog */}
+        {showAutoPlayDialog && (
+          <AutoPlayDialog
+            onStart={handleAutoPlayStart}
+            onCancel={handleAutoPlayCancel}
+            countdown={3}
+          />
+        )}
       </div>
     </div>
   )

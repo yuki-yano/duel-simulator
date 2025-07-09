@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "vite build --mode client && vite build && echo '{\"version\":1,\"include\":[\"/api/*\"],\"exclude\":[]}' > dist/_routes.json",
+    "build": "vite build --mode client && vite build",
     "preview": "wrangler pages dev",
-    "deploy": "vite build --mode client && vite build && echo '{\"version\":1,\"include\":[\"/api/*\"],\"exclude\":[]}' > dist/_routes.json && wrangler pages deploy dist",
+    "deploy": "vite build --mode client && vite build && wrangler pages deploy dist",
     "dev:client": "vite --mode client",
     "dev:server": "wrangler dev src/server/index.ts",
     "wrangler": "wrangler",

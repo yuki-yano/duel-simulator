@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react"
 import { useSetAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
-import type { Card as GameCard } from "@/shared/types/game"
+import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
 interface DraggableCardProps {
   card: GameCard
+  zone: ZoneId // Zone information passed separately
   className?: string
   hoverDirection?: "up" | "left" | "right"
   style?: React.CSSProperties
@@ -16,6 +17,7 @@ interface DraggableCardProps {
 
 export function DraggableCard({
   card,
+  zone,
   className,
   hoverDirection = "up",
   style,
@@ -114,9 +116,11 @@ export function DraggableCard({
 
         // Start dragging immediately
         setIsTouching(true)
-        const cardWithIndex =
-          stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
-        setDraggedCard(cardWithIndex)
+        const cardWithZone = {
+          ...card,
+          zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
+        }
+        setDraggedCard(cardWithZone)
 
         // Get current touch position in client coordinates
         setTouchPosition({ x: touch.clientX, y: touch.clientY })
@@ -146,9 +150,11 @@ export function DraggableCard({
     }
 
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
-    const cardWithIndex =
-      stackIndex !== undefined && card.zone ? { ...card, zone: { ...card.zone, cardIndex: stackIndex } } : card
-    setDraggedCard(cardWithIndex)
+    const cardWithZone = {
+      ...card,
+      zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
+    }
+    setDraggedCard(cardWithZone)
     e.dataTransfer.effectAllowed = "move"
   }
 

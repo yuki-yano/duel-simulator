@@ -8,6 +8,8 @@ import type { Card as GameCard, DeckCardIdsMapping } from "@/shared/types/game"
 interface DeckImageProcessorProps {
   imageDataUrl: string
   onProcessComplete: (cards: string[], metadata: DeckProcessMetadata) => void
+  isReplayMode?: boolean
+  onReplayStart?: () => void
 }
 
 export interface DeckProcessMetadata {
@@ -52,7 +54,7 @@ const LAYOUT_RATIOS = {
   textHeight: 0.035, // Text area height is 3.5% of image width
 }
 
-export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImageProcessorProps) {
+export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMode = false, onReplayStart }: DeckImageProcessorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const debugCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -561,6 +563,12 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
       }
 
       onProcessComplete(cards, metadata)
+      
+      // If in replay mode, trigger onReplayStart immediately
+      // (the actual 2-second delay is handled in the parent component)
+      if (isReplayMode && onReplayStart) {
+        onReplayStart()
+      }
     } catch (error) {
       console.error("カードの切り出し処理でエラーが発生しました:", error)
       alert("カードの切り出しに失敗しました。")
@@ -676,7 +684,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
             }
           `}
         >
-          {isProcessing ? "処理中..." : "カードを切り出す"}
+          {isProcessing ? "処理中..." : isReplayMode ? "カードを切り出して再生" : "カードを切り出す"}
         </button>
 
         {/* Processed Cards Count */}
