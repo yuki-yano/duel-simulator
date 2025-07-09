@@ -29,6 +29,7 @@ export interface ZoneId {
   type: ZoneType
   index?: number
   cardIndex?: number // Index within a stack of cards
+  cardId?: string // Card ID for effect animations
 }
 
 export interface Position {

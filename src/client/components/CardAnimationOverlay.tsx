@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useAtom } from "jotai"
 import { cardAnimationsAtom, type CardAnimation } from "@/client/atoms/boardAtoms"
 import { cn } from "@/client/lib/utils"
+import { EffectActivationAnimation } from "./EffectActivationAnimation"
 
 interface AnimatedCardProps {
   animation: CardAnimation
@@ -9,18 +10,25 @@ interface AnimatedCardProps {
 }
 
 function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
-  const [position, setPosition] = useState(animation.fromPosition)
+  const [position, setPosition] = useState(animation.fromPosition!)
 
   useEffect(() => {
+    if (animation.type !== "move") {
+      onComplete()
+      return
+    }
+
     // Start animation after a small delay to ensure initial position is rendered
     const timer = setTimeout(() => {
-      setPosition(animation.toPosition)
+      if (animation.toPosition) {
+        setPosition(animation.toPosition)
+      }
     }, 10)
 
     // Call onComplete when animation finishes
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, animation.duration)
+    }, animation.duration ?? 300)
 
     return () => {
       clearTimeout(timer)
@@ -28,13 +36,15 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
     }
   }, [animation, onComplete])
 
+  if (animation.type !== "move") return null
+
   return (
     <div
       className="fixed pointer-events-none z-[10000]"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        transition: `all ${animation.duration}ms ease-in-out`,
+        transition: `all ${animation.duration ?? 300}ms ease-in-out`,
         width:
           window.innerWidth >= 1024
             ? "77px"
@@ -68,19 +78,32 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
 export function CardAnimationOverlay() {
   const [animations, setAnimations] = useAtom(cardAnimationsAtom)
 
-  const handleAnimationComplete = (cardId: string) => {
-    setAnimations((prev) => prev.filter((anim) => anim.cardId !== cardId))
+  const handleAnimationComplete = (animationId: string) => {
+    setAnimations((prev) => prev.filter((anim) => anim.id !== animationId))
   }
 
   return (
     <>
-      {animations.map((animation) => (
-        <AnimatedCard
-          key={animation.cardId}
-          animation={animation}
-          onComplete={() => handleAnimationComplete(animation.cardId)}
-        />
-      ))}
+      {animations.map((animation) => {
+        if (animation.type === "activate" && animation.position) {
+          return (
+            <EffectActivationAnimation
+              key={animation.id}
+              position={animation.position}
+              cardRect={animation.cardRect}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        } else {
+          return (
+            <AnimatedCard
+              key={animation.id}
+              animation={animation}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        }
+      })}
     </>
   )
 }

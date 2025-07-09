@@ -84,3 +84,73 @@ textarea {
     user-select: none;
   }
 }
+
+/* Effect activation animations */
+@keyframes whiteFlash {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes blueMist {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) translateY(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) translateY(-20px);
+  }
+}
+
+@keyframes edgeGlow {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(147, 197, 253, 0);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(147, 197, 253, 0.8);
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 30px rgba(147, 197, 253, 0);
+  }
+}

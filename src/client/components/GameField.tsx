@@ -24,6 +24,7 @@ import {
   replayDataAtom,
   isDeckLoadedAtom,
   rotateCardAtom,
+  activateEffectAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
@@ -924,9 +925,11 @@ export function GameField() {
   const canRedo = useAtomValue(canRedoAtom)
   const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
   const rotateCard = useSetAtom(rotateCardAtom)
+  const activateEffect = useSetAtom(activateEffectAtom)
   const [contextMenu, setContextMenu] = useState<{
     card: GameCard
     position: { x: number; y: number }
+    cardElement?: HTMLElement | null
   } | null>(null)
 
   // Replay atoms
@@ -967,7 +970,10 @@ export function GameField() {
     e.preventDefault()
     const position =
       "touches" in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
-    setContextMenu({ card, position })
+    
+    // Store the card element that was clicked
+    const cardElement = (e.target as HTMLElement).closest('[draggable="true"]') as HTMLElement | null
+    setContextMenu({ card, position, cardElement })
   }, [])
 
   const handleContextMenuAction = useCallback(
@@ -976,9 +982,11 @@ export function GameField() {
         // Toggle between normal (0) and defense position (-90)
         const newRotation = card.rotation === -90 ? 0 : -90
         rotateCard({ zone: card.zone }, newRotation)
+      } else if (action === "activate" && card.zone) {
+        activateEffect({ zone: card.zone }, contextMenu?.cardElement ?? undefined)
       }
     },
-    [rotateCard],
+    [rotateCard, activateEffect, contextMenu],
   )
 
   // Keyboard shortcuts for undo/redo

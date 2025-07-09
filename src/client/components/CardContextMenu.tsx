@@ -49,6 +49,11 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
 
   const menuItems = [
     {
+      id: "activate",
+      label: "効果の発動",
+      enabled: true,
+    },
+    {
       id: "rotate",
       label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
       enabled: isMonsterSpellTrapZone,

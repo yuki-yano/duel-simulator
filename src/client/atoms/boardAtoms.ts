@@ -346,6 +346,9 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
     case "draw":
       // Draw operations are handled by move operations
       break
+    case "activate":
+      // Activate operations don't change state, only visual effects
+      break
   }
 
   return newState
@@ -415,6 +418,8 @@ export const playReplayAtom = atom(null, async (get, set) => {
         if (prevPos) {
           // Temporarily store the animation with same start/end position
           animations.push({
+            id: crypto.randomUUID(),
+            type: "move",
             cardId: card.id,
             cardImageUrl: card.imageUrl,
             fromPosition: prevPos,
@@ -440,8 +445,8 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Update animations with actual end positions
       const updatedAnimations = animations.map((anim) => {
-        const nextPos = getCardElementPosition(anim.cardId)
-        return nextPos ? { ...anim, toPosition: nextPos } : anim
+        const nextPos = anim.cardId !== undefined ? getCardElementPosition(anim.cardId) : null
+        return nextPos !== null ? { ...anim, toPosition: nextPos } : anim
       })
 
       // Update animations with correct end positions
@@ -452,7 +457,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         await new Promise((resolve) => setTimeout(resolve, speed))
       }
     } else {
-      // No card movement, but check for rotation
+      // No card movement, but check for rotation or activation
       if (operation.type === "rotate") {
         // Update state immediately for rotation
         set(gameStateAtom, nextState)
@@ -463,8 +468,56 @@ export const playReplayAtom = atom(null, async (get, set) => {
         if (i < replayData.operations.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 300))
         }
+      } else if (operation.type === "activate" && operation.to) {
+        // Update state (no change for activate)
+        set(gameStateAtom, nextState)
+        set(replayCurrentIndexAtom, i + 1)
+        currentState = nextState
+
+        // Small delay to ensure DOM is updated
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        // Create activation animation
+        const animationId = crypto.randomUUID()
+        const animations = get(cardAnimationsAtom)
+        
+        // Try to get card element position for replay
+        let cardRect: { x: number; y: number; width: number; height: number } | undefined
+        if (operation.to?.zone?.cardId !== undefined) {
+          const cardElement = document.querySelector(`[data-card-id="${operation.to.zone.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          }
+        }
+        
+        set(cardAnimationsAtom, [
+          ...animations,
+          {
+            id: animationId,
+            type: "activate",
+            position: operation.to,
+            cardRect,
+            startTime: Date.now(),
+          },
+        ])
+
+        // Remove animation after duration
+        setTimeout(() => {
+          set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
+        }, 500)
+
+        // Wait for activation animation
+        if (i < replayData.operations.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        }
       } else {
-        // Other operations (no movement, no rotation)
+        // Other operations (no movement, no rotation, no activation)
         set(gameStateAtom, nextState)
         set(replayCurrentIndexAtom, i + 1)
         currentState = nextState
@@ -474,6 +527,21 @@ export const playReplayAtom = atom(null, async (get, set) => {
           await new Promise((resolve) => setTimeout(resolve, speed))
         }
       }
+    }
+  }
+
+  // Wait for final animation to complete
+  const finalOperation = replayData.operations[replayData.operations.length - 1]
+  if (finalOperation !== undefined) {
+    if (finalOperation.type === "move" || finalOperation.type === "draw") {
+      // Wait for move/draw animation
+      await new Promise((resolve) => setTimeout(resolve, speed))
+    } else if (finalOperation.type === "rotate") {
+      // Wait for rotation animation
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    } else if (finalOperation.type === "activate") {
+      // Wait for activation animation
+      await new Promise((resolve) => setTimeout(resolve, 500))
     }
   }
 
@@ -503,12 +571,16 @@ export const stopReplayAtom = atom(null, (get, set) => {
 
 // Animation state for card movements during replay
 export interface CardAnimation {
-  cardId: string
-  cardImageUrl: string
-  fromPosition: { x: number; y: number }
-  toPosition: { x: number; y: number }
+  id: string
+  type: "move" | "activate"
+  cardId?: string
+  cardImageUrl?: string
+  fromPosition?: { x: number; y: number }
+  toPosition?: { x: number; y: number }
+  position?: Position
+  cardRect?: { x: number; y: number; width: number; height: number }
   startTime: number
-  duration: number
+  duration?: number
 }
 
 export const cardAnimationsAtom = atom<CardAnimation[]>([])
@@ -562,6 +634,81 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
     }
     set(operationsAtom, [...get(operationsAtom), operation])
   }
+})
+
+// Card effect activation action
+export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
+  // Get the card at this position to get its ID
+  const state = get(gameStateAtom)
+  const playerBoard = state.players[position.zone.player]
+  let card: Card | null = null
+  
+  switch (position.zone.type) {
+    case "monsterZone":
+      card = playerBoard.monsterZones[position.zone.index ?? 0]?.[0] ?? null
+      break
+    case "spellTrapZone":
+      card = playerBoard.spellTrapZones[position.zone.index ?? 0]?.[0] ?? null
+      break
+    case "extraMonsterZone":
+      card = playerBoard.extraMonsterZones[position.zone.index ?? 0]?.[0] ?? null
+      break
+    case "graveyard":
+      card = playerBoard.graveyard[position.zone.index ?? 0] ?? null
+      break
+    case "hand":
+      card = playerBoard.hand[position.zone.index ?? 0] ?? null
+      break
+  }
+  
+  // Add card ID to position for zoom effect
+  const positionWithCardId = {
+    ...position,
+    zone: {
+      ...position.zone,
+      cardId: card?.id,
+    }
+  }
+  
+  // Effect activation doesn't change game state, only visual effect
+  const operation: GameOperation = {
+    id: crypto.randomUUID(),
+    timestamp: Date.now(),
+    type: "activate",
+    to: positionWithCardId,
+    player: position.zone.player,
+  }
+  set(operationsAtom, [...get(operationsAtom), operation])
+  
+  // Get card position if element is provided
+  let cardRect: DOMRect | null = null
+  if (cardElement) {
+    cardRect = cardElement.getBoundingClientRect()
+  }
+  
+  // Trigger visual effect animation
+  const animations = get(cardAnimationsAtom)
+  const animationId = crypto.randomUUID()
+  set(cardAnimationsAtom, [
+    ...animations,
+    {
+      id: animationId,
+      type: "activate",
+      position: positionWithCardId,
+      cardRect: cardRect ? {
+        x: cardRect.x,
+        y: cardRect.y,
+        width: cardRect.width,
+        height: cardRect.height,
+      } : undefined,
+      startTime: Date.now(),
+    },
+  ])
+  
+  // Remove animation after duration
+  setTimeout(() => {
+    set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
+  }, 500)
 })
 
 // Draw cards from deck to hand
