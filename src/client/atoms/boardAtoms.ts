@@ -1,7 +1,7 @@
 import { atom } from "jotai"
 import type { Atom, WritableAtom } from "jotai"
 import { v4 as uuidv4 } from 'uuid'
-import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation, GamePhase } from "../../shared/types/game"
+import type { Card, GameState, PlayerBoard, Position, ZoneId, ZoneType, GameOperation, GamePhase } from "../../shared/types/game"
 
 // Animation duration constants (in milliseconds)
 const ANIMATION_DURATIONS = {
@@ -611,8 +611,9 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
   switch (operation.type) {
     case "move":
       if (operation.from && operation.to) {
-        // Perform the move operation
-        return performCardMove(newState, operation.from, operation.to)
+        // Perform the move operation with options (for shift key state)
+        const options = operation.metadata as { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean } | undefined
+        return performCardMove(newState, operation.from, operation.to, options)
       }
       break
     case "rotate":
@@ -863,7 +864,7 @@ export interface CardAnimation {
 export const cardAnimationsAtom = atom<CardAnimation[]>([])
 
 // Card move action
-export const moveCardAtom = atom(null, (get, set, from: Position, to: Position, options?: { shiftKey?: boolean }) => {
+export const moveCardAtom = atom(null, (get, set, from: Position, to: Position, options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean }) => {
   const state = get(gameStateAtom)
   const newState = performCardMove(state, from, to, options)
 
@@ -944,44 +945,16 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     const playerBoard = state.players[position.zone.player]
     let card: Card | null = null
   
-  switch (position.zone.type) {
-    case "monsterZone":
-      card = playerBoard.monsterZones[position.zone.index ?? 0]?.[0] ?? null
-      break
-    case "spellTrapZone":
-      card = playerBoard.spellTrapZones[position.zone.index ?? 0]?.[0] ?? null
-      break
-    case "extraMonsterZone":
-      card = playerBoard.extraMonsterZones[position.zone.index ?? 0]?.[0] ?? null
-      break
-    case "graveyard":
-      // Use cardId if available for accurate identification
-      if (position.zone.cardId !== undefined) {
-        card = playerBoard.graveyard.find(c => c.id === position.zone.cardId) ?? null
-      } else {
-        // Fallback to index-based lookup
-        card = playerBoard.graveyard[position.zone.index ?? 0] ?? null
-      }
-      break
-    case "hand":
-      // Use cardId if available for accurate identification
-      if (position.zone.cardId !== undefined) {
-        card = playerBoard.hand.find(c => c.id === position.zone.cardId) ?? null
-      } else {
-        // Fallback to index-based lookup
-        card = playerBoard.hand[position.zone.index ?? 0] ?? null
-      }
-      break
-    case "banished":
-      // Use cardId if available for accurate identification
-      if (position.zone.cardId !== undefined) {
-        card = playerBoard.banished.find(c => c.id === position.zone.cardId) ?? null
-      } else {
-        // Fallback to index-based lookup
-        card = playerBoard.banished[position.zone.index ?? 0] ?? null
-      }
-      break
-  }
+    // Use ID-based approach (cardId is now required)
+    const cardId = position.cardId || position.zone.cardId
+    if (!cardId) {
+      console.error("No cardId provided to activateEffectAtom")
+      return
+    }
+    const result = getCardById(playerBoard, cardId)
+    if (result) {
+      card = result.card
+    }
   
   // Add card ID to position for zoom effect
   const positionWithCardId = {
@@ -1097,8 +1070,8 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
       id: uuidv4(),
       timestamp: Date.now(),
       type: "draw",
-      from: { zone: { player, type: "deck" } },
-      to: { zone: { player, type: "hand" } },
+      from: { zone: { player, type: "deck" }, cardId: card.id },
+      to: { zone: { player, type: "hand" }, cardId: card.id },
       card,
       player,
     }
@@ -1107,15 +1080,24 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
 })
 
 // Helper function: Execute card move
-function performCardMove(state: GameState, from: Position, to: Position, options?: { shiftKey?: boolean }): GameState {
+function performCardMove(state: GameState, from: Position, to: Position, options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean }): GameState {
   // Deep clone the state to ensure we always create a new object
   const newState = JSON.parse(JSON.stringify(state)) as GameState
 
   const fromPlayer = newState.players[from.zone.player]
   const toPlayer = newState.players[to.zone.player]
 
-  // Get card
-  const card = getCardAtPosition(fromPlayer, from.zone)
+  // Get card by ID (cardId is now required)
+  let card: Card | null = null
+  let actualFromZone: ZoneId = from.zone
+  
+  // ID-based approach
+  const result = getCardById(fromPlayer, from.cardId)
+  if (result) {
+    card = result.card
+    actualFromZone = { ...result.zone, player: from.zone.player }
+  }
+  
   if (!card) {
     return state
   }
@@ -1125,11 +1107,12 @@ function performCardMove(state: GameState, from: Position, to: Position, options
   const supportsRotation =
     to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
 
-  // Apply rotation and face down state if Shift key was held during drop
+  // Apply rotation and face down state based on options
   let rotation = card.rotation
   let faceDown = card.faceDown
   
   if (supportsRotation) {
+    // Handle PC shift key (both defense and face down)
     if (options?.shiftKey === true) {
       // Monster zones: Face up defense position (表側守備表示)
       if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
@@ -1141,9 +1124,32 @@ function performCardMove(state: GameState, from: Position, to: Position, options
         rotation = 0
         faceDown = true
       }
+    }
+    // Handle mobile toggle buttons separately
+    else if (options?.defenseMode === true || options?.faceDownMode === true) {
+      // Monster zones
+      if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
+        if (options.defenseMode === true) {
+          rotation = -90  // Defense position
+          faceDown = false  // Face up
+        }
+        if (options.faceDownMode === true) {
+          faceDown = true  // Face down (keep current rotation)
+        }
+      }
+      // Spell/Trap zones
+      else if (to.zone.type === "spellTrapZone") {
+        rotation = 0  // Always upright
+        if (options.faceDownMode === true) {
+          faceDown = true  // Face down
+        } else {
+          faceDown = false  // Face up
+        }
+      }
     } else if (to.zone.type === "spellTrapZone") {
-      // When moving to spell/trap zone without shift, always set to attack position (rotation 0)
+      // When moving to spell/trap zone without any options, set to face up
       rotation = 0
+      faceDown = false
     }
   } else {
     rotation = 0
@@ -1159,7 +1165,7 @@ function performCardMove(state: GameState, from: Position, to: Position, options
   }
 
   // Remove card from source location
-  const newFromPlayer = removeCardFromZone(fromPlayer, from.zone)
+  const newFromPlayer = removeCardFromZone(fromPlayer, actualFromZone)
 
   // Add card to new location
   const newToPlayer = addCardToZone(
@@ -1178,12 +1184,22 @@ function performCardMove(state: GameState, from: Position, to: Position, options
 // Helper function: Execute card rotation
 function performCardRotation(state: GameState, position: Position, angle: number): GameState {
   const player = state.players[position.zone.player]
-  const card = getCardAtPosition(player, position.zone)
+  
+  // Get card by ID (cardId is now required)
+  let card: Card | null = null
+  let actualZone: ZoneId = position.zone
+  
+  // ID-based approach
+  const result = getCardById(player, position.cardId)
+  if (result) {
+    card = result.card
+    actualZone = { ...result.zone, player: position.zone.player }
+  }
 
   if (!card) return state
 
   const rotatedCard = { ...card, rotation: angle }
-  const newPlayer = updateCardInZone(player, position.zone, rotatedCard)
+  const newPlayer = updateCardInZone(player, actualZone, rotatedCard)
 
   return {
     ...state,
@@ -1197,12 +1213,22 @@ function performCardRotation(state: GameState, position: Position, angle: number
 // Helper function: Execute card flip (face up/down)
 function performCardFlip(state: GameState, position: Position): GameState {
   const player = state.players[position.zone.player]
-  const card = getCardAtPosition(player, position.zone)
+  
+  // Get card by ID (cardId is now required)
+  let card: Card | null = null
+  let actualZone: ZoneId = position.zone
+  
+  // ID-based approach
+  const result = getCardById(player, position.cardId)
+  if (result) {
+    card = result.card
+    actualZone = { ...result.zone, player: position.zone.player }
+  }
 
   if (!card) return state
 
   const flippedCard = { ...card, faceDown: card.faceDown !== true }
-  const newPlayer = updateCardInZone(player, position.zone, flippedCard)
+  const newPlayer = updateCardInZone(player, actualZone, flippedCard)
 
   return {
     ...state,
@@ -1213,48 +1239,89 @@ function performCardFlip(state: GameState, position: Position): GameState {
   }
 }
 
-// Helper function: Get card at specified position
-function getCardAtPosition(player: PlayerBoard, zone: ZoneId): Card | null {
-  switch (zone.type) {
-    case "monsterZone":
-      if (zone.index !== undefined) {
-        const cards = player.monsterZones[zone.index]
-        // If card has a specific index within the stack, use that
-        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
-        return cards.length > cardIndex ? cards[cardIndex] : null
+
+// Helper function: Get card by ID (searches all zones)
+function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: ZoneId } | null {
+  // Search monster zones
+  for (let i = 0; i < player.monsterZones.length; i++) {
+    const cards = player.monsterZones[i]
+    for (let j = 0; j < cards.length; j++) {
+      if (cards[j].id === cardId) {
+        return { 
+          card: cards[j], 
+          zone: { player: "self", type: "monsterZone", index: i, cardIndex: j } 
+        }
       }
-      return null
-    case "spellTrapZone":
-      if (zone.index !== undefined) {
-        const cards = player.spellTrapZones[zone.index]
-        // If card has a specific index within the stack, use that
-        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
-        return cards.length > cardIndex ? cards[cardIndex] : null
-      }
-      return null
-    case "fieldZone":
-      return player.fieldZone
-    case "extraMonsterZone":
-      if (zone.index !== undefined) {
-        const cards = player.extraMonsterZones[zone.index]
-        // If card has a specific index within the stack, use that
-        const cardIndex = "cardIndex" in zone && typeof zone.cardIndex === "number" ? zone.cardIndex : 0
-        return cards.length > cardIndex ? cards[cardIndex] : null
-      }
-      return null
-    case "hand":
-      return zone.index !== undefined ? player.hand[zone.index] : null
-    case "deck":
-      return zone.index !== undefined ? player.deck[zone.index] : null
-    case "graveyard":
-      return zone.index !== undefined ? player.graveyard[zone.index] : null
-    case "banished":
-      return zone.index !== undefined ? player.banished[zone.index] : null
-    case "extraDeck":
-      return zone.index !== undefined ? player.extraDeck[zone.index] : null
-    default:
-      return null
+    }
   }
+  
+  // Search spell/trap zones
+  for (let i = 0; i < player.spellTrapZones.length; i++) {
+    const cards = player.spellTrapZones[i]
+    for (let j = 0; j < cards.length; j++) {
+      if (cards[j].id === cardId) {
+        return { 
+          card: cards[j], 
+          zone: { player: "self", type: "spellTrapZone", index: i, cardIndex: j } 
+        }
+      }
+    }
+  }
+  
+  // Search field zone
+  if (player.fieldZone && player.fieldZone.id === cardId) {
+    return { card: player.fieldZone, zone: { player: "self", type: "fieldZone" } }
+  }
+  
+  // Search extra monster zones
+  for (let i = 0; i < player.extraMonsterZones.length; i++) {
+    const cards = player.extraMonsterZones[i]
+    for (let j = 0; j < cards.length; j++) {
+      if (cards[j].id === cardId) {
+        return { 
+          card: cards[j], 
+          zone: { player: "self", type: "extraMonsterZone", index: i, cardIndex: j } 
+        }
+      }
+    }
+  }
+  
+  // Search hand
+  for (let i = 0; i < player.hand.length; i++) {
+    if (player.hand[i].id === cardId) {
+      return { card: player.hand[i], zone: { player: "self", type: "hand", index: i } }
+    }
+  }
+  
+  // Search deck
+  for (let i = 0; i < player.deck.length; i++) {
+    if (player.deck[i].id === cardId) {
+      return { card: player.deck[i], zone: { player: "self", type: "deck", index: i } }
+    }
+  }
+  
+  // Search graveyard
+  for (let i = 0; i < player.graveyard.length; i++) {
+    if (player.graveyard[i].id === cardId) {
+      return { card: player.graveyard[i], zone: { player: "self", type: "graveyard", index: i } }
+    }
+  }
+  
+  // Search banished
+  for (let i = 0; i < player.banished.length; i++) {
+    if (player.banished[i].id === cardId) {
+      return { card: player.banished[i], zone: { player: "self", type: "banished", index: i } }
+    }
+  }
+  
+  // Search extra deck
+  for (let i = 0; i < player.extraDeck.length; i++) {
+    if (player.extraDeck[i].id === cardId) {
+      return { card: player.extraDeck[i], zone: { player: "self", type: "extraDeck", index: i } }
+    }
+  }
+  
+  return null
 }
 
 // Helper function: Remove card from zone

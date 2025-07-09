@@ -36,6 +36,7 @@ export interface ZoneId {
 export interface Position {
   zone: ZoneId
   index?: number
+  cardId: string  // IDベースでカードを特定するため（必須）
 }
 
 export interface PlayerBoard {

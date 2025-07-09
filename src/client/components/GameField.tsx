@@ -729,7 +729,9 @@ function GraveZone({
           let insertIndex = orderedDisplayCards.length // Default to end
 
           for (let i = 0; i < orderedDisplayCards.length; i++) {
-            const cardTop = containerPaddingY + i * effectiveCardHeight
+            // Calculate position from bottom to top
+            const reversedIndex = orderedDisplayCards.length - 1 - i
+            const cardTop = containerPaddingY + reversedIndex * effectiveCardHeight
             const cardCenter = cardTop + cardHeightPx / 2
 
             if (relativeY < cardCenter) {
@@ -869,7 +871,10 @@ function GraveZone({
                   const maxPosition = usableHeight - cardHeightPx
                   const effectiveCardHeight =
                     orderedDisplayCards.length > 1 ? maxPosition / (orderedDisplayCards.length - 1) : 0
-                  const cardPosition = Math.min(index * effectiveCardHeight, maxPosition)
+                  
+                  // Position cards from bottom to top (reverse the position)
+                  const reversedIndex = orderedDisplayCards.length - 1 - index
+                  const cardPosition = Math.min(reversedIndex * effectiveCardHeight, maxPosition)
 
                   // カードにzone情報が正しく設定されていることを確認
 
@@ -880,8 +885,8 @@ function GraveZone({
                       className="absolute h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                       style={{
                         top: `${Math.round(cardPosition)}px`,
-                        // Lower cards (higher index) should appear on top
-                        zIndex: hoveredCardIndex === index ? 100 : index,
+                        // Newer cards (lower index) should appear on top
+                        zIndex: hoveredCardIndex === index ? 100 : orderedDisplayCards.length - index,
                         transition: "none",
                       }}
                       onMouseEnter={() => setHoveredCardIndex(index)}
@@ -900,7 +905,7 @@ function GraveZone({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-1 h-full justify-start">
+            <div className="flex flex-col-reverse items-center gap-1 h-full justify-end">
               {orderedDisplayCards.map((card, index) => {
                 return (
                   <div
@@ -908,8 +913,8 @@ function GraveZone({
                     data-card-id={card.id}
                     className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                     style={{
-                      // Lower cards (higher index) should appear on top
-                      zIndex: hoveredCardIndex === index ? 100 : index,
+                      // Newer cards (lower index) should appear on top
+                      zIndex: hoveredCardIndex === index ? 100 : orderedDisplayCards.length - index,
                     }}
                     onMouseEnter={() => setHoveredCardIndex(index)}
                     onMouseLeave={() => setHoveredCardIndex(null)}
@@ -951,6 +956,7 @@ export function GameFieldContent() {
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | null>(null)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
+  const [isTouchDevice] = useState(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, undo] = useAtom(undoAtom)
@@ -999,15 +1005,26 @@ export function GameFieldContent() {
   const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
 
   const handleCardDrop = (from: ZoneId, to: ZoneId, shiftKey?: boolean) => {
-    // Apply mobile toggle states as shift key equivalent
-    const effectiveShiftKey = shiftKey || mobileDefenseMode || mobileFaceDownMode
+    if (!draggedCard) {
+      console.error("No dragged card available for drop operation")
+      return
+    }
     
-    if (draggedCard && draggedCard.zone && draggedCard.index !== undefined) {
+    // Prepare options with separate mobile toggle states
+    const options = {
+      shiftKey: shiftKey || false,
+      defenseMode: mobileDefenseMode,
+      faceDownMode: mobileFaceDownMode
+    }
+    
+    if (draggedCard.zone && draggedCard.index !== undefined) {
       // draggedCardのzone情報にindexを含める
       const fromWithIndex = { ...from, index: draggedCard.index }
-      moveCard({ zone: fromWithIndex }, { zone: to }, { shiftKey: effectiveShiftKey })
+      // Include card ID for ID-based tracking
+      moveCard({ zone: fromWithIndex, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
     } else {
-      moveCard({ zone: from }, { zone: to }, { shiftKey: effectiveShiftKey })
+      // Include card ID even without index
+      moveCard({ zone: from, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
     }
   }
 
@@ -1027,16 +1044,14 @@ export function GameFieldContent() {
         if (action === "rotate" && card.zone) {
           // Toggle between normal (0) and defense position (-90)
           const newRotation = card.rotation === -90 ? 0 : -90
-          rotateCard({ zone: card.zone }, newRotation)
+          // Include card ID for ID-based tracking
+          rotateCard({ zone: card.zone, cardId: card.id }, newRotation)
         } else if (action === "activate" && card.zone) {
           // Include card ID in the zone for accurate card identification
-          const zoneWithCardId = {
-            ...card.zone,
-            cardId: card.id,
-          }
-          activateEffect({ zone: zoneWithCardId }, contextMenu?.cardElement ?? undefined)
+          activateEffect({ zone: card.zone, cardId: card.id }, contextMenu?.cardElement ?? undefined)
         } else if (action === "flip" && card.zone) {
-          flipCard({ zone: card.zone })
+          // Include card ID for ID-based tracking
+          flipCard({ zone: card.zone, cardId: card.id })
         }
       } catch (error) {
         // Show error on mobile for debugging
@@ -1251,7 +1266,7 @@ export function GameFieldContent() {
         {/* Undo/Redo buttons */}
         <div className="mb-2 flex flex-col gap-2">
           <div className="flex flex-row justify-start gap-2">
-            <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" ? true : false}>
+            <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" && !isTouchDevice ? true : false}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => undo()}
@@ -1276,7 +1291,7 @@ export function GameFieldContent() {
                 </TooltipContent>
               )}
             </Tooltip>
-            <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" ? true : false}>
+            <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" && !isTouchDevice ? true : false}>
               <TooltipTrigger asChild>
                 <button
                   onClick={() => redo()}
@@ -1699,7 +1714,7 @@ export function GameFieldContent() {
               続行しますか？
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <button
               onClick={() => setShowRecordingConfirmDialog(false)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
