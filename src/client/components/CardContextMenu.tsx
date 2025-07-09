@@ -46,16 +46,25 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
   const isMonsterSpellTrapZone =
     card.zone &&
     (card.zone.type === "monsterZone" || card.zone.type === "spellTrapZone" || card.zone.type === "extraMonsterZone")
+  
+  const isMonsterZone = 
+    card.zone && 
+    (card.zone.type === "monsterZone" || card.zone.type === "extraMonsterZone")
 
   const menuItems = [
     {
       id: "activate",
       label: "効果の発動",
-      enabled: true,
+      enabled: card.faceDown !== true,
     },
     {
       id: "rotate",
       label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
+      enabled: isMonsterZone,
+    },
+    {
+      id: "flip",
+      label: card.faceDown === true ? "表側表示にする" : "裏側表示にする",
       enabled: isMonsterSpellTrapZone,
     },
   ]

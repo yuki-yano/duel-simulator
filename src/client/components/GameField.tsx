@@ -25,6 +25,7 @@ import {
   isDeckLoadedAtom,
   rotateCardAtom,
   activateEffectAtom,
+  flipCardAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
@@ -754,9 +755,16 @@ function GraveZone({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     if (draggedCard && onDrop && draggedCard.zone && zone) {
+      // Check if the source is from graveyard/banished
+      const isFromGraveOrBanished = 
+        draggedCard.zone.type === "graveyard" || draggedCard.zone.type === "banished"
+      
+      // Only use dropIndex if moving within graveyard/banished zones
       const targetZone: ZoneId = {
         ...zone,
-        index: dropIndex !== null ? dropIndex : undefined,
+        // If from other zones, always add to end (no index)
+        // If from grave/banished, allow position-based insertion
+        index: isFromGraveOrBanished && dropIndex !== null ? dropIndex : undefined,
       }
       onDrop(draggedCard.zone, targetZone, e.shiftKey)
     }
@@ -858,8 +866,8 @@ function GraveZone({
                       className="absolute h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                       style={{
                         top: `${Math.round(cardPosition)}px`,
-                        // Reverse z-index for graveyard to match visual order (newest on top)
-                        zIndex: hoveredCardIndex === index ? 100 : orderedDisplayCards.length - index,
+                        // Lower cards (higher index) should appear on top
+                        zIndex: hoveredCardIndex === index ? 100 : index,
                         transition: "none",
                       }}
                       onMouseEnter={() => setHoveredCardIndex(index)}
@@ -886,7 +894,8 @@ function GraveZone({
                     data-card-id={card.id}
                     className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
                     style={{
-                      zIndex: hoveredCardIndex === index ? 100 : index + 1,
+                      // Lower cards (higher index) should appear on top
+                      zIndex: hoveredCardIndex === index ? 100 : index,
                     }}
                     onMouseEnter={() => setHoveredCardIndex(index)}
                     onMouseLeave={() => setHoveredCardIndex(null)}
@@ -926,6 +935,7 @@ export function GameField() {
   const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
   const rotateCard = useSetAtom(rotateCardAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
+  const flipCard = useSetAtom(flipCardAtom)
   const [contextMenu, setContextMenu] = useState<{
     card: GameCard
     position: { x: number; y: number }
@@ -983,10 +993,17 @@ export function GameField() {
         const newRotation = card.rotation === -90 ? 0 : -90
         rotateCard({ zone: card.zone }, newRotation)
       } else if (action === "activate" && card.zone) {
-        activateEffect({ zone: card.zone }, contextMenu?.cardElement ?? undefined)
+        // Include card ID in the zone for accurate card identification
+        const zoneWithCardId = {
+          ...card.zone,
+          cardId: card.id,
+        }
+        activateEffect({ zone: zoneWithCardId }, contextMenu?.cardElement ?? undefined)
+      } else if (action === "flip" && card.zone) {
+        flipCard({ zone: card.zone })
       }
     },
-    [rotateCard, activateEffect, contextMenu],
+    [rotateCard, activateEffect, flipCard, contextMenu],
   )
 
   // Keyboard shortcuts for undo/redo

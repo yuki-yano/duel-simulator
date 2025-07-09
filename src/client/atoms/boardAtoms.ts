@@ -636,6 +636,27 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
   }
 })
 
+// Card flip (face up/down) action
+export const flipCardAtom = atom(null, (get, set, position: Position) => {
+  const state = get(gameStateAtom)
+  const newState = performCardFlip(state, position)
+
+  if (newState !== state) {
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
+
+    const operation: GameOperation = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      type: "changePosition",
+      to: position,
+      player: position.zone.player,
+      metadata: { flip: true },
+    }
+    set(operationsAtom, [...get(operationsAtom), operation])
+  }
+})
+
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
   // Get the card at this position to get its ID
@@ -654,10 +675,31 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
       card = playerBoard.extraMonsterZones[position.zone.index ?? 0]?.[0] ?? null
       break
     case "graveyard":
-      card = playerBoard.graveyard[position.zone.index ?? 0] ?? null
+      // Use cardId if available for accurate identification
+      if (position.zone.cardId !== undefined) {
+        card = playerBoard.graveyard.find(c => c.id === position.zone.cardId) ?? null
+      } else {
+        // Fallback to index-based lookup
+        card = playerBoard.graveyard[position.zone.index ?? 0] ?? null
+      }
       break
     case "hand":
-      card = playerBoard.hand[position.zone.index ?? 0] ?? null
+      // Use cardId if available for accurate identification
+      if (position.zone.cardId !== undefined) {
+        card = playerBoard.hand.find(c => c.id === position.zone.cardId) ?? null
+      } else {
+        // Fallback to index-based lookup
+        card = playerBoard.hand[position.zone.index ?? 0] ?? null
+      }
+      break
+    case "banished":
+      // Use cardId if available for accurate identification
+      if (position.zone.cardId !== undefined) {
+        card = playerBoard.banished.find(c => c.id === position.zone.cardId) ?? null
+      } else {
+        // Fallback to index-based lookup
+        card = playerBoard.banished[position.zone.index ?? 0] ?? null
+      }
       break
   }
   
@@ -785,14 +827,29 @@ function performCardMove(state: GameState, from: Position, to: Position, options
   const supportsRotation =
     to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
 
-  // Apply rotation if Shift key was held during drop
+  // Apply rotation and face down state if Shift key was held during drop
   let rotation = card.rotation
+  let faceDown = card.faceDown
+  
   if (supportsRotation) {
     if (options?.shiftKey === true) {
-      rotation = -90
+      // Monster zones: Face up defense position (表側守備表示)
+      if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
+        rotation = -90
+        faceDown = false
+      }
+      // Spell/Trap zones: Face down (裏側表示)
+      else if (to.zone.type === "spellTrapZone") {
+        rotation = 0
+        faceDown = true
+      }
+    } else if (to.zone.type === "spellTrapZone") {
+      // When moving to spell/trap zone without shift, always set to attack position (rotation 0)
+      rotation = 0
     }
   } else {
     rotation = 0
+    faceDown = false
   }
 
   const updatedCard = {
@@ -800,6 +857,7 @@ function performCardMove(state: GameState, from: Position, to: Position, options
     zone: to.zone,
     index: to.zone.index,
     rotation,
+    faceDown,
   }
 
   // Remove card from source location
@@ -828,6 +886,25 @@ function performCardRotation(state: GameState, position: Position, angle: number
 
   const rotatedCard = { ...card, rotation: angle }
   const newPlayer = updateCardInZone(player, position.zone, rotatedCard)
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [position.zone.player]: newPlayer,
+    },
+  }
+}
+
+// Helper function: Execute card flip (face up/down)
+function performCardFlip(state: GameState, position: Position): GameState {
+  const player = state.players[position.zone.player]
+  const card = getCardAtPosition(player, position.zone)
+
+  if (!card) return state
+
+  const flippedCard = { ...card, faceDown: card.faceDown !== true }
+  const newPlayer = updateCardInZone(player, position.zone, flippedCard)
 
   return {
     ...state,

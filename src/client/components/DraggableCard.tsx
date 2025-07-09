@@ -358,31 +358,48 @@ export function DraggableCard({
           ...style,
         }}
       >
-        <img
-          src={card.imageUrl}
-          alt="Card"
-          className={cn(
-            "w-full h-full object-cover rounded transition-shadow duration-200",
-            (isHovered || isTouching) && "shadow-xl",
+        <div className="relative w-full h-full">
+          <img
+            src={card.imageUrl}
+            alt="Card"
+            className={cn(
+              "w-full h-full object-cover rounded transition-shadow duration-200",
+              (isHovered || isTouching) && "shadow-xl",
+            )}
+            style={{
+              transform: `rotate(${card.rotation}deg)`,
+              transition: "transform 0.2s ease",
+              WebkitUserSelect: "none",
+              userSelect: "none",
+              WebkitTouchCallout: "none",
+              // Intentionally not setting WebkitUserDrag to allow PC drag
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+          {/* Face down overlay */}
+          {card.faceDown === true && (
+            <div
+              className="absolute inset-0 rounded pointer-events-none bg-black/40"
+              style={{
+                transform: `rotate(${card.rotation}deg)`,
+                transition: "transform 0.2s ease",
+              }}
+            />
           )}
-          style={{
-            transform: `rotate(${card.rotation}deg)`,
-            transition: "transform 0.2s ease",
-            WebkitUserSelect: "none",
-            userSelect: "none",
-            WebkitTouchCallout: "none",
-            // Intentionally not setting WebkitUserDrag to allow PC drag
-          }}
-          onContextMenu={(e) => e.preventDefault()}
-        />
+        </div>
       </div>
       {isTouching &&
         touchPosition &&
         dragOffsetRef.current &&
         (() => {
           // Use fixed size for drag image
-          const dragImageWidth = 60
-          const dragImageHeight = 86
+          const baseWidth = 60
+          const baseHeight = 86
+          
+          // Adjust container size based on rotation
+          const isRotated = card.rotation === -90 || card.rotation === 90
+          const dragImageWidth = isRotated ? baseHeight : baseWidth
+          const dragImageHeight = isRotated ? baseWidth : baseHeight
 
           // Simple positioning without any pinch zoom adjustments
           const displayX = touchPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
@@ -399,20 +416,37 @@ export function DraggableCard({
                 pointerEvents: "none",
               }}
             >
-              <img
-                src={card.imageUrl}
-                alt="Dragging card"
-                draggable={false}
-                className="w-full h-full object-cover rounded shadow-xl"
+              <div 
+                className="relative"
                 style={{
-                  transform: `rotate(${card.rotation}deg)`,
-                  WebkitUserSelect: "none",
-                  userSelect: "none",
-                  WebkitTouchCallout: "none",
-                  pointerEvents: "none",
+                  width: `${baseWidth}px`,
+                  height: `${baseHeight}px`,
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: `translate(-50%, -50%) rotate(${card.rotation}deg)`,
                 }}
-                onContextMenu={(e) => e.preventDefault()}
-              />
+              >
+                <img
+                  src={card.imageUrl}
+                  alt="Dragging card"
+                  draggable={false}
+                  className="w-full h-full object-cover rounded shadow-xl"
+                  style={{
+                    WebkitUserSelect: "none",
+                    userSelect: "none",
+                    WebkitTouchCallout: "none",
+                    pointerEvents: "none",
+                  }}
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+                {/* Face down overlay for drag image */}
+                {card.faceDown === true && (
+                  <div
+                    className="absolute inset-0 rounded pointer-events-none bg-black/40"
+                  />
+                )}
+              </div>
             </div>
           )
         })()}

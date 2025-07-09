@@ -11,6 +11,7 @@ export interface Card {
   rotation: number
   zone?: ZoneId
   index?: number
+  faceDown?: boolean
 }
 
 export type ZoneType =
