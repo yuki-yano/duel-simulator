@@ -52,6 +52,7 @@ import {
   rotateCardAtom,
   activateEffectAtom,
   flipCardAtom,
+  toggleCardHighlightAtom,
   resetToInitialStateAtom,
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
@@ -989,6 +990,7 @@ export function GameFieldContent() {
   const rotateCard = useSetAtom(rotateCardAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
   const flipCard = useSetAtom(flipCardAtom)
+  const toggleCardHighlight = useSetAtom(toggleCardHighlightAtom)
   const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
   const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
   const [contextMenu, setContextMenu] = useState<{
@@ -1083,6 +1085,9 @@ export function GameFieldContent() {
         } else if (action === "flip" && card.zone) {
           // Include card ID for ID-based tracking
           flipCard({ zone: card.zone, cardId: card.id })
+        } else if (action === "highlight" && card.zone) {
+          // Toggle highlight state
+          toggleCardHighlight({ zone: card.zone, cardId: card.id })
         }
       } catch (error) {
         // Show error on mobile for debugging
@@ -1090,7 +1095,7 @@ export function GameFieldContent() {
         console.error(`Error in handleContextMenuAction (${action}):`, error)
       }
     },
-    [rotateCard, activateEffect, flipCard, contextMenu],
+    [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
   )
 
   // Keyboard shortcuts for undo/redo

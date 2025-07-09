@@ -12,6 +12,7 @@ export interface Card {
   zone?: ZoneId
   index?: number
   faceDown?: boolean
+  highlighted?: boolean
 }
 
 export type ZoneType =
@@ -67,7 +68,7 @@ export type GamePhase = "draw" | "standby" | "main1" | "battle" | "main2" | "end
 export interface GameOperation {
   id: string
   timestamp: number
-  type: "move" | "summon" | "set" | "attack" | "activate" | "draw" | "shuffle" | "rotate" | "changePosition"
+  type: "move" | "summon" | "set" | "attack" | "activate" | "draw" | "shuffle" | "rotate" | "changePosition" | "toggleHighlight"
   from?: Position
   to?: Position
   card?: Card

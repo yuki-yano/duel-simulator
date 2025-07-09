@@ -5,10 +5,11 @@ import type { Position } from "@/shared/types/game"
 interface EffectActivationAnimationProps {
   position: Position
   cardRect?: { x: number; y: number; width: number; height: number }
+  cardRotation?: number
   onComplete: () => void
 }
 
-export function EffectActivationAnimation({ position, cardRect, onComplete }: EffectActivationAnimationProps) {
+export function EffectActivationAnimation({ position, cardRect, cardRotation = 0, onComplete }: EffectActivationAnimationProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [effectPosition, setEffectPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(
     null,
@@ -92,13 +93,16 @@ export function EffectActivationAnimation({ position, cardRect, onComplete }: Ef
 
   if (!effectPosition) return null
 
+  // Check if card is rotated
+  const isRotated = cardRotation === -90 || cardRotation === 90
+
   return (
     <>
       {/* Card zoom effect - カード自体の拡大 */}
       <style>
         {`
           [data-card-id="${position.zone?.cardId ?? ""}"] {
-            transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
+            transform: ${isVisible ? `rotate(${cardRotation}deg) scale(1.05)` : `rotate(${cardRotation}deg) scale(1)`} !important;
             transition: transform 0.3s ease-out !important;
             z-index: ${isVisible ? "9997" : "auto"} !important;
             position: relative !important;
@@ -123,6 +127,10 @@ export function EffectActivationAnimation({ position, cardRect, onComplete }: Ef
       >
         <div
           className={cn("absolute inset-0 rounded-lg bg-white/50", isVisible && "animate-[whiteFlash_0.3s_ease-out]")}
+          style={{
+            transform: isRotated ? `rotate(${cardRotation}deg)` : undefined,
+            transformOrigin: "center",
+          }}
         />
       </div>
 
@@ -139,6 +147,8 @@ export function EffectActivationAnimation({ position, cardRect, onComplete }: Ef
           width: `${effectPosition.width + 4}px`,
           height: `${effectPosition.height + 4}px`,
           zIndex: 9998,
+          transform: isRotated ? `rotate(${cardRotation}deg)` : undefined,
+          transformOrigin: "center",
         }}
       >
         {/* Blue glowing mist */}

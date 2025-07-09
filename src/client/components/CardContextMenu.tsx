@@ -56,6 +56,11 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
       enabled: card.faceDown !== true,
     },
     {
+      id: "highlight",
+      label: card.highlighted === true ? "ハイライトを解除" : "ハイライト",
+      enabled: true,
+    },
+    {
       id: "rotate",
       label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
       enabled: isMonsterZone,

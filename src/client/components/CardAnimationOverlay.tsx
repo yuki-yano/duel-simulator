@@ -91,6 +91,7 @@ export function CardAnimationOverlay() {
               key={animation.id}
               position={animation.position}
               cardRect={animation.cardRect}
+              cardRotation={animation.cardRotation}
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )

@@ -698,6 +698,12 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
     case "activate":
       // Activate operations don't change state, only visual effects
       break
+    case "toggleHighlight":
+      if (operation.to) {
+        const result = performCardHighlightToggle(newState, operation.to)
+        return result || newState // Return newState if performCardHighlightToggle returns undefined
+      }
+      break
   }
 
   return newState
@@ -956,6 +962,7 @@ export interface CardAnimation {
   toPosition?: { x: number; y: number }
   position?: Position
   cardRect?: { x: number; y: number; width: number; height: number }
+  cardRotation?: number
   startTime: number
   duration?: number
 }
@@ -1058,6 +1065,30 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
   }
 })
 
+export const toggleCardHighlightAtom = atom(null, (get, set, position: Position) => {
+  const state = get(gameStateAtom)
+  const newState = performCardHighlightToggle(state, position)
+
+  if (newState !== state) {
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
+
+    const operation: GameOperation = {
+      id: uuidv4(),
+      timestamp: Date.now(),
+      type: "toggleHighlight",
+      to: position,
+      player: position.zone.player,
+    }
+    set(operationsAtom, [...get(operationsAtom), operation])
+
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
+  }
+})
+
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
   try {
@@ -1132,6 +1163,7 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
             height: cardRect.height,
           }
         : undefined,
+      cardRotation: card?.rotation,
       startTime: Date.now(),
     }
 
@@ -1369,6 +1401,34 @@ function performCardFlip(state: GameState, position: Position): GameState {
 
   const flippedCard = { ...card, faceDown: card.faceDown !== true }
   const newPlayer = updateCardInZone(player, actualZone, flippedCard)
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [position.zone.player]: newPlayer,
+    },
+  }
+}
+
+function performCardHighlightToggle(state: GameState, position: Position): GameState {
+  const player = state.players[position.zone.player]
+
+  // Get card by ID (cardId is now required)
+  let card: Card | null = null
+  let actualZone: ZoneId = position.zone
+
+  // ID-based approach
+  const result = getCardById(player, position.cardId)
+  if (result) {
+    card = result.card
+    actualZone = { ...result.zone, player: position.zone.player }
+  }
+
+  if (!card) return state
+
+  const highlightedCard = { ...card, highlighted: card.highlighted !== true }
+  const newPlayer = updateCardInZone(player, actualZone, highlightedCard)
 
   return {
     ...state,
