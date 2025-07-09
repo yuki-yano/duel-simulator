@@ -3,6 +3,16 @@ import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
+import { Slider } from "@client/components/ui/slider"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@client/components/ui/tooltip"
+import {
   gameStateAtom,
   hoveredZoneAtom,
   draggedCardAtom,
@@ -11,11 +21,15 @@ import {
   redoAtom,
   canUndoAtom,
   canRedoAtom,
+  undoOperationDescriptionAtom,
+  redoOperationDescriptionAtom,
+  operationsAtom,
   replayRecordingAtom,
   replayStartIndexAtom,
   replayPlayingAtom,
   replayPausedAtom,
   replayCurrentIndexAtom,
+  replaySpeedAtom,
   startReplayRecordingAtom,
   stopReplayRecordingAtom,
   playReplayAtom,
@@ -925,13 +939,24 @@ function GraveZone({
 }
 
 export function GameField() {
+  return (
+    <TooltipProvider delayDuration={100}>
+      <GameFieldContent />
+    </TooltipProvider>
+  )
+}
+
+export function GameFieldContent() {
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
+  const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | null>(null)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, undo] = useAtom(undoAtom)
   const [, redo] = useAtom(redoAtom)
   const canUndo = useAtomValue(canUndoAtom)
   const canRedo = useAtomValue(canRedoAtom)
+  const undoDescription = useAtomValue(undoOperationDescriptionAtom)
+  const redoDescription = useAtomValue(redoOperationDescriptionAtom)
   const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
   const rotateCard = useSetAtom(rotateCardAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
@@ -941,6 +966,9 @@ export function GameField() {
     position: { x: number; y: number }
     cardElement?: HTMLElement | null
   } | null>(null)
+  
+  // Recording confirmation dialog state
+  const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -949,6 +977,8 @@ export function GameField() {
   const [isPaused] = useAtom(replayPausedAtom)
   const [currentReplayIndex] = useAtom(replayCurrentIndexAtom)
   const [replayData] = useAtom(replayDataAtom)
+  const [replaySpeed, setReplaySpeed] = useAtom(replaySpeedAtom)
+  const operations = useAtomValue(operationsAtom)
   const [, startRecording] = useAtom(startReplayRecordingAtom)
   const [, stopRecording] = useAtom(stopReplayRecordingAtom)
   const [, playReplay] = useAtom(playReplayAtom)
@@ -1095,7 +1125,15 @@ export function GameField() {
             <>
               {!isRecording ? (
                 <button
-                  onClick={() => startRecording()}
+                  onClick={() => {
+                    if (replayData && replayData.operations.length > 0) {
+                      // Show confirmation dialog if replay data already exists
+                      setShowRecordingConfirmDialog(true)
+                    } else {
+                      // Start recording directly if no replay data
+                      startRecording()
+                    }
+                  }}
                   disabled={!isDeckLoaded}
                   className={cn(
                     "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
@@ -1109,26 +1147,58 @@ export function GameField() {
                   <span>録画開始</span>
                 </button>
               ) : (
-                <button
-                  onClick={() => stopRecording()}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-600 text-white hover:bg-red-700 animate-pulse"
-                  aria-label="Stop recording"
-                >
-                  <Square className="w-4 h-4" />
-                  <span>録画停止</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => stopRecording()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-600 text-white hover:bg-red-700 animate-pulse"
+                    aria-label="Stop recording"
+                  >
+                    <Square className="w-4 h-4" />
+                    <span>録画停止</span>
+                  </button>
+                  <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
+                    録画中: {operations.filter(op => op.timestamp >= (replayData?.startTime || Date.now())).length} 操作
+                  </div>
+                </>
               )}
 
               {/* Play replay button */}
               {replayData && replayData.operations.length > 0 && !isRecording && (
-                <button
-                  onClick={() => playReplay()}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-green-500 text-white hover:bg-green-600"
-                  aria-label="Play replay"
-                >
-                  <Play className="w-4 h-4" />
-                  <span>リプレイ再生</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => playReplay()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-green-500 text-white hover:bg-green-600"
+                    aria-label="Play replay"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>リプレイ再生</span>
+                  </button>
+                  
+                  {/* Replay speed control */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm text-muted-foreground">速度:</span>
+                    <div className="w-20 sm:w-24">
+                      <Slider
+                        value={[
+                          replaySpeed === 0.5 ? 0 :
+                          replaySpeed === 1 ? 1 :
+                          replaySpeed === 2 ? 2 : 3
+                        ]}
+                        onValueChange={(value) => {
+                          const speeds = [0.5, 1, 2, 3]
+                          setReplaySpeed(speeds[value[0]])
+                        }}
+                        min={0}
+                        max={3}
+                        step={1}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">
+                      {replaySpeed}x
+                    </span>
+                  </div>
+                </>
               )}
             </>
           )}
@@ -1168,35 +1238,57 @@ export function GameField() {
         </div>
 
         {/* Undo/Redo buttons */}
-        <div className="mb-2 flex justify-start gap-2">
-          <button
-            onClick={() => undo()}
-            disabled={!canUndo || isPlaying || !isDeckLoaded}
-            className={cn(
-              "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-              canUndo && !isPlaying && isDeckLoaded
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-muted text-muted-foreground cursor-not-allowed",
+        <div className="mb-2 flex flex-col sm:flex-row justify-start gap-2">
+          <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" ? true : false}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => undo()}
+                onMouseEnter={() => setHoveredButton("undo")}
+                onMouseLeave={() => setHoveredButton(null)}
+                disabled={!canUndo || isPlaying || !isDeckLoaded}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  canUndo && !isPlaying && isDeckLoaded
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" />
+                <span>元に戻す</span>
+              </button>
+            </TooltipTrigger>
+            {undoDescription && (
+              <TooltipContent>
+                <p>{undoDescription}</p>
+              </TooltipContent>
             )}
-            aria-label="Undo"
-          >
-            <Undo2 className="w-4 h-4" />
-            <span>元に戻す</span>
-          </button>
-          <button
-            onClick={() => redo()}
-            disabled={!canRedo || isPlaying || !isDeckLoaded}
-            className={cn(
-              "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-              canRedo && !isPlaying && isDeckLoaded
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-muted text-muted-foreground cursor-not-allowed",
+          </Tooltip>
+          <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" ? true : false}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => redo()}
+                onMouseEnter={() => setHoveredButton("redo")}
+                onMouseLeave={() => setHoveredButton(null)}
+                disabled={!canRedo || isPlaying || !isDeckLoaded}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  canRedo && !isPlaying && isDeckLoaded
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" />
+                <span>やり直す</span>
+              </button>
+            </TooltipTrigger>
+            {redoDescription && (
+              <TooltipContent>
+                <p>{redoDescription}</p>
+              </TooltipContent>
             )}
-            aria-label="Redo"
-          >
-            <Redo2 className="w-4 h-4" />
-            <span>やり直す</span>
-          </button>
+          </Tooltip>
         </div>
 
         {/* Opponent's Area */}
@@ -1543,6 +1635,37 @@ export function GameField() {
 
       {/* Card Animation Overlay */}
       <CardAnimationOverlay />
+
+      {/* Recording Confirmation Dialog */}
+      <Dialog open={showRecordingConfirmDialog} onOpenChange={setShowRecordingConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>録画データの上書き確認</DialogTitle>
+            <DialogDescription>
+              既に録画されたリプレイデータが存在します。
+              新しい録画を開始すると、現在のリプレイデータは上書きされます。
+              続行しますか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setShowRecordingConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={() => {
+                setShowRecordingConfirmDialog(false)
+                startRecording()
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
+            >
+              録画開始
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

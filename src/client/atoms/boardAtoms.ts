@@ -2,6 +2,22 @@ import { atom } from "jotai"
 import type { Atom, WritableAtom } from "jotai"
 import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation, GamePhase } from "../../shared/types/game"
 
+// Animation duration constants (in milliseconds)
+const ANIMATION_DURATIONS = {
+  EFFECT_ACTIVATION: 300,
+  CARD_ROTATION: 200,
+  REPLAY_DELAY: 50,
+  EFFECT_ACTIVATION_WAIT: 300, // Wait time after effect activation in replay
+  ROTATION_WAIT: 300, // Wait time after rotation in replay
+  BASE_MOVE_DURATION: 750, // Base duration for move animations at 1x speed
+} as const
+
+// Get animation duration based on speed multiplier
+function getAnimationDuration(baseDuration: number, speedMultiplier: number): number {
+  // speedMultiplier: 0.5x, 1x, 2x, 3x
+  return Math.round(baseDuration / speedMultiplier)
+}
+
 // Initial player board
 const createInitialPlayerBoard = (): PlayerBoard => ({
   monsterZones: Array(5)
@@ -39,8 +55,17 @@ export const gameStateAtom = atom<GameState>(createInitialGameState())
 // Operation history atom
 export const operationsAtom = atom<GameOperation[]>([])
 
+// History entry for undo/redo with operation tracking
+interface HistoryEntry {
+  gameState: GameState
+  operationCount: number  // Number of operations at this state
+}
+
 // History for undo/redo
-export const gameHistoryAtom = atom<GameState[]>([createInitialGameState()])
+export const gameHistoryAtom = atom<HistoryEntry[]>([{
+  gameState: createInitialGameState(),
+  operationCount: 0
+}])
 export const gameHistoryIndexAtom = atom<number>(0)
 
 // UI state atoms
@@ -91,9 +116,16 @@ type Setter = <Value, Args extends unknown[], Result>(atom: WritableAtom<Value, 
 const addToHistory = (get: Getter, set: Setter, newState: GameState) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
+
+  // Create new history entry
+  const newEntry: HistoryEntry = {
+    gameState: newState,
+    operationCount: operations.length
+  }
 
   // Remove future history if we're in the middle of the history
-  const newHistory = [...history.slice(0, currentIndex + 1), newState]
+  const newHistory = [...history.slice(0, currentIndex + 1), newEntry]
 
   // Limit history size to prevent memory issues
   const limitedHistory = newHistory.slice(-50)
@@ -111,20 +143,31 @@ export const setGameStateWithHistoryAtom = atom(null, (get, set, newState: GameS
 // Reset history with new initial state
 export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
   set(gameStateAtom, newState)
-  set(gameHistoryAtom, [newState])
+  set(gameHistoryAtom, [{
+    gameState: newState,
+    operationCount: 0
+  }])
   set(gameHistoryIndexAtom, 0)
+  set(operationsAtom, [])  // Clear operations as well
 })
 
 // Undo atom
 export const undoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
 
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
-    const previousState = history[newIndex]
-    set(gameStateAtom, previousState)
+    const previousEntry = history[newIndex]
+    
+    // Update game state
+    set(gameStateAtom, previousEntry.gameState)
     set(gameHistoryIndexAtom, newIndex)
+    
+    // Trim operations to match the previous state
+    const trimmedOperations = operations.slice(0, previousEntry.operationCount)
+    set(operationsAtom, trimmedOperations)
   }
 })
 
@@ -135,9 +178,14 @@ export const redoAtom = atom(null, (get, set) => {
 
   if (currentIndex < history.length - 1) {
     const newIndex = currentIndex + 1
-    const nextState = history[newIndex]
-    set(gameStateAtom, nextState)
+    const nextEntry = history[newIndex]
+    
+    // Update game state
+    set(gameStateAtom, nextEntry.gameState)
     set(gameHistoryIndexAtom, newIndex)
+    
+    // Operations should already contain the correct operations
+    // No need to modify operationsAtom during redo
   }
 })
 
@@ -151,6 +199,227 @@ export const canRedoAtom = atom((get) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   return currentIndex < history.length - 1
+})
+
+// Helper function to get zone display name
+function getZoneDisplayName(zone: ZoneId): string {
+  const playerPrefix = zone.player === "opponent" ? "相手の" : ""
+  
+  switch (zone.type) {
+    case "monsterZone":
+      return `${playerPrefix}モンスターゾーン${zone.index !== undefined ? zone.index + 1 : ""}`
+    case "spellTrapZone":
+      return `${playerPrefix}魔法・罠ゾーン${zone.index !== undefined ? zone.index + 1 : ""}`
+    case "hand":
+      return `${playerPrefix}手札`
+    case "graveyard":
+      return `${playerPrefix}墓地`
+    case "banished":
+      return `${playerPrefix}除外`
+    case "deck":
+      return `${playerPrefix}デッキ`
+    case "extraDeck":
+      return `${playerPrefix}エクストラデッキ`
+    case "fieldZone":
+      return `${playerPrefix}フィールドゾーン`
+    case "extraMonsterZone":
+      return `${playerPrefix}エクストラモンスターゾーン${zone.index !== undefined ? zone.index + 1 : ""}`
+    default:
+      return zone.type
+  }
+}
+
+// Get operation description from game states
+function getOperationDescription(prevState: GameState, currentState: GameState): string {
+  // Find differences between states
+  const allZones: Array<{ player: "self" | "opponent"; zone: ZoneType; index?: number }> = []
+  
+  // Collect all zones to check
+  for (const player of ["self", "opponent"] as const) {
+    allZones.push({ player, zone: "hand" })
+    allZones.push({ player, zone: "deck" })
+    allZones.push({ player, zone: "graveyard" })
+    allZones.push({ player, zone: "banished" })
+    allZones.push({ player, zone: "extraDeck" })
+    allZones.push({ player, zone: "fieldZone" })
+    for (let i = 0; i < 5; i++) {
+      allZones.push({ player, zone: "monsterZone", index: i })
+      allZones.push({ player, zone: "spellTrapZone", index: i })
+    }
+    for (let i = 0; i < 2; i++) {
+      allZones.push({ player, zone: "extraMonsterZone", index: i })
+    }
+  }
+  
+  // Check for card movements
+  for (const { player, zone, index } of allZones) {
+    const prevCards = getCardsInZone(prevState, player, zone, index)
+    const currentCards = getCardsInZone(currentState, player, zone, index)
+    
+    // Check for new cards in current zone
+    for (const card of currentCards) {
+      if (!prevCards.find(c => c.id === card.id)) {
+        // This card was moved to this zone
+        const fromZone = findCardInState(prevState, card.id)
+        if (fromZone) {
+          const from = { player: fromZone.player, type: fromZone.zone, index: fromZone.index }
+          const to = { player, type: zone, index }
+          return `${getZoneDisplayName(from)}から${getZoneDisplayName(to)}へ移動`
+        }
+      }
+    }
+    
+    // Check for rotation changes
+    if (zone === "monsterZone" || zone === "spellTrapZone" || zone === "extraMonsterZone") {
+      const prevCard = prevCards[0]
+      const currentCard = currentCards[0]
+      if (prevCard && currentCard && prevCard.id === currentCard.id && prevCard.rotation !== currentCard.rotation) {
+        const position = currentCard.rotation === -90 ? "守備表示" : "攻撃表示"
+        return `${getZoneDisplayName({ player, type: zone, index })}のカードを${position}に変更`
+      }
+    }
+    
+    // Check for face down changes
+    if (zone === "monsterZone" || zone === "spellTrapZone" || zone === "extraMonsterZone") {
+      const prevCard = prevCards[0]
+      const currentCard = currentCards[0]
+      if (prevCard && currentCard && prevCard.id === currentCard.id && prevCard.faceDown !== currentCard.faceDown) {
+        const state = currentCard.faceDown ? "裏側表示" : "表側表示"
+        return `${getZoneDisplayName({ player, type: zone, index })}のカードを${state}に変更`
+      }
+    }
+  }
+  
+  // Check for hand order changes
+  const prevSelfHand = prevState.players.self.hand
+  const currentSelfHand = currentState.players.self.hand
+  if (prevSelfHand.length === currentSelfHand.length && prevSelfHand.length > 0) {
+    const isSameCards = prevSelfHand.every(card => currentSelfHand.find(c => c.id === card.id))
+    const isDifferentOrder = prevSelfHand.some((card, index) => currentSelfHand[index]?.id !== card.id)
+    if (isSameCards && isDifferentOrder) {
+      return "手札の順序変更"
+    }
+  }
+  
+  return "操作"
+}
+
+// Helper to get cards in a specific zone
+function getCardsInZone(state: GameState, player: "self" | "opponent", zone: ZoneType, index?: number): Card[] {
+  const playerBoard = state.players[player]
+  
+  switch (zone) {
+    case "monsterZone":
+      return index !== undefined ? playerBoard.monsterZones[index] : []
+    case "spellTrapZone":
+      return index !== undefined ? playerBoard.spellTrapZones[index] : []
+    case "extraMonsterZone":
+      return index !== undefined ? playerBoard.extraMonsterZones[index] : []
+    case "fieldZone":
+      return playerBoard.fieldZone ? [playerBoard.fieldZone] : []
+    case "hand":
+      return playerBoard.hand
+    case "deck":
+      return playerBoard.deck
+    case "graveyard":
+      return playerBoard.graveyard
+    case "banished":
+      return playerBoard.banished
+    case "extraDeck":
+      return playerBoard.extraDeck
+    default:
+      return []
+  }
+}
+
+// Helper to find card in state
+function findCardInState(state: GameState, cardId: string): { player: "self" | "opponent"; zone: ZoneType; index?: number } | null {
+  for (const [player, board] of Object.entries(state.players) as [keyof GameState["players"], PlayerBoard][]) {
+    // Check all zones
+    for (let i = 0; i < board.monsterZones.length; i++) {
+      if (board.monsterZones[i].find(c => c.id === cardId)) {
+        return { player, zone: "monsterZone", index: i }
+      }
+    }
+    for (let i = 0; i < board.spellTrapZones.length; i++) {
+      if (board.spellTrapZones[i].find(c => c.id === cardId)) {
+        return { player, zone: "spellTrapZone", index: i }
+      }
+    }
+    for (let i = 0; i < board.extraMonsterZones.length; i++) {
+      if (board.extraMonsterZones[i].find(c => c.id === cardId)) {
+        return { player, zone: "extraMonsterZone", index: i }
+      }
+    }
+    if (board.fieldZone?.id === cardId) {
+      return { player, zone: "fieldZone" }
+    }
+    if (board.hand.find(c => c.id === cardId)) {
+      return { player, zone: "hand" }
+    }
+    if (board.deck.find(c => c.id === cardId)) {
+      return { player, zone: "deck" }
+    }
+    if (board.graveyard.find(c => c.id === cardId)) {
+      return { player, zone: "graveyard" }
+    }
+    if (board.banished.find(c => c.id === cardId)) {
+      return { player, zone: "banished" }
+    }
+    if (board.extraDeck.find(c => c.id === cardId)) {
+      return { player, zone: "extraDeck" }
+    }
+  }
+  return null
+}
+
+// Get undo/redo operation description
+export const undoOperationDescriptionAtom = atom((get) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
+  
+  if (currentIndex > 0) {
+    const prevEntry = history[currentIndex - 1]
+    const currentEntry = history[currentIndex]
+    
+    // Check if only operations changed (same gameState = effect activation)
+    if (JSON.stringify(prevEntry.gameState) === JSON.stringify(currentEntry.gameState)) {
+      // Look for the effect activation operation
+      const lastOperation = operations[currentEntry.operationCount - 1]
+      if (lastOperation?.type === "activate") {
+        return "効果発動"
+      }
+    }
+    
+    return getOperationDescription(prevEntry.gameState, currentEntry.gameState)
+  }
+  
+  return null
+})
+
+export const redoOperationDescriptionAtom = atom((get) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
+  
+  if (currentIndex < history.length - 1) {
+    const currentEntry = history[currentIndex]
+    const nextEntry = history[currentIndex + 1]
+    
+    // Check if only operations changed (same gameState = effect activation)
+    if (JSON.stringify(currentEntry.gameState) === JSON.stringify(nextEntry.gameState)) {
+      // Look for the effect activation operation
+      const nextOperation = operations[nextEntry.operationCount - 1]
+      if (nextOperation?.type === "activate") {
+        return "効果発動"
+      }
+    }
+    
+    return getOperationDescription(currentEntry.gameState, nextEntry.gameState)
+  }
+  
+  return null
 })
 
 // Replay data structure
@@ -171,7 +440,7 @@ export const replayDataAtom = atom<ReplayData | null>(null)
 export const replayPlayingAtom = atom<boolean>(false)
 export const replayPausedAtom = atom<boolean>(false)
 export const replayCurrentIndexAtom = atom<number | null>(null)
-export const replaySpeedAtom = atom<number>(750) // Default 750ms between steps
+export const replaySpeedAtom = atom<number>(1) // Default 1x speed
 
 // Start replay recording
 export const startReplayRecordingAtom = atom(null, (get, set) => {
@@ -357,7 +626,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
 // Play replay
 export const playReplayAtom = atom(null, async (get, set) => {
   const replayData = get(replayDataAtom)
-  const speed = get(replaySpeedAtom)
+  const speedMultiplier = get(replaySpeedAtom) // Direct speed multiplier: 0.5x, 1x, 2x, 3x
 
   if (!replayData || replayData.operations.length === 0) {
     console.warn("No replay data available")
@@ -409,7 +678,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Create animations for moved cards BEFORE updating state
       const animations: CardAnimation[] = []
-      const animationDuration = Math.floor((speed * 2) / 3) // 2/3 of replay speed
+      const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * speedMultiplier)) // 2/3 of base duration adjusted by speed
 
       // First, create animations with current positions
       for (const { card } of movedCards) {
@@ -441,7 +710,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
       currentState = nextState
 
       // Small delay to ensure DOM is updated
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)))
 
       // Update animations with actual end positions
       const updatedAnimations = animations.map((anim) => {
@@ -454,7 +723,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Wait for animation to complete before next step
       if (i < replayData.operations.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, speed))
+        await new Promise((resolve) => setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)))
       }
     } else {
       // No card movement, but check for rotation or activation
@@ -464,9 +733,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
         set(replayCurrentIndexAtom, i + 1)
         currentState = nextState
 
-        // Use shorter delay for rotation (300ms total, 200ms animation)
+        // Use shorter delay for rotation
         if (i < replayData.operations.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 300))
+          await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)))
         }
       } else if (operation.type === "activate" && operation.to) {
         // Update state (no change for activate)
@@ -475,7 +744,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         currentState = nextState
 
         // Small delay to ensure DOM is updated
-        await new Promise((resolve) => setTimeout(resolve, 50))
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)))
 
         // Create activation animation
         const animationId = crypto.randomUUID()
@@ -510,11 +779,11 @@ export const playReplayAtom = atom(null, async (get, set) => {
         // Remove animation after duration
         setTimeout(() => {
           set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
-        }, 500)
+        }, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, speedMultiplier))
 
         // Wait for activation animation
         if (i < replayData.operations.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)))
         }
       } else {
         // Other operations (no movement, no rotation, no activation)
@@ -524,7 +793,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
         // Wait for next step
         if (i < replayData.operations.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, speed))
+          await new Promise((resolve) => setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)))
         }
       }
     }
@@ -535,13 +804,13 @@ export const playReplayAtom = atom(null, async (get, set) => {
   if (finalOperation !== undefined) {
     if (finalOperation.type === "move" || finalOperation.type === "draw") {
       // Wait for move/draw animation
-      await new Promise((resolve) => setTimeout(resolve, speed))
+      await new Promise((resolve) => setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)))
     } else if (finalOperation.type === "rotate") {
       // Wait for rotation animation
-      await new Promise((resolve) => setTimeout(resolve, 300))
+      await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)))
     } else if (finalOperation.type === "activate") {
       // Wait for activation animation
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)))
     }
   }
 
@@ -750,7 +1019,11 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
   // Remove animation after duration
   setTimeout(() => {
     set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
-  }, 500)
+  }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
+  
+  // Add to history for undo/redo support (same gameState, but new operation)
+  const currentState = get(gameStateAtom)
+  addToHistory(get, set, currentState)
 })
 
 // Draw cards from deck to hand
