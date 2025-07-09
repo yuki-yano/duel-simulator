@@ -91,7 +91,7 @@ export function DraggableCard({
           dragOffsetRef.current = { x: 0, y: 0 }
         }
 
-        // Set up long press detection (1000ms = 1 second)
+        // Set up long press detection (600ms)
         longPressTimerRef.current = setTimeout(() => {
           if (touchStartPosRef.current && onContextMenu) {
             // Hide drag image when showing context menu
@@ -110,7 +110,7 @@ export function DraggableCard({
             // Trigger custom context menu
             onContextMenu(syntheticEvent, card)
           }
-        }, 1000)
+        }, 600)
 
         // Start dragging immediately
         setIsTouching(true)

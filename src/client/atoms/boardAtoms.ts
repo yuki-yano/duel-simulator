@@ -1,5 +1,6 @@
 import { atom } from "jotai"
 import type { Atom, WritableAtom } from "jotai"
+import { v4 as uuidv4 } from 'uuid'
 import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation, GamePhase } from "../../shared/types/game"
 
 // Animation duration constants (in milliseconds)
@@ -384,8 +385,8 @@ export const undoOperationDescriptionAtom = atom((get) => {
     const currentEntry = history[currentIndex]
     
     // Check if only operations changed (same gameState = effect activation)
-    if (JSON.stringify(prevEntry.gameState) === JSON.stringify(currentEntry.gameState)) {
-      // Look for the effect activation operation
+    // Optimization: Check operation count first before expensive JSON comparison
+    if (currentEntry.operationCount > prevEntry.operationCount) {
       const lastOperation = operations[currentEntry.operationCount - 1]
       if (lastOperation?.type === "activate") {
         return "効果発動"
@@ -408,8 +409,8 @@ export const redoOperationDescriptionAtom = atom((get) => {
     const nextEntry = history[currentIndex + 1]
     
     // Check if only operations changed (same gameState = effect activation)
-    if (JSON.stringify(currentEntry.gameState) === JSON.stringify(nextEntry.gameState)) {
-      // Look for the effect activation operation
+    // Optimization: Check operation count first before expensive JSON comparison
+    if (nextEntry.operationCount > currentEntry.operationCount) {
       const nextOperation = operations[nextEntry.operationCount - 1]
       if (nextOperation?.type === "activate") {
         return "効果発動"
@@ -477,7 +478,14 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
       // Filter operations that occurred during recording
       const recordedOps = operations.filter((op) => {
         const opTime = op.timestamp
-        return opTime >= replayData.startTime && (replayData.endTime === undefined || opTime <= replayData.endTime)
+        return opTime >= replayData.startTime
+      })
+      
+      console.log("stopRecording: filtered operations", {
+        totalOperations: operations.length,
+        recordedOperations: recordedOps.length,
+        startTime: replayData.startTime,
+        endTime: Date.now()
       })
 
       // Update replay data with operations and end time
@@ -687,7 +695,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         if (prevPos) {
           // Temporarily store the animation with same start/end position
           animations.push({
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             type: "move",
             cardId: card.id,
             cardImageUrl: card.imageUrl,
@@ -747,7 +755,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)))
 
         // Create activation animation
-        const animationId = crypto.randomUUID()
+        const animationId = uuidv4()
         const animations = get(cardAnimationsAtom)
         
         // Try to get card element position for replay
@@ -869,7 +877,7 @@ export const moveCardAtom = atom(null, (get, set, from: Position, to: Position, 
 
     // Record operation
     const operation: GameOperation = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       timestamp: Date.now(),
       type: "move",
       from,
@@ -894,7 +902,7 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
     addToHistory(get, set, newState)
 
     const operation: GameOperation = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       timestamp: Date.now(),
       type: "rotate",
       to: position,
@@ -915,7 +923,7 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
     addToHistory(get, set, newState)
 
     const operation: GameOperation = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       timestamp: Date.now(),
       type: "changePosition",
       to: position,
@@ -928,10 +936,13 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
 
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
-  // Get the card at this position to get its ID
-  const state = get(gameStateAtom)
-  const playerBoard = state.players[position.zone.player]
-  let card: Card | null = null
+  try {
+    console.log("activateEffectAtom called with:", position)
+    
+    // Get the card at this position to get its ID
+    const state = get(gameStateAtom)
+    const playerBoard = state.players[position.zone.player]
+    let card: Card | null = null
   
   switch (position.zone.type) {
     case "monsterZone":
@@ -981,14 +992,18 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     }
   }
   
+  console.log("Creating operation for card:", card)
+  
   // Effect activation doesn't change game state, only visual effect
   const operation: GameOperation = {
-    id: crypto.randomUUID(),
+    id: uuidv4(),
     timestamp: Date.now(),
     type: "activate",
     to: positionWithCardId,
     player: position.zone.player,
   }
+  
+  console.log("Adding operation:", operation)
   set(operationsAtom, [...get(operationsAtom), operation])
   
   // Get card position if element is provided
@@ -999,22 +1014,26 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
   
   // Trigger visual effect animation
   const animations = get(cardAnimationsAtom)
-  const animationId = crypto.randomUUID()
-  set(cardAnimationsAtom, [
-    ...animations,
-    {
-      id: animationId,
-      type: "activate",
-      position: positionWithCardId,
-      cardRect: cardRect ? {
-        x: cardRect.x,
-        y: cardRect.y,
-        width: cardRect.width,
-        height: cardRect.height,
-      } : undefined,
-      startTime: Date.now(),
-    },
-  ])
+  const animationId = uuidv4()
+  
+  console.log("Current animations before adding:", animations)
+  console.log("Adding activation animation with id:", animationId)
+  
+  const newAnimation = {
+    id: animationId,
+    type: "activate" as const,
+    position: positionWithCardId,
+    cardRect: cardRect ? {
+      x: cardRect.x,
+      y: cardRect.y,
+      width: cardRect.width,
+      height: cardRect.height,
+    } : undefined,
+    startTime: Date.now(),
+  }
+  
+  set(cardAnimationsAtom, [...animations, newAnimation])
+  console.log("Animation added successfully")
   
   // Remove animation after duration
   setTimeout(() => {
@@ -1024,6 +1043,12 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
   // Add to history for undo/redo support (same gameState, but new operation)
   const currentState = get(gameStateAtom)
   addToHistory(get, set, currentState)
+  
+  console.log("activateEffectAtom completed successfully")
+  } catch (error) {
+    console.error("Error in activateEffectAtom:", error)
+    throw error
+  }
 })
 
 // Draw cards from deck to hand
@@ -1069,7 +1094,7 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
   // Record draw operation for each card
   drawnCards.forEach((card) => {
     const operation: GameOperation = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       timestamp: Date.now(),
       type: "draw",
       from: { zone: { player, type: "deck" } },

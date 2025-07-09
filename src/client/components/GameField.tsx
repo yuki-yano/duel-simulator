@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause } from "lucide-react"
+import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause, Shield, Eye, EyeOff } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   Dialog,
@@ -949,6 +949,8 @@ export function GameField() {
 export function GameFieldContent() {
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | null>(null)
+  const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
+  const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, undo] = useAtom(undoAtom)
@@ -997,12 +999,15 @@ export function GameFieldContent() {
   const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
 
   const handleCardDrop = (from: ZoneId, to: ZoneId, shiftKey?: boolean) => {
+    // Apply mobile toggle states as shift key equivalent
+    const effectiveShiftKey = shiftKey || mobileDefenseMode || mobileFaceDownMode
+    
     if (draggedCard && draggedCard.zone && draggedCard.index !== undefined) {
       // draggedCardのzone情報にindexを含める
       const fromWithIndex = { ...from, index: draggedCard.index }
-      moveCard({ zone: fromWithIndex }, { zone: to }, { shiftKey })
+      moveCard({ zone: fromWithIndex }, { zone: to }, { shiftKey: effectiveShiftKey })
     } else {
-      moveCard({ zone: from }, { zone: to }, { shiftKey })
+      moveCard({ zone: from }, { zone: to }, { shiftKey: effectiveShiftKey })
     }
   }
 
@@ -1018,19 +1023,25 @@ export function GameFieldContent() {
 
   const handleContextMenuAction = useCallback(
     (action: string, card: GameCard) => {
-      if (action === "rotate" && card.zone) {
-        // Toggle between normal (0) and defense position (-90)
-        const newRotation = card.rotation === -90 ? 0 : -90
-        rotateCard({ zone: card.zone }, newRotation)
-      } else if (action === "activate" && card.zone) {
-        // Include card ID in the zone for accurate card identification
-        const zoneWithCardId = {
-          ...card.zone,
-          cardId: card.id,
+      try {
+        if (action === "rotate" && card.zone) {
+          // Toggle between normal (0) and defense position (-90)
+          const newRotation = card.rotation === -90 ? 0 : -90
+          rotateCard({ zone: card.zone }, newRotation)
+        } else if (action === "activate" && card.zone) {
+          // Include card ID in the zone for accurate card identification
+          const zoneWithCardId = {
+            ...card.zone,
+            cardId: card.id,
+          }
+          activateEffect({ zone: zoneWithCardId }, contextMenu?.cardElement ?? undefined)
+        } else if (action === "flip" && card.zone) {
+          flipCard({ zone: card.zone })
         }
-        activateEffect({ zone: zoneWithCardId }, contextMenu?.cardElement ?? undefined)
-      } else if (action === "flip" && card.zone) {
-        flipCard({ zone: card.zone })
+      } catch (error) {
+        // Show error on mobile for debugging
+        alert(`Error in ${action}: ${error instanceof Error ? error.message : String(error)}`)
+        console.error(`Error in handleContextMenuAction (${action}):`, error)
       }
     },
     [rotateCard, activateEffect, flipCard, contextMenu],
@@ -1238,57 +1249,95 @@ export function GameFieldContent() {
         </div>
 
         {/* Undo/Redo buttons */}
-        <div className="mb-2 flex flex-col sm:flex-row justify-start gap-2">
-          <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" ? true : false}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => undo()}
-                onMouseEnter={() => setHoveredButton("undo")}
-                onMouseLeave={() => setHoveredButton(null)}
-                disabled={!canUndo || isPlaying || !isDeckLoaded}
-                className={cn(
-                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                  canUndo && !isPlaying && isDeckLoaded
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+        <div className="mb-2 flex flex-col gap-2">
+          <div className="flex flex-row justify-start gap-2">
+            <Tooltip open={undoDescription && canUndo && !isPlaying && hoveredButton === "undo" ? true : false}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => undo()}
+                  onMouseEnter={() => setHoveredButton("undo")}
+                  onMouseLeave={() => setHoveredButton(null)}
+                  disabled={!canUndo || isPlaying || !isDeckLoaded}
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                    canUndo && !isPlaying && isDeckLoaded
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-muted text-muted-foreground cursor-not-allowed",
+                  )}
+                  aria-label="Undo"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  <span>元に戻す</span>
+                </button>
+              </TooltipTrigger>
+              {undoDescription && (
+                <TooltipContent>
+                  <p>{undoDescription}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+            <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" ? true : false}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => redo()}
+                  onMouseEnter={() => setHoveredButton("redo")}
+                  onMouseLeave={() => setHoveredButton(null)}
+                  disabled={!canRedo || isPlaying || !isDeckLoaded}
+                  className={cn(
+                    "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                    canRedo && !isPlaying && isDeckLoaded
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-muted text-muted-foreground cursor-not-allowed",
+                  )}
+                  aria-label="Redo"
+                >
+                  <Redo2 className="w-4 h-4" />
+                  <span>やり直す</span>
+                </button>
+              </TooltipTrigger>
+              {redoDescription && (
+                <TooltipContent>
+                  <p>{redoDescription}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </div>
+          
+          {/* Mobile quick action buttons - only show on small screens */}
+          <div className="flex sm:hidden flex-row justify-start gap-2">
+            <button
+              onClick={() => setMobileDefenseMode(!mobileDefenseMode)}
+              disabled={!isDeckLoaded || isPlaying}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium",
+                mobileDefenseMode
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : isDeckLoaded && !isPlaying
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed",
-                )}
-                aria-label="Undo"
-              >
-                <Undo2 className="w-4 h-4" />
-                <span>元に戻す</span>
-              </button>
-            </TooltipTrigger>
-            {undoDescription && (
-              <TooltipContent>
-                <p>{undoDescription}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-          <Tooltip open={redoDescription && canRedo && !isPlaying && hoveredButton === "redo" ? true : false}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => redo()}
-                onMouseEnter={() => setHoveredButton("redo")}
-                onMouseLeave={() => setHoveredButton(null)}
-                disabled={!canRedo || isPlaying || !isDeckLoaded}
-                className={cn(
-                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                  canRedo && !isPlaying && isDeckLoaded
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+              aria-label="Toggle defense mode"
+            >
+              <Shield className="w-4 h-4" />
+              <span>守備表示{mobileDefenseMode ? " ON" : ""}</span>
+            </button>
+            <button
+              onClick={() => setMobileFaceDownMode(!mobileFaceDownMode)}
+              disabled={!isDeckLoaded || isPlaying}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium",
+                mobileFaceDownMode
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : isDeckLoaded && !isPlaying
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed",
-                )}
-                aria-label="Redo"
-              >
-                <Redo2 className="w-4 h-4" />
-                <span>やり直す</span>
-              </button>
-            </TooltipTrigger>
-            {redoDescription && (
-              <TooltipContent>
-                <p>{redoDescription}</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+              )}
+              aria-label="Toggle face down mode"
+            >
+              <EyeOff className="w-4 h-4" />
+              <span>裏側表示{mobileFaceDownMode ? " ON" : ""}</span>
+            </button>
+          </div>
         </div>
 
         {/* Opponent's Area */}
@@ -1296,7 +1345,10 @@ export function GameFieldContent() {
           <div className="flex items-center justify-start mb-1">
             <button
               onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
-              className="flex items-center gap-1 px-2 py-1 hover:bg-muted rounded-md transition-colors text-xs sm:text-sm"
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              )}
               aria-label={isOpponentFieldOpen ? "Hide opponent field" : "Show opponent field"}
             >
               {isOpponentFieldOpen ? (

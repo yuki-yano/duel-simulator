@@ -82,6 +82,10 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
         left: `${adjustedPosition.x}px`,
         top: `${adjustedPosition.y}px`,
       }}
+      onTouchEnd={(e) => {
+        // Prevent touch events from propagating on menu container
+        e.stopPropagation()
+      }}
     >
       {menuItems.map((item) => (
         <button
@@ -95,10 +99,31 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
               : "text-gray-400 dark:text-gray-500 cursor-not-allowed",
           )}
           disabled={item.enabled !== true}
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
             if (item.enabled === true) {
-              onAction(item.id, card)
-              onClose()
+              try {
+                onAction(item.id, card)
+              } catch (error) {
+                console.error("Error in context menu action:", error)
+              } finally {
+                onClose()
+              }
+            }
+          }}
+          onTouchEnd={(e) => {
+            // Handle touch events for mobile
+            e.preventDefault()
+            e.stopPropagation()
+            if (item.enabled === true) {
+              try {
+                onAction(item.id, card)
+              } catch (error) {
+                console.error("Error in context menu action:", error)
+              } finally {
+                onClose()
+              }
             }
           }}
         >
