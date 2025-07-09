@@ -85,6 +85,9 @@ export const isDeckLoadedAtom = atom<boolean>((get) => {
     state.players.opponent.extraDeck.length > 0
   )
 })
+
+// Initial state after deck loading (for reset functionality)
+export const initialStateAfterDeckLoadAtom = atom<GameState | null>(null)
 export const highlightedZonesAtom = atom<ZoneId[]>([])
 
 // Temporary storage for cards extracted from deck image
@@ -200,6 +203,36 @@ export const canRedoAtom = atom((get) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   return currentIndex < history.length - 1
+})
+
+// Reset to initial state (deck loaded state)
+export const resetToInitialStateAtom = atom(null, (get, set) => {
+  const initialState = get(initialStateAfterDeckLoadAtom)
+  
+  if (initialState) {
+    // Create a deep copy of the initial state
+    const resetState = JSON.parse(JSON.stringify(initialState)) as GameState
+    
+    // Reset game state and clear history
+    set(resetHistoryAtom, resetState)
+    
+    // Clear any active animations or UI state
+    set(selectedCardAtom, null)
+    set(draggedCardAtom, null)
+    set(hoveredZoneAtom, null)
+    set(highlightedZonesAtom, [])
+    set(cardAnimationsAtom, [])
+    
+    // Stop any active replay
+    if (get(replayPlayingAtom)) {
+      set(stopReplayAtom)
+    }
+    
+    // Stop recording if active
+    if (get(replayRecordingAtom)) {
+      set(stopReplayRecordingAtom)
+    }
+  }
 })
 
 // Helper function to get zone display name
@@ -436,6 +469,8 @@ export const replayRecordingAtom = atom<boolean>(false)
 export const replayStartIndexAtom = atom<number | null>(null)
 export const replayEndIndexAtom = atom<number | null>(null)
 export const replayDataAtom = atom<ReplayData | null>(null)
+// Separate operations list for replay recording to avoid undo/redo interference
+export const replayOperationsAtom = atom<GameOperation[]>([])
 
 // Replay playback atoms
 export const replayPlayingAtom = atom<boolean>(false)
@@ -462,6 +497,7 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
   set(replayStartIndexAtom, currentIndex)
   set(replayEndIndexAtom, null)
   set(replayDataAtom, replayData)
+  set(replayOperationsAtom, [])  // Clear replay operations
 })
 
 // Stop replay recording
@@ -470,35 +506,26 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
   const replayData = get(replayDataAtom)
 
   if (replayData) {
-    // Collect operations from start to end index
-    const startIndex = get(replayStartIndexAtom)
-    const operations = get(operationsAtom)
+    // Use replay-specific operations list instead of global operations
+    const replayOperations = get(replayOperationsAtom)
+    
+    console.log("stopRecording: replay operations", {
+      recordedOperations: replayOperations.length,
+      startTime: replayData.startTime,
+      endTime: Date.now()
+    })
 
-    if (startIndex !== null) {
-      // Filter operations that occurred during recording
-      const recordedOps = operations.filter((op) => {
-        const opTime = op.timestamp
-        return opTime >= replayData.startTime
-      })
-      
-      console.log("stopRecording: filtered operations", {
-        totalOperations: operations.length,
-        recordedOperations: recordedOps.length,
-        startTime: replayData.startTime,
-        endTime: Date.now()
-      })
-
-      // Update replay data with operations and end time
-      set(replayDataAtom, {
-        ...replayData,
-        operations: recordedOps,
-        endTime: Date.now(),
-      })
-    }
+    // Update replay data with operations and end time
+    set(replayDataAtom, {
+      ...replayData,
+      operations: replayOperations,
+      endTime: Date.now(),
+    })
   }
 
   set(replayRecordingAtom, false)
   set(replayEndIndexAtom, currentIndex)
+  set(replayOperationsAtom, [])  // Clear replay operations
 })
 
 // Helper function to find moved cards between states
@@ -887,6 +914,11 @@ export const moveCardAtom = atom(null, (get, set, from: Position, to: Position, 
       metadata: options,
     }
     set(operationsAtom, [...get(operationsAtom), operation])
+    
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
 
     // Clear selected card after move to prevent UI issues
     set(selectedCardAtom, null)
@@ -911,6 +943,11 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
       metadata: { angle },
     }
     set(operationsAtom, [...get(operationsAtom), operation])
+    
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
   }
 })
 
@@ -932,6 +969,11 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
       metadata: { flip: true },
     }
     set(operationsAtom, [...get(operationsAtom), operation])
+    
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
   }
 })
 
@@ -978,6 +1020,11 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
   
   console.log("Adding operation:", operation)
   set(operationsAtom, [...get(operationsAtom), operation])
+  
+  // Also record to replay operations if recording
+  if (get(replayRecordingAtom)) {
+    set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+  }
   
   // Get card position if element is provided
   let cardRect: DOMRect | null = null
@@ -1076,6 +1123,11 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
       player,
     }
     set(operationsAtom, [...get(operationsAtom), operation])
+    
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
   })
 })
 

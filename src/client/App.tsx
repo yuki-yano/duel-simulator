@@ -12,6 +12,7 @@ import {
   operationsAtom,
   drawCardAtom,
   draggedCardAtom,
+  initialStateAfterDeckLoadAtom,
 } from "@client/atoms/boardAtoms"
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
   const [, _drawCard] = useAtom(drawCardAtom)
   const [isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
+  const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
 
   // Disable pinch zoom on mount
   useEffect(() => {
@@ -81,6 +83,9 @@ export default function App() {
 
       // Reset history with deck loaded state as initial state
       resetHistory(newState)
+      
+      // Save initial state for reset functionality
+      setInitialStateAfterDeckLoad(newState)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extractedCards]) // Intentionally excluding gameState and resetHistory to prevent infinite loop

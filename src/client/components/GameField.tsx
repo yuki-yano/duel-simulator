@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause, Shield, Eye, EyeOff } from "lucide-react"
+import { ChevronDown, ChevronUp, Undo2, Redo2, Circle, Square, Play, Pause, Shield, Eye, EyeOff, RotateCcw } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   Dialog,
@@ -40,6 +40,8 @@ import {
   rotateCardAtom,
   activateEffectAtom,
   flipCardAtom,
+  resetToInitialStateAtom,
+  initialStateAfterDeckLoadAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
@@ -953,7 +955,7 @@ export function GameField() {
 
 export function GameFieldContent() {
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
-  const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | null>(null)
+  const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | "reset" | null>(null)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [isTouchDevice] = useState(() => 'ontouchstart' in window || navigator.maxTouchPoints > 0)
@@ -969,6 +971,8 @@ export function GameFieldContent() {
   const rotateCard = useSetAtom(rotateCardAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
   const flipCard = useSetAtom(flipCardAtom)
+  const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
+  const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
   const [contextMenu, setContextMenu] = useState<{
     card: GameCard
     position: { x: number; y: number }
@@ -977,6 +981,9 @@ export function GameFieldContent() {
   
   // Recording confirmation dialog state
   const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
+  
+  // Reset confirmation dialog state
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -1316,6 +1323,26 @@ export function GameFieldContent() {
                 </TooltipContent>
               )}
             </Tooltip>
+            <button
+              onClick={() => {
+                if (initialStateAfterDeckLoad) {
+                  setShowResetConfirmDialog(true)
+                }
+              }}
+              onMouseEnter={() => setHoveredButton("reset")}
+              onMouseLeave={() => setHoveredButton(null)}
+              disabled={!isDeckLoaded || !initialStateAfterDeckLoad || isPlaying}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                isDeckLoaded && initialStateAfterDeckLoad && !isPlaying
+                  ? "bg-amber-500 text-white hover:bg-amber-600"
+                  : "bg-muted text-muted-foreground cursor-not-allowed",
+              )}
+              aria-label="Reset"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>リセット</span>
+            </button>
           </div>
           
           {/* Mobile quick action buttons - only show on small screens */}
@@ -1729,6 +1756,37 @@ export function GameFieldContent() {
               className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
             >
               録画開始
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetConfirmDialog} onOpenChange={setShowResetConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ゲーム状態のリセット確認</DialogTitle>
+            <DialogDescription>
+              現在のゲーム状態をリセットして、デッキ読み込み直後の状態に戻します。
+              この操作は元に戻すことができません。
+              続行しますか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setShowResetConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={() => {
+                setShowResetConfirmDialog(false)
+                resetToInitialState()
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors"
+            >
+              リセット
             </button>
           </DialogFooter>
         </DialogContent>
