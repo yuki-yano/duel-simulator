@@ -59,8 +59,6 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
   const [deckConfig, setDeckConfig] = useState<DeckConfiguration | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
   const [showDebug, _setShowDebug] = useState(false)
-  const [manualMode, setManualMode] = useState(false)
-  const [manualCounts, setManualCounts] = useState({ main: 40, extra: 15 })
   const [ocrDebugCanvases, setOcrDebugCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const [ocrProcessedCanvases, setOcrProcessedCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const setExtractedCards = useSetAtom(extractedCardsAtom)
@@ -68,6 +66,8 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
   useEffect(() => {
     if (imageDataUrl) {
       drawPreview()
+      // 画像が読み込まれたら自動的にデッキ構造を解析
+      void analyzeDeckStructure()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageDataUrl])
@@ -168,9 +168,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
     }
 
     // Perform OCR on this region
-    const worker = await createWorker("jpn", 1, {
-      logger: () => {}, // Silent logger for region OCR
-    })
+    const worker = await createWorker("jpn")
 
     // Set OCR parameters for better number recognition
     await worker.setParameters({
@@ -202,7 +200,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
         const mainDeckY = img.width * LAYOUT_RATIOS.mainDeckTextY
         let mainDeckText = await extractTextFromRegion(img, textX, mainDeckY, textWidth, textHeight, "main")
 
-        console.log("Main deck OCR (attempt 1):", mainDeckText)
+        // Debug: Main deck OCR (attempt 1)
 
         // If first attempt fails, try slightly different position
         if (!mainDeckText.match(/\d+/)) {
@@ -213,7 +211,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
             textWidth + img.width * 0.04, // Wider area
             textHeight + img.width * 0.01, // Taller area
           )
-          console.log("Main deck OCR (attempt 2):", mainDeckText)
+          // Debug: Main deck OCR (attempt 2)
         }
 
         // Save debug canvas
@@ -268,7 +266,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
           const extraDeckText = await extractTextFromRegion(img, textX, extraDeckY, textWidth, textHeight, "extra")
 
-          console.log("Extra deck OCR:", extraDeckText)
+          // Debug: Extra deck OCR
 
           const extraDeckMatch = extraDeckText.match(/(\d+)\s*枚/)
           if (extraDeckMatch) {
@@ -285,9 +283,9 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
 
         // Check if no deck sections found
         if (deckSections.length === 0) {
-          console.warn("No deck sections found in OCR. Switching to manual mode.")
-          setManualMode(true)
+          console.warn("No deck sections found in OCR.")
           setIsAnalyzing(false)
+          alert("デッキ構造の検出に失敗しました。画像の品質を確認してください。")
           return
         }
 
@@ -345,8 +343,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
         }
       } catch (error) {
         console.error("Failed to analyze deck structure:", error)
-        alert("デッキ構造の解析に失敗しました。")
-        setManualMode(true)
+        alert("デッキ構造の解析に失敗しました。画像の品質を確認してください。")
       }
 
       setIsAnalyzing(false)
@@ -621,124 +618,10 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete }: DeckImag
           </>
         )}
 
-        {/* Analyze Button */}
-        <button
-          onClick={analyzeDeckStructure}
-          disabled={isAnalyzing}
-          className={`
-            w-full py-2 px-4 rounded-lg font-medium transition-colors
-            ${
-              isAnalyzing
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-green-500 text-white hover:bg-green-600"
-            }
-          `}
-        >
-          {isAnalyzing ? "デッキ構造を解析中..." : "デッキ構造を自動解析"}
-        </button>
-
-        {/* Manual mode toggle */}
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={manualMode}
-            onChange={(e) => setManualMode(e.target.checked)}
-            className="rounded"
-          />
-          手動でデッキ枚数を設定
-        </label>
-
-        {/* Manual deck count input */}
-        {manualMode && (
-          <div className="bg-yellow-50 p-3 rounded-lg space-y-2">
-            <p className="text-sm font-medium">デッキ枚数を手動で設定:</p>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-600 w-24">メインデッキ:</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="60"
-                  value={manualCounts.main}
-                  onChange={(e) => setManualCounts((prev) => ({ ...prev, main: parseInt(e.target.value) || 0 }))}
-                  className="w-16 px-2 py-1 text-xs border rounded"
-                />
-                <span className="text-xs text-gray-600">枚</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-600 w-24">エクストラデッキ:</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="15"
-                  value={manualCounts.extra}
-                  onChange={(e) => setManualCounts((prev) => ({ ...prev, extra: parseInt(e.target.value) || 0 }))}
-                  className="w-16 px-2 py-1 text-xs border rounded"
-                />
-                <span className="text-xs text-gray-600">枚</span>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                const img = new Image()
-                img.onload = () => {
-                  // Calculate card dimensions
-                  const cardsPerRow = 10
-                  const totalGapRatio = 0.02
-                  const leftMarginRatio = 0.002
-                  const rightMarginRatio = 0.002
-                  const cardAreaWidth = img.width * (1 - totalGapRatio - leftMarginRatio - rightMarginRatio)
-                  const cardWidth = cardAreaWidth / cardsPerRow
-                  const cardHeight = cardWidth * LAYOUT_RATIOS.cardAspectRatio
-                  const cardGap = (img.width * totalGapRatio) / (cardsPerRow - 1)
-
-                  const mainDeckY = img.width * LAYOUT_RATIOS.mainDeckTextY
-                  const mainDeckRows = Math.ceil(manualCounts.main / 10)
-
-                  const mainDeckHeight =
-                    img.width * LAYOUT_RATIOS.firstRowOffset +
-                    mainDeckRows * cardHeight +
-                    (mainDeckRows - 1) * img.width * LAYOUT_RATIOS.rowGap
-                  const extraDeckY =
-                    mainDeckY +
-                    img.width * LAYOUT_RATIOS.textToCardsGap +
-                    mainDeckHeight +
-                    img.width * LAYOUT_RATIOS.sectionGap
-                  const extraDeckRows = Math.ceil(manualCounts.extra / 10)
-
-                  const config: DeckConfiguration = {
-                    mainDeck:
-                      manualCounts.main > 0
-                        ? {
-                            label: "main",
-                            count: manualCounts.main,
-                            yPosition: mainDeckY,
-                            rows: mainDeckRows,
-                          }
-                        : null,
-                    extraDeck:
-                      manualCounts.extra > 0
-                        ? {
-                            label: "extra",
-                            count: manualCounts.extra,
-                            yPosition: extraDeckY,
-                            rows: extraDeckRows,
-                          }
-                        : null,
-                    sideDeck: null,
-                    cardWidth,
-                    cardHeight,
-                    cardGap,
-                    leftMargin: img.width * leftMarginRatio,
-                  }
-                  setDeckConfig(config)
-                }
-                img.src = imageDataUrl
-              }}
-              className="w-full mt-2 py-1 px-3 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-            >
-              設定を適用
-            </button>
+        {/* Analyzing status */}
+        {isAnalyzing && (
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-700">デッキ構造を解析中...</p>
           </div>
         )}
 

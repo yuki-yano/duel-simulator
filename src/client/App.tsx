@@ -27,7 +27,7 @@ export default function App() {
   const [, _drawCard] = useAtom(drawCardAtom)
   const [isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
-  
+
   // Disable pinch zoom on mount
   useEffect(() => {
     const handleTouchMove = (e: TouchEvent) => {
@@ -35,11 +35,11 @@ export default function App() {
         e.preventDefault()
       }
     }
-    
-    document.addEventListener('touchmove', handleTouchMove, { passive: false })
-    
+
+    document.addEventListener("touchmove", handleTouchMove, { passive: false })
+
     return () => {
-      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener("touchmove", handleTouchMove)
     }
   }, [])
 
@@ -78,11 +78,11 @@ export default function App() {
           },
         },
       }
-      
+
       // Reset history with deck loaded state as initial state
       resetHistory(newState)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extractedCards]) // Intentionally excluding gameState and resetHistory to prevent infinite loop
 
   // Prevent scrolling during touch drag

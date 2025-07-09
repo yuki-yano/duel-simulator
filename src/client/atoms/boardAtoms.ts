@@ -47,6 +47,18 @@ export const gameHistoryIndexAtom = atom<number>(0)
 export const selectedCardAtom = atom<Card | null>(null)
 export const draggedCardAtom = atom<Card | null>(null)
 export const hoveredZoneAtom = atom<ZoneId | null>(null)
+
+// Deck loaded state
+export const isDeckLoadedAtom = atom<boolean>((get) => {
+  const state = get(gameStateAtom)
+  // Check if any cards exist in any player's deck
+  return (
+    state.players.self.deck.length > 0 ||
+    state.players.opponent.deck.length > 0 ||
+    state.players.self.extraDeck.length > 0 ||
+    state.players.opponent.extraDeck.length > 0
+  )
+})
 export const highlightedZonesAtom = atom<ZoneId[]>([])
 
 // Temporary storage for cards extracted from deck image
@@ -74,21 +86,18 @@ export const currentPhaseAtom = atom<GamePhase, [GamePhase], void>(
 
 // Helper to add state to history
 type Getter = <Value>(atom: Atom<Value>) => Value
-type Setter = <Value, Args extends unknown[], Result>(
-  atom: WritableAtom<Value, Args, Result>,
-  ...args: Args
-) => Result
+type Setter = <Value, Args extends unknown[], Result>(atom: WritableAtom<Value, Args, Result>, ...args: Args) => Result
 
 const addToHistory = (get: Getter, set: Setter, newState: GameState) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
-  
+
   // Remove future history if we're in the middle of the history
   const newHistory = [...history.slice(0, currentIndex + 1), newState]
-  
+
   // Limit history size to prevent memory issues
   const limitedHistory = newHistory.slice(-50)
-  
+
   set(gameHistoryAtom, limitedHistory)
   set(gameHistoryIndexAtom, limitedHistory.length - 1)
 }
@@ -110,7 +119,7 @@ export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
 export const undoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
-  
+
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
     const previousState = history[newIndex]
@@ -123,7 +132,7 @@ export const undoAtom = atom(null, (get, set) => {
 export const redoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
-  
+
   if (currentIndex < history.length - 1) {
     const newIndex = currentIndex + 1
     const nextState = history[newIndex]
@@ -168,17 +177,17 @@ export const replaySpeedAtom = atom<number>(750) // Default 750ms between steps
 export const startReplayRecordingAtom = atom(null, (get, set) => {
   const currentIndex = get(gameHistoryIndexAtom)
   const currentState = get(gameStateAtom)
-  
+
   // Create deep copy of current state as snapshot
   const snapshot = JSON.parse(JSON.stringify(currentState)) as GameState
-  
+
   // Initialize replay data
   const replayData: ReplayData = {
     startSnapshot: snapshot,
     operations: [],
-    startTime: Date.now()
+    startTime: Date.now(),
   }
-  
+
   set(replayRecordingAtom, true)
   set(replayStartIndexAtom, currentIndex)
   set(replayEndIndexAtom, null)
@@ -189,57 +198,60 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
 export const stopReplayRecordingAtom = atom(null, (get, set) => {
   const currentIndex = get(gameHistoryIndexAtom)
   const replayData = get(replayDataAtom)
-  
+
   if (replayData) {
     // Collect operations from start to end index
     const startIndex = get(replayStartIndexAtom)
     const operations = get(operationsAtom)
-    
+
     if (startIndex !== null) {
       // Filter operations that occurred during recording
-      const recordedOps = operations.filter(op => {
+      const recordedOps = operations.filter((op) => {
         const opTime = op.timestamp
         return opTime >= replayData.startTime && (replayData.endTime === undefined || opTime <= replayData.endTime)
       })
-      
+
       // Update replay data with operations and end time
       set(replayDataAtom, {
         ...replayData,
         operations: recordedOps,
-        endTime: Date.now()
+        endTime: Date.now(),
       })
     }
   }
-  
+
   set(replayRecordingAtom, false)
   set(replayEndIndexAtom, currentIndex)
 })
 
 // Helper function to find moved cards between states
-function findMovedCards(prevState: GameState, nextState: GameState): Array<{
-  card: Card,
-  fromZone: ZoneId,
+function findMovedCards(
+  prevState: GameState,
+  nextState: GameState,
+): Array<{
+  card: Card
+  fromZone: ZoneId
   toZone: ZoneId
 }> {
-  const movedCards: Array<{ card: Card, fromZone: ZoneId, toZone: ZoneId }> = []
-  
+  const movedCards: Array<{ card: Card; fromZone: ZoneId; toZone: ZoneId }> = []
+
   // Helper to find card in all zones
-  const findCardInState = (state: GameState, cardId: string): { card: Card, zone: ZoneId } | null => {
-    for (const [player, board] of Object.entries(state.players) as [keyof GameState['players'], PlayerBoard][]) {
+  const findCardInState = (state: GameState, cardId: string): { card: Card; zone: ZoneId } | null => {
+    for (const [player, board] of Object.entries(state.players) as [keyof GameState["players"], PlayerBoard][]) {
       // Check all zones
       // Monster zones
       for (let i = 0; i < board.monsterZones.length; i++) {
-        const card = board.monsterZones[i].find(c => c.id === cardId)
+        const card = board.monsterZones[i].find((c) => c.id === cardId)
         if (card) return { card, zone: { player, type: "monsterZone", index: i } }
       }
       // Spell/trap zones
       for (let i = 0; i < board.spellTrapZones.length; i++) {
-        const card = board.spellTrapZones[i].find(c => c.id === cardId)
+        const card = board.spellTrapZones[i].find((c) => c.id === cardId)
         if (card) return { card, zone: { player, type: "spellTrapZone", index: i } }
       }
       // Extra monster zones
       for (let i = 0; i < board.extraMonsterZones.length; i++) {
-        const card = board.extraMonsterZones[i].find(c => c.id === cardId)
+        const card = board.extraMonsterZones[i].find((c) => c.id === cardId)
         if (card) return { card, zone: { player, type: "extraMonsterZone", index: i } }
       }
       // Field zone
@@ -247,72 +259,70 @@ function findMovedCards(prevState: GameState, nextState: GameState): Array<{
         return { card: board.fieldZone, zone: { player, type: "fieldZone" } }
       }
       // Hand
-      const handCard = board.hand.find(c => c.id === cardId)
+      const handCard = board.hand.find((c) => c.id === cardId)
       if (handCard) return { card: handCard, zone: { player, type: "hand", index: handCard.index } }
       // Deck
-      const deckCard = board.deck.find(c => c.id === cardId)
+      const deckCard = board.deck.find((c) => c.id === cardId)
       if (deckCard) return { card: deckCard, zone: { player, type: "deck", index: deckCard.index } }
       // Graveyard
-      const graveyardCard = board.graveyard.find(c => c.id === cardId)
+      const graveyardCard = board.graveyard.find((c) => c.id === cardId)
       if (graveyardCard) return { card: graveyardCard, zone: { player, type: "graveyard", index: graveyardCard.index } }
       // Banished
-      const banishedCard = board.banished.find(c => c.id === cardId)
+      const banishedCard = board.banished.find((c) => c.id === cardId)
       if (banishedCard) return { card: banishedCard, zone: { player, type: "banished", index: banishedCard.index } }
       // Extra deck
-      const extraDeckCard = board.extraDeck.find(c => c.id === cardId)
+      const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
       if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck", index: extraDeckCard.index } }
     }
     return null
   }
-  
+
   // Get all card IDs from both states
   const allCardIds = new Set<string>()
   for (const board of Object.values(prevState.players)) {
-    board.monsterZones.flat().forEach(c => allCardIds.add(c.id))
-    board.spellTrapZones.flat().forEach(c => allCardIds.add(c.id))
-    board.extraMonsterZones.flat().forEach(c => allCardIds.add(c.id))
+    board.monsterZones.flat().forEach((c) => allCardIds.add(c.id))
+    board.spellTrapZones.flat().forEach((c) => allCardIds.add(c.id))
+    board.extraMonsterZones.flat().forEach((c) => allCardIds.add(c.id))
     if (board.fieldZone) allCardIds.add(board.fieldZone.id)
-    board.hand.forEach(c => allCardIds.add(c.id))
-    board.deck.forEach(c => allCardIds.add(c.id))
-    board.graveyard.forEach(c => allCardIds.add(c.id))
-    board.banished.forEach(c => allCardIds.add(c.id))
-    board.extraDeck.forEach(c => allCardIds.add(c.id))
+    board.hand.forEach((c) => allCardIds.add(c.id))
+    board.deck.forEach((c) => allCardIds.add(c.id))
+    board.graveyard.forEach((c) => allCardIds.add(c.id))
+    board.banished.forEach((c) => allCardIds.add(c.id))
+    board.extraDeck.forEach((c) => allCardIds.add(c.id))
   }
-  
+
   // Check each card for position changes
   for (const cardId of allCardIds) {
     const prevPosition = findCardInState(prevState, cardId)
     const nextPosition = findCardInState(nextState, cardId)
-    
+
     if (prevPosition && nextPosition) {
       // Check if zone changed
       const prevZone = prevPosition.zone
       const nextZone = nextPosition.zone
-      
-      if (prevZone.player !== nextZone.player ||
-          prevZone.type !== nextZone.type ||
-          prevZone.index !== nextZone.index) {
+
+      if (prevZone.player !== nextZone.player || prevZone.type !== nextZone.type || prevZone.index !== nextZone.index) {
         movedCards.push({
           card: nextPosition.card,
           fromZone: prevZone,
-          toZone: nextZone
+          toZone: nextZone,
         })
       }
     }
   }
-  
+
   return movedCards
 }
 
 // Get card element position
-function getCardElementPosition(cardId: string): { x: number, y: number } | null {
+function getCardElementPosition(cardId: string): { x: number; y: number } | null {
   const element = document.querySelector(`[data-card-id="${cardId}"]`)
   if (!element) return null
-  
+
   const rect = element.getBoundingClientRect()
   return {
     x: rect.left,
-    y: rect.top
+    y: rect.top,
   }
 }
 
@@ -320,7 +330,7 @@ function getCardElementPosition(cardId: string): { x: number, y: number } | null
 function applyOperation(state: GameState, operation: GameOperation): GameState {
   // Create a deep copy of the state
   const newState = JSON.parse(JSON.stringify(state)) as GameState
-  
+
   switch (operation.type) {
     case "move":
       if (operation.from && operation.to) {
@@ -329,7 +339,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       }
       break
     case "rotate":
-      if (operation.to && typeof operation.metadata?.angle === 'number') {
+      if (operation.to && typeof operation.metadata?.angle === "number") {
         return performCardRotation(newState, operation.to, operation.metadata.angle)
       }
       break
@@ -337,7 +347,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       // Draw operations are handled by move operations
       break
   }
-  
+
   return newState
 }
 
@@ -345,63 +355,63 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
 export const playReplayAtom = atom(null, async (get, set) => {
   const replayData = get(replayDataAtom)
   const speed = get(replaySpeedAtom)
-  
+
   if (!replayData || replayData.operations.length === 0) {
     console.warn("No replay data available")
     return
   }
-  
+
   // Set initial state from snapshot
   set(replayPlayingAtom, true)
   set(replayPausedAtom, false)
   set(replayCurrentIndexAtom, 0)
   set(gameStateAtom, JSON.parse(JSON.stringify(replayData.startSnapshot)) as GameState)
-  
+
   // Clear any existing animations and UI state
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
-  
+
   // Keep track of current state
   let currentState = JSON.parse(JSON.stringify(replayData.startSnapshot)) as GameState
-  
+
   // Wait for DOM to update after snapshot restore
-  await new Promise(resolve => setTimeout(resolve, 100))
-  
+  await new Promise((resolve) => setTimeout(resolve, 100))
+
   // Play through each operation
   for (let i = 0; i < replayData.operations.length; i++) {
     // Check if paused or stopped
     if (!get(replayPlayingAtom)) break
-    
+
     // Wait while paused
     while (get(replayPausedAtom) && get(replayPlayingAtom)) {
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
-    
+
     if (!get(replayPlayingAtom)) break
-    
+
     const operation = replayData.operations[i]
-    
+
     // Apply operation to get next state
     const nextState = applyOperation(currentState, operation)
-    
+
     // Find moved cards
     const movedCards = findMovedCards(currentState, nextState)
-    
+
     if (movedCards.length > 0) {
       // Get positions before state update
       const cardPositions = movedCards.map(({ card }) => ({
         cardId: card.id,
-        position: getCardElementPosition(card.id)
+        position: getCardElementPosition(card.id),
       }))
-      
+
       // Create animations for moved cards BEFORE updating state
       const animations: CardAnimation[] = []
-      const animationDuration = Math.floor(speed * 2 / 3) // 2/3 of replay speed
-      
+      const animationDuration = Math.floor((speed * 2) / 3) // 2/3 of replay speed
+
       // First, create animations with current positions
       for (const { card } of movedCards) {
-        const prevPos = cardPositions.find(p => p.cardId === card.id)?.position
-        
+        const prevPos = cardPositions.find((p) => p.cardId === card.id)?.position
+
         if (prevPos) {
           // Temporarily store the animation with same start/end position
           animations.push({
@@ -410,50 +420,63 @@ export const playReplayAtom = atom(null, async (get, set) => {
             fromPosition: prevPos,
             toPosition: prevPos, // Will be updated after state change
             startTime: Date.now(),
-            duration: animationDuration
+            duration: animationDuration,
           })
         }
       }
-      
+
       // Start animations (cards will be hidden)
       if (animations.length > 0) {
         set(cardAnimationsAtom, animations)
       }
-      
+
       // Apply next state
       set(gameStateAtom, nextState)
       set(replayCurrentIndexAtom, i + 1)
       currentState = nextState
-      
+
       // Small delay to ensure DOM is updated
-      await new Promise(resolve => setTimeout(resolve, 50))
-      
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
       // Update animations with actual end positions
-      const updatedAnimations = animations.map(anim => {
+      const updatedAnimations = animations.map((anim) => {
         const nextPos = getCardElementPosition(anim.cardId)
         return nextPos ? { ...anim, toPosition: nextPos } : anim
       })
-      
+
       // Update animations with correct end positions
       set(cardAnimationsAtom, updatedAnimations)
-      
+
       // Wait for animation to complete before next step
       if (i < replayData.operations.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, speed))
+        await new Promise((resolve) => setTimeout(resolve, speed))
       }
     } else {
-      // No card movement, just update state
-      set(gameStateAtom, nextState)
-      set(replayCurrentIndexAtom, i + 1)
-      currentState = nextState
-      
-      // Wait for next step
-      if (i < replayData.operations.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, speed))
+      // No card movement, but check for rotation
+      if (operation.type === "rotate") {
+        // Update state immediately for rotation
+        set(gameStateAtom, nextState)
+        set(replayCurrentIndexAtom, i + 1)
+        currentState = nextState
+
+        // Use shorter delay for rotation (300ms total, 200ms animation)
+        if (i < replayData.operations.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300))
+        }
+      } else {
+        // Other operations (no movement, no rotation)
+        set(gameStateAtom, nextState)
+        set(replayCurrentIndexAtom, i + 1)
+        currentState = nextState
+
+        // Wait for next step
+        if (i < replayData.operations.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, speed))
+        }
       }
     }
   }
-  
+
   // End replay
   set(replayPlayingAtom, false)
   set(replayPausedAtom, false)
@@ -490,13 +513,16 @@ export interface CardAnimation {
 
 export const cardAnimationsAtom = atom<CardAnimation[]>([])
 
-
 // Card move action
-export const moveCardAtom = atom(null, (get, set, from: Position, to: Position) => {
+export const moveCardAtom = atom(null, (get, set, from: Position, to: Position, options?: { shiftKey?: boolean }) => {
   const state = get(gameStateAtom)
-  const newState = performCardMove(state, from, to)
+  const newState = performCardMove(state, from, to, options)
 
-  if (newState !== state) {
+  // Always record operations and update state, even for same-zone moves
+  // This ensures undo/redo and replay work correctly
+  const stateChanged = JSON.stringify(state) !== JSON.stringify(newState)
+
+  if (stateChanged) {
     set(gameStateAtom, newState)
     addToHistory(get, set, newState)
 
@@ -508,10 +534,12 @@ export const moveCardAtom = atom(null, (get, set, from: Position, to: Position) 
       from,
       to,
       player: from.zone.player,
+      metadata: options,
     }
     set(operationsAtom, [...get(operationsAtom), operation])
-  } else {
-    // No-op for same zone moves without index change
+
+    // Clear selected card after move to prevent UI issues
+    set(selectedCardAtom, null)
   }
 })
 
@@ -592,9 +620,12 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
 })
 
 // Helper function: Execute card move
-function performCardMove(state: GameState, from: Position, to: Position): GameState {
-  const fromPlayer = state.players[from.zone.player]
-  const toPlayer = state.players[to.zone.player]
+function performCardMove(state: GameState, from: Position, to: Position, options?: { shiftKey?: boolean }): GameState {
+  // Deep clone the state to ensure we always create a new object
+  const newState = JSON.parse(JSON.stringify(state)) as GameState
+
+  const fromPlayer = newState.players[from.zone.player]
+  const toPlayer = newState.players[to.zone.player]
 
   // Get card
   const card = getCardAtPosition(fromPlayer, from.zone)
@@ -603,10 +634,25 @@ function performCardMove(state: GameState, from: Position, to: Position): GameSt
   }
 
   // Update card's zone information
+  // Reset rotation if moving to a zone that doesn't support rotation
+  const supportsRotation =
+    to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
+
+  // Apply rotation if Shift key was held during drop
+  let rotation = card.rotation
+  if (supportsRotation) {
+    if (options?.shiftKey === true) {
+      rotation = -90
+    }
+  } else {
+    rotation = 0
+  }
+
   const updatedCard = {
     ...card,
     zone: to.zone,
     index: to.zone.index,
+    rotation,
   }
 
   // Remove card from source location
@@ -619,14 +665,11 @@ function performCardMove(state: GameState, from: Position, to: Position): GameSt
     updatedCard,
   )
 
-  return {
-    ...state,
-    players: {
-      ...state.players,
-      [from.zone.player]: newFromPlayer,
-      [to.zone.player]: newToPlayer,
-    },
-  }
+  // Update the cloned state
+  newState.players[from.zone.player] = newFromPlayer
+  newState.players[to.zone.player] = newToPlayer
+
+  return newState
 }
 
 // Helper function: Execute card rotation
@@ -792,7 +835,9 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
       if (zone.index !== undefined) {
         const newZones = [...player.monsterZones]
         const cards = [...newZones[zone.index]]
-        cards.unshift(card) // Add to the top
+        // If cardIndex is specified, insert at that position
+        const insertIndex = zone.cardIndex ?? 0
+        cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
         return { ...player, monsterZones: newZones }
       }
@@ -801,7 +846,9 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
       if (zone.index !== undefined) {
         const newZones = [...player.spellTrapZones]
         const cards = [...newZones[zone.index]]
-        cards.unshift(card) // Add to the top
+        // If cardIndex is specified, insert at that position
+        const insertIndex = zone.cardIndex ?? 0
+        cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
         return { ...player, spellTrapZones: newZones }
       }
@@ -812,7 +859,9 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
       if (zone.index !== undefined) {
         const newZones = [...player.extraMonsterZones]
         const cards = [...newZones[zone.index]]
-        cards.unshift(card) // Add to the top
+        // If cardIndex is specified, insert at that position
+        const insertIndex = zone.cardIndex ?? 0
+        cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
         return { ...player, extraMonsterZones: newZones }
       }

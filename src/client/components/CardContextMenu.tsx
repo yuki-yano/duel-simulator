@@ -43,13 +43,16 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
     }
   }
 
+  const isMonsterSpellTrapZone =
+    card.zone &&
+    (card.zone.type === "monsterZone" || card.zone.type === "spellTrapZone" || card.zone.type === "extraMonsterZone")
+
   const menuItems = [
-    { id: "rotate", label: "回転" },
-    { id: "flip", label: "裏返す" },
-    { id: "toGraveyard", label: "墓地へ送る" },
-    { id: "toBanished", label: "除外する" },
-    { id: "toHand", label: "手札に戻す" },
-    { id: "toDeck", label: "デッキに戻す" },
+    {
+      id: "rotate",
+      label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
+      enabled: isMonsterSpellTrapZone,
+    },
   ]
 
   return (
@@ -59,7 +62,7 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
         "fixed z-[10000] bg-white dark:bg-gray-800",
         "border border-gray-200 dark:border-gray-700",
         "rounded-lg shadow-lg py-1 min-w-[180px]",
-        "animate-in fade-in-0 zoom-in-95 duration-200"
+        "animate-in fade-in-0 zoom-in-95 duration-200",
       )}
       style={{
         left: `${adjustedPosition.x}px`,
@@ -71,14 +74,18 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
           key={item.id}
           className={cn(
             "w-full px-4 py-2 text-left",
-            "text-sm text-gray-400 dark:text-gray-500",
-            "cursor-not-allowed",
-            "transition-colors duration-150"
+            "text-sm",
+            "transition-colors duration-150",
+            item.enabled === true
+              ? "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+              : "text-gray-400 dark:text-gray-500 cursor-not-allowed",
           )}
-          disabled
+          disabled={item.enabled !== true}
           onClick={() => {
-            onAction(item.id, card)
-            onClose()
+            if (item.enabled === true) {
+              onAction(item.id, card)
+              onClose()
+            }
           }}
         >
           <span>{item.label}</span>
