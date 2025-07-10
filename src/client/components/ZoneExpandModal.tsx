@@ -188,7 +188,13 @@ export function ZoneExpandModal({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <div className="relative" style={{ minHeight: `${availableHeight}px` }}>
+        <div 
+          className="relative" 
+          style={{ minHeight: `${availableHeight}px` }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {cards.map((card, index) => {
             const row = Math.floor(index / cardsPerRow)
             const col = index % cardsPerRow
@@ -209,7 +215,7 @@ export function ZoneExpandModal({
                   top: `${top}px`,
                   width: `${actualCardWidth}px`,
                   height: `${cardHeightPx}px`,
-                  zIndex: hoveredCardIndex === index ? 100 : cards.length - index,
+                  zIndex: hoveredCardIndex === index ? 1000 : 100 + cards.length - index,
                 }}
                 onMouseEnter={() => setHoveredCardIndex(index)}
                 onMouseLeave={() => setHoveredCardIndex(null)}

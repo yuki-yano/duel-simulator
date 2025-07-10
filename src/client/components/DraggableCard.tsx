@@ -198,10 +198,24 @@ export function DraggableCard({
     }
     setDraggedCard(cardWithZone)
     e.dataTransfer.effectAllowed = "move"
+    
+    // Set high z-index for the dragging element
+    const element = e.currentTarget as HTMLElement
+    if (element) {
+      element.style.zIndex = "9999"
+      element.style.position = "relative"
+    }
   }
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent) => {
     setDraggedCard(null)
+    
+    // Reset z-index
+    const element = e.currentTarget as HTMLElement
+    if (element) {
+      element.style.zIndex = ""
+      element.style.position = ""
+    }
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {

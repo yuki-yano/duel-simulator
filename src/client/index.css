@@ -83,11 +83,6 @@ textarea {
     -webkit-user-drag: none;
     user-select: none;
   }
-  
-  /* Ensure dragging card appears above other elements */
-  [draggable="true"]:active {
-    z-index: 9999 !important;
-  }
 }
 
 /* Effect activation animations */
