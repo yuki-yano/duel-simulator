@@ -34,6 +34,7 @@ export default function Replay() {
   const [showAutoPlayDialog, setShowAutoPlayDialog] = useState(false)
   const [replayDataError, setReplayDataError] = useState<string | null>(null)
   const [savedStateData, setSavedStateData] = useState<any>(null)
+  const [isFatalError, setIsFatalError] = useState(false)
 
   const setReplayData = useSetAtom(replayDataAtom)
   const setGameState = useSetAtom(gameStateAtom)
@@ -74,6 +75,7 @@ export default function Replay() {
         savedState = await loadGameState(id ?? "")
       } catch (e) {
         // Handle API errors (404, network errors, etc)
+        setIsFatalError(true)
         throw new Error("リプレイが見つかりません")
       }
       
@@ -262,8 +264,12 @@ export default function Replay() {
       
       setError(errorMessage)
       setErrorDetails(errorDetail)
-      setShowErrorDialog(true)
       setIsLoading(false)
+      
+      // If it's not a fatal error, show dialog after page loads
+      if (!isFatalError) {
+        setTimeout(() => setShowErrorDialog(true), 100)
+      }
     }
   }
 
@@ -278,7 +284,8 @@ export default function Replay() {
     )
   }
 
-  if (error !== null) {
+  // Only show full-screen error for fatal errors (404, etc)
+  if (isFatalError && error !== null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -290,6 +297,7 @@ export default function Replay() {
       </div>
     )
   }
+
 
   // Handle deck process complete (dummy handler for replay mode)
   const handleProcessComplete = () => {
