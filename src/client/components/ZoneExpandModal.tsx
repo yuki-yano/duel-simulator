@@ -135,9 +135,9 @@ export function ZoneExpandModal({
   const isHovered =
     hoveredZone != null && zone != null && hoveredZone.player === zone.player && hoveredZone.type === zone.type
 
-  // Get background color based on zone type (solid colors)
-  const bgColor = zone.type === "graveyard" ? "bg-background" : "bg-background"
-  const borderColor = zone.type === "graveyard" ? "border-red-500" : "border-slate-500"
+  // Get background color based on zone type (subtle transparency)
+  const bgColor = "bg-background/95"
+  const borderColor = zone.type === "graveyard" ? "border-red-400/50" : "border-slate-400/50"
 
   return (
     <div
