@@ -9,9 +9,10 @@ interface CardContextMenuProps {
   position: { x: number; y: number }
   onClose: () => void
   onAction: (action: string, card: GameCard) => void
+  isReplayActive?: boolean
 }
 
-export function CardContextMenu({ card, zone, position, onClose, onAction }: CardContextMenuProps) {
+export function CardContextMenu({ card, zone, position, onClose, onAction, isReplayActive }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,22 +56,22 @@ export function CardContextMenu({ card, zone, position, onClose, onAction }: Car
     {
       id: "activate",
       label: "効果の発動",
-      enabled: card.faceDown !== true,
+      enabled: card.faceDown !== true && !isReplayActive,
     },
     {
       id: "highlight",
       label: card.highlighted === true ? "ハイライトを解除" : "ハイライト",
-      enabled: true,
+      enabled: !isReplayActive,
     },
     {
       id: "rotate",
       label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
-      enabled: isMonsterZone,
+      enabled: isMonsterZone && !isReplayActive,
     },
     {
       id: "flip",
       label: card.faceDown === true ? "表側表示にする" : "裏側表示にする",
-      enabled: isMonsterSpellTrapZone,
+      enabled: isMonsterSpellTrapZone && !isReplayActive,
     },
   ]
 

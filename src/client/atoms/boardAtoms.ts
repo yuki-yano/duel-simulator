@@ -2289,6 +2289,26 @@ function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): Player
           draft.hand[zone.index] = card
         }
         break
+      case "deck":
+        if (zone.index !== undefined && zone.index < draft.deck.length) {
+          draft.deck[zone.index] = card
+        }
+        break
+      case "extraDeck":
+        if (zone.index !== undefined && zone.index < draft.extraDeck.length) {
+          draft.extraDeck[zone.index] = card
+        }
+        break
+      case "graveyard":
+        if (zone.index !== undefined && zone.index < draft.graveyard.length) {
+          draft.graveyard[zone.index] = card
+        }
+        break
+      case "banished":
+        if (zone.index !== undefined && zone.index < draft.banished.length) {
+          draft.banished[zone.index] = card
+        }
+        break
     }
   })
 }

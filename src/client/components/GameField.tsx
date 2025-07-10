@@ -1436,6 +1436,37 @@ export function GameFieldContent() {
           {/* Replay controls on desktop - same row */}
           {replayData && replayData.operations.length > 0 && !isRecording && (
             <div className="hidden sm:flex items-center gap-4">
+              {/* Playback controls when playing */}
+              {isPlaying && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (isPaused) {
+                        void playReplay()
+                      } else {
+                        void togglePause()
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+                    aria-label={isPaused ? "Resume" : "Pause"}
+                  >
+                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    <span>{isPaused ? "再開" : "一時停止"}</span>
+                  </button>
+                  <button
+                    onClick={() => stopReplay()}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-gray-500 text-white hover:bg-gray-600"
+                    aria-label="Stop replay"
+                  >
+                    <Square className="w-4 h-4" />
+                    <span>停止</span>
+                  </button>
+                  <div className="flex items-center px-3 py-1.5 text-sm font-medium text-muted-foreground">
+                    ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+                  </div>
+                </div>
+              )}
+
               {/* Replay speed control */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">速度:</span>
@@ -1475,9 +1506,9 @@ export function GameFieldContent() {
             </div>
           )}
 
-          {/* Replay playback controls */}
+          {/* Replay playback controls for mobile */}
           {isPlaying && (
-            <>
+            <div className="flex sm:hidden items-center gap-2">
               <button
                 onClick={() => {
                   if (isPaused) {
@@ -1486,7 +1517,7 @@ export function GameFieldContent() {
                     void togglePause()
                   }
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-blue-500 text-white hover:bg-blue-600"
                 aria-label={isPaused ? "Resume" : "Pause"}
               >
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -1494,16 +1525,16 @@ export function GameFieldContent() {
               </button>
               <button
                 onClick={() => stopReplay()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-gray-500 text-white hover:bg-gray-600"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-gray-500 text-white hover:bg-gray-600"
                 aria-label="Stop replay"
               >
                 <Square className="w-4 h-4" />
                 <span>停止</span>
               </button>
-              <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
+              <div className="flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground">
                 ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
               </div>
-            </>
+            </div>
           )}
 
           {/* Recording status */}
@@ -2009,6 +2040,7 @@ export function GameFieldContent() {
           position={contextMenu.position}
           onClose={() => setContextMenu(null)}
           onAction={handleContextMenuAction}
+          isReplayActive={isPlaying}
         />
       )}
 
