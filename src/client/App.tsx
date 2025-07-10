@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
+import { produce } from "immer"
 import { Card, CardContent } from "@client/components/ui/Card"
 import { GameField } from "@client/components/GameField"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
-import type { GameState } from "@client/api/gameState"
 import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
 import { useAtom, useAtomValue } from "jotai"
 import {
@@ -20,14 +20,14 @@ import {
 export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
-  const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
+  const [_deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [showGoToReplayDialog, setShowGoToReplayDialog] = useState(false)
   const extractedCards = useAtomValue(extractedCardsAtom)
   const gameState = useAtomValue(gameStateAtom)
   const [, resetHistory] = useAtom(resetHistoryAtom)
   const _operations = useAtomValue(operationsAtom)
   const [, _drawCard] = useAtom(drawCardAtom)
-  const [isGameStarted, _setIsGameStarted] = useState(false)
+  const [_isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
   const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
   const [, setDeckMetadataAtom] = useAtom(deckMetadataAtom)
@@ -81,17 +81,10 @@ export default function App() {
         index,
       }))
 
-      const newState = {
-        ...gameState,
-        players: {
-          ...gameState.players,
-          self: {
-            ...gameState.players.self,
-            deck: mainDeckWithZones,
-            extraDeck: extraDeckWithZones,
-          },
-        },
-      }
+      const newState = produce(gameState, (draft) => {
+        draft.players.self.deck = mainDeckWithZones
+        draft.players.self.extraDeck = extraDeckWithZones
+      })
 
       // Reset history with deck loaded state as initial state
       resetHistory(newState)

@@ -71,6 +71,7 @@ export const operationsAtom = atom<GameOperation[]>([])
 interface HistoryEntry {
   gameState: GameState
   operationCount: number // Number of operations at this state
+  operations: GameOperation[] // Store operations up to this state
 }
 
 // History for undo/redo
@@ -78,6 +79,7 @@ export const gameHistoryAtom = atom<HistoryEntry[]>([
   {
     gameState: createInitialGameState(),
     operationCount: 0,
+    operations: [],
   },
 ])
 export const gameHistoryIndexAtom = atom<number>(0)
@@ -147,6 +149,7 @@ const addToHistory = (get: Getter, set: Setter, newState: GameState) => {
   const newEntry: HistoryEntry = {
     gameState: newState,
     operationCount: operations.length,
+    operations: [...operations], // Store a copy of operations
   }
 
   // Remove future history if we're in the middle of the history
@@ -172,6 +175,7 @@ export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
     {
       gameState: newState,
       operationCount: 0,
+      operations: [],
     },
   ])
   set(gameHistoryIndexAtom, 0)
@@ -182,7 +186,6 @@ export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
 export const undoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
-  const operations = get(operationsAtom)
 
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
@@ -192,18 +195,17 @@ export const undoAtom = atom(null, (get, set) => {
     set(gameStateAtom, previousEntry.gameState)
     set(gameHistoryIndexAtom, newIndex)
 
-    // Trim operations to match the previous state
-    const trimmedOperations = operations.slice(0, previousEntry.operationCount)
-    set(operationsAtom, trimmedOperations)
+    // Restore operations from history
+    set(operationsAtom, [...previousEntry.operations])
 
     // Also trim replay operations if recording
     if (get(replayRecordingAtom)) {
       // Calculate how many operations to trim from replay operations
-      const currentOperationCount = history[currentIndex].operationCount
-      const previousOperationCount = previousEntry.operationCount
-      const operationsToRemove = currentOperationCount - previousOperationCount
+      const currentEntry = history[currentIndex]
+      const operationsToRemove = currentEntry.operationCount - previousEntry.operationCount
 
       const replayOps = get(replayOperationsAtom)
+      
       // Remove the last N operations from replay operations
       const trimmedReplayOps = replayOps.slice(0, replayOps.length - operationsToRemove)
       set(replayOperationsAtom, trimmedReplayOps)
@@ -219,22 +221,32 @@ export const redoAtom = atom(null, (get, set) => {
   if (currentIndex < history.length - 1) {
     const newIndex = currentIndex + 1
     const nextEntry = history[newIndex]
+    const currentEntry = history[currentIndex]
 
     // Update game state
     set(gameStateAtom, nextEntry.gameState)
     set(gameHistoryIndexAtom, newIndex)
 
-    // Restore operations to match the next state
-    const operations = get(operationsAtom)
-    const currentEntry = history[currentIndex]
+    // Restore operations from history
+    set(operationsAtom, [...nextEntry.operations])
 
-    // Find operations that need to be added back
-    const operationsToAdd = operations.slice(currentEntry.operationCount, nextEntry.operationCount)
+    // Find operations that need to be added to replay
+    const operationsToAdd = nextEntry.operations.slice(currentEntry.operationCount, nextEntry.operationCount)
 
     // Also add to replay operations if recording
-    if (get(replayRecordingAtom) && operationsToAdd.length > 0) {
+    if (get(replayRecordingAtom)) {
+      const replayStartOperationCount = get(replayStartIndexAtom) ?? 0
       const replayOps = get(replayOperationsAtom)
-      set(replayOperationsAtom, [...replayOps, ...operationsToAdd])
+      
+      // Only add operations that occurred after replay recording started
+      const newOperations = operationsToAdd.filter((_, index) => {
+        const operationIndex = currentEntry.operationCount + index
+        return operationIndex >= replayStartOperationCount
+      })
+      
+      if (newOperations.length > 0) {
+        set(replayOperationsAtom, [...replayOps, ...newOperations])
+      }
     }
   }
 })
@@ -546,6 +558,7 @@ export const replaySpeedAtom = atom<number>(1) // Default 1x speed
 export const startReplayRecordingAtom = atom(null, (get, set) => {
   const currentIndex = get(gameHistoryIndexAtom)
   const currentState = get(gameStateAtom)
+  const currentOperations = get(operationsAtom)
 
   // Create deep copy of current state as snapshot
   const snapshot = produce(currentState, () => {})
@@ -558,7 +571,7 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
   }
 
   set(replayRecordingAtom, true)
-  set(replayStartIndexAtom, currentIndex)
+  set(replayStartIndexAtom, currentOperations.length) // Store operation count at start
   set(replayEndIndexAtom, null)
   set(replayDataAtom, replayData)
   set(replayOperationsAtom, []) // Clear replay operations
@@ -573,11 +586,6 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
     // Use replay-specific operations list instead of global operations
     const replayOperations = get(replayOperationsAtom)
 
-    console.log("stopRecording: replay operations", {
-      recordedOperations: replayOperations.length,
-      startTime: replayData.startTime,
-      endTime: Date.now(),
-    })
 
     // Update replay data with operations and end time
     set(replayDataAtom, {
@@ -1095,7 +1103,8 @@ export const moveCardAtom = atom(
 
       // Also record to replay operations if recording
       if (get(replayRecordingAtom)) {
-        set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+        const currentReplayOps = get(replayOperationsAtom)
+        set(replayOperationsAtom, [...currentReplayOps, operation])
       }
 
       // Clear selected card after move to prevent UI issues

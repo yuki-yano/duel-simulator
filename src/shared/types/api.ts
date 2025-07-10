@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { DeckConfigurationSchema, DeckCardIdsMappingSchema } from "@/client/schemas/replay"
 
 // リクエストスキーマ
 export const SaveDeckImageRequestSchema = z.object({
@@ -18,8 +19,8 @@ export const SaveGameStateRequestSchema = z.object({
   description: z.string().max(500).optional(),
   type: z.enum(["replay", "snapshot"]).default("replay"),
   version: z.string().default("1.0"),
-  deckConfig: z.string().min(1),
-  deckCardIds: z.string().min(1),
+  deckConfig: DeckConfigurationSchema,
+  deckCardIds: DeckCardIdsMappingSchema,
 })
 
 // レスポンススキーマ

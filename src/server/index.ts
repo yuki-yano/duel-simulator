@@ -168,8 +168,8 @@ app.post("/api/save-states", async (c) => {
       description,
       type,
       version,
-      deckConfig: deckConfig, // Already JSON string from client
-      deckCardIds: deckCardIds, // Already JSON string from client
+      deckConfig: JSON.stringify(deckConfig), // Serialize object to JSON string
+      deckCardIds: JSON.stringify(deckCardIds), // Serialize object to JSON string
       createdAt: new Date().toISOString(),
     })
 

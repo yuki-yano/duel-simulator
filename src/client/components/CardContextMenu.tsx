@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { produce } from "immer"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
@@ -30,19 +31,20 @@ export function CardContextMenu({ card, zone, position, onClose, onAction }: Car
   }, [onClose])
 
   // Adjust position to keep menu within viewport
-  const adjustedPosition = { ...position }
-  if (menuRef.current) {
-    const rect = menuRef.current.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
+  const adjustedPosition = produce(position, (draft) => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect()
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
 
-    if (rect.right > viewportWidth) {
-      adjustedPosition.x = viewportWidth - rect.width - 10
+      if (rect.right > viewportWidth) {
+        draft.x = viewportWidth - rect.width - 10
+      }
+      if (rect.bottom > viewportHeight) {
+        draft.y = viewportHeight - rect.height - 10
+      }
     }
-    if (rect.bottom > viewportHeight) {
-      adjustedPosition.y = viewportHeight - rect.height - 10
-    }
-  }
+  })
 
   const isMonsterSpellTrapZone =
     zone.type === "monsterZone" || zone.type === "spellTrapZone" || zone.type === "extraMonsterZone"

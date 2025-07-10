@@ -344,7 +344,6 @@ export default function Replay() {
   // Handle deck process complete (dummy handler for replay mode)
   const handleProcessComplete = () => {
     // Processing is already done, this is just for UI consistency
-    console.log("Deck process complete in replay mode")
   }
 
   // Handle replay start

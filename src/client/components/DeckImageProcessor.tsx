@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
+import { produce } from "immer"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
@@ -161,7 +162,9 @@ export function DeckImageProcessor({
 
     // Save processed canvas for debug display if debugKey provided
     if (debugKey && showDebug) {
-      setOcrProcessedCanvases((prev) => ({ ...prev, [debugKey]: processedDataUrl }))
+      setOcrProcessedCanvases((prev) => produce(prev, (draft) => {
+        draft[debugKey] = processedDataUrl
+      }))
     }
 
     // Perform OCR on this region
@@ -219,7 +222,9 @@ export function DeckImageProcessor({
           const debugCtx = debugCanvas.getContext("2d")
           if (debugCtx) {
             debugCtx.drawImage(img, textX, mainDeckY, textWidth, textHeight, 0, 0, textWidth, textHeight)
-            setOcrDebugCanvases((prev) => ({ ...prev, main: debugCanvas.toDataURL() }))
+            setOcrDebugCanvases((prev) => produce(prev, (draft) => {
+              draft.main = debugCanvas.toDataURL()
+            }))
           }
         }
 

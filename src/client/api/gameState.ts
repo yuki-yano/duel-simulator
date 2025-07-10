@@ -1,4 +1,3 @@
-import { saveDeckImage, calculateImageHash } from "./deck"
 import type { ReplaySaveData, DeckCardIdsMapping, DeckConfiguration } from "@/shared/types/game"
 import { ErrorResponseSchema, SaveStateSuccessResponseSchema, SavedStateResponseSchema } from "@/shared/types/api"
 import { z } from "zod"
@@ -40,11 +39,11 @@ export async function saveReplayData(
       stateJson: JSON.stringify(replayData),
       deckImageHash,
       title: replayData.metadata.title,
-      description: replayData.metadata.description || "",
+      description: replayData.metadata.description ?? "",
       type: replayData.type,
       version: replayData.version,
-      deckConfig: JSON.stringify(deckConfig),
-      deckCardIds: JSON.stringify(deckCardIds),
+      deckConfig,
+      deckCardIds,
     }),
   })
 
