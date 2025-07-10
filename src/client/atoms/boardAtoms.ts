@@ -1,6 +1,7 @@
 import { atom } from "jotai"
 import type { Atom, WritableAtom } from "jotai"
 import { v4 as uuidv4 } from "uuid"
+import { produce } from "immer"
 import type {
   Card,
   GameState,
@@ -256,7 +257,7 @@ export const resetToInitialStateAtom = atom(null, (get, set) => {
 
   if (initialState) {
     // Create a deep copy of the initial state
-    const resetState = JSON.parse(JSON.stringify(initialState)) as GameState
+    const resetState = produce(initialState, () => {})
 
     // Reset game state and clear history
     set(resetHistoryAtom, resetState)
@@ -547,7 +548,7 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
   const currentState = get(gameStateAtom)
 
   // Create deep copy of current state as snapshot
-  const snapshot = JSON.parse(JSON.stringify(currentState)) as GameState
+  const snapshot = produce(currentState, () => {})
 
   // Initialize replay data
   const replayData: ReplayData = {
@@ -695,8 +696,7 @@ function getCardElementPosition(cardId: string): { x: number; y: number } | null
 
 // Helper to apply operation to state
 function applyOperation(state: GameState, operation: GameOperation): GameState {
-  // Create a deep copy of the state
-  const newState = JSON.parse(JSON.stringify(state)) as GameState
+  let newState = state
 
   switch (operation.type) {
     case "move":
@@ -722,8 +722,8 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
         const options = operation.metadata as
           | { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean }
           | undefined
-        const result = performCardMove(newState, fromPosition, toPosition, options)
-        return result != null ? result : newState // Return newState if performCardMove returns undefined
+        newState = performCardMove(state, fromPosition, toPosition, options)
+        return newState
       }
       break
     case "rotate":
@@ -737,8 +737,8 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
           },
           cardId: operation.cardId,
         }
-        const result = performCardRotation(newState, position, operation.metadata.angle)
-        return result != null ? result : newState // Return newState if performCardRotation returns undefined
+        newState = performCardRotation(state, position, operation.metadata.angle)
+        return newState
       }
       break
     case "draw":
@@ -758,8 +758,8 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
           },
           cardId: operation.cardId,
         }
-        const result = performCardHighlightToggle(newState, position)
-        return result != null ? result : newState // Return newState if performCardHighlightToggle returns undefined
+        newState = performCardHighlightToggle(state, position)
+        return newState
       }
       break
   }
@@ -789,7 +789,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
   set(replayCurrentIndexAtom, 0)
 
   // Initialize history with snapshot
-  const initialState = JSON.parse(JSON.stringify(replayData.startSnapshot)) as GameState
+  const initialState = produce(replayData.startSnapshot, () => {})
   set(resetHistoryAtom, initialState)
 
   // Clear any existing animations and UI state
@@ -797,7 +797,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
   set(highlightedZonesAtom, [])
 
   // Keep track of current state
-  let currentState = JSON.parse(JSON.stringify(replayData.startSnapshot)) as GameState
+  let currentState = produce(replayData.startSnapshot, () => {})
 
   // Wait for DOM to update after snapshot restore
   await new Promise((resolve) => setTimeout(resolve, 100))
@@ -1367,11 +1367,9 @@ function performCardMove(
   to: Position,
   options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean },
 ): GameState {
-  // Deep clone the state to ensure we always create a new object
-  const newState = JSON.parse(JSON.stringify(state)) as GameState
-
-  const fromPlayer = newState.players[from.zone.player]
-  const toPlayer = newState.players[to.zone.player]
+  return produce(state, draft => {
+    const fromPlayer = state.players[from.zone.player]
+    const toPlayer = state.players[to.zone.player]
 
   // Get card by ID (cardId is now required)
   let card: Card | null = null
@@ -1442,11 +1440,10 @@ function performCardMove(
     faceDown = false
   }
 
-  const updatedCard = {
-    ...card,
-    rotation,
-    faceDown,
-  }
+  const updatedCard = produce(card, draft => {
+    draft.rotation = rotation
+    draft.faceDown = faceDown
+  })
 
   // Remove card from source location using card ID
   const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id)
@@ -1470,11 +1467,10 @@ function performCardMove(
     updatedCard,
   )
 
-  // Update the cloned state
-  newState.players[from.zone.player] = newFromPlayer
-  newState.players[to.zone.player] = newToPlayer
-
-  return newState
+  // Update the draft state
+    draft.players[from.zone.player] = newFromPlayer
+    draft.players[to.zone.player] = newToPlayer
+  })
 }
 
 // Helper function: Execute card rotation
@@ -1494,7 +1490,9 @@ function performCardRotation(state: GameState, position: Position, angle: number
 
   if (!card) return state
 
-  const rotatedCard = { ...card, rotation: angle }
+  const rotatedCard = produce(card, draft => {
+    draft.rotation = angle
+  })
   const newPlayer = updateCardInZone(player, actualZone, rotatedCard)
 
   return {
@@ -1523,7 +1521,9 @@ function performCardFlip(state: GameState, position: Position): GameState {
 
   if (!card) return state
 
-  const flippedCard = { ...card, faceDown: !(card.faceDown === true) }
+  const flippedCard = produce(card, draft => {
+    draft.faceDown = !(draft.faceDown === true)
+  })
   const newPlayer = updateCardInZone(player, actualZone, flippedCard)
 
   return {
@@ -1551,7 +1551,9 @@ function performCardHighlightToggle(state: GameState, position: Position): GameS
 
   if (!card) return state
 
-  const highlightedCard = { ...card, highlighted: !(card.highlighted === true) }
+  const highlightedCard = produce(card, draft => {
+    draft.highlighted = !(draft.highlighted === true)
+  })
   const newPlayer = updateCardInZone(player, actualZone, highlightedCard)
 
   return {
@@ -1649,296 +1651,240 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
 
 // Helper function: Remove card from zone by ID
 function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string): PlayerBoard {
-  switch (zone.type) {
-    case "monsterZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.monsterZones]
-        const cards = [...newZones[zone.index]]
-        const cardIndex = cards.findIndex((c) => c.id === cardId)
-        if (cardIndex !== -1) {
-          cards.splice(cardIndex, 1)
+  return produce(player, draft => {
+    switch (zone.type) {
+      case "monsterZone":
+        if (zone.index !== undefined) {
+          const cards = draft.monsterZones[zone.index]
+          const cardIndex = cards.findIndex((c) => c.id === cardId)
+          if (cardIndex !== -1) {
+            cards.splice(cardIndex, 1)
+          }
         }
-        newZones[zone.index] = cards
-        return { ...player, monsterZones: newZones }
-      }
-      break
-    case "spellTrapZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.spellTrapZones]
-        const cards = [...newZones[zone.index]]
-        const cardIndex = cards.findIndex((c) => c.id === cardId)
-        if (cardIndex !== -1) {
-          cards.splice(cardIndex, 1)
+        break
+      case "spellTrapZone":
+        if (zone.index !== undefined) {
+          const cards = draft.spellTrapZones[zone.index]
+          const cardIndex = cards.findIndex((c) => c.id === cardId)
+          if (cardIndex !== -1) {
+            cards.splice(cardIndex, 1)
+          }
         }
-        newZones[zone.index] = cards
-        return { ...player, spellTrapZones: newZones }
-      }
-      break
-    case "fieldZone":
-      if (player.fieldZone?.id === cardId) {
-        return { ...player, fieldZone: null }
-      }
-      break
-    case "extraMonsterZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.extraMonsterZones]
-        const cards = [...newZones[zone.index]]
-        const cardIndex = cards.findIndex((c) => c.id === cardId)
-        if (cardIndex !== -1) {
-          cards.splice(cardIndex, 1)
+        break
+      case "fieldZone":
+        if (draft.fieldZone?.id === cardId) {
+          draft.fieldZone = null
         }
-        newZones[zone.index] = cards
-        return { ...player, extraMonsterZones: newZones }
+        break
+      case "extraMonsterZone":
+        if (zone.index !== undefined) {
+          const cards = draft.extraMonsterZones[zone.index]
+          const cardIndex = cards.findIndex((c) => c.id === cardId)
+          if (cardIndex !== -1) {
+            cards.splice(cardIndex, 1)
+          }
+        }
+        break
+      case "hand": {
+        const index = draft.hand.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.hand.splice(index, 1)
+        }
+        break
       }
-      break
-    case "hand": {
-      const index = player.hand.findIndex((c) => c.id === cardId)
-      if (index !== -1) {
-        const newHand = [...player.hand]
-        newHand.splice(index, 1)
-        // Cards no longer need index property
-        return { ...player, hand: newHand }
+      case "deck": {
+        const index = draft.deck.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.deck.splice(index, 1)
+        }
+        break
       }
-      break
+      case "graveyard": {
+        const index = draft.graveyard.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.graveyard.splice(index, 1)
+        }
+        break
+      }
+      case "banished": {
+        const index = draft.banished.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.banished.splice(index, 1)
+        }
+        break
+      }
+      case "extraDeck": {
+        const index = draft.extraDeck.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.extraDeck.splice(index, 1)
+        }
+        break
+      }
     }
-    case "deck": {
-      const index = player.deck.findIndex((c) => c.id === cardId)
-      if (index !== -1) {
-        const newDeck = [...player.deck]
-        newDeck.splice(index, 1)
-        // Cards no longer need index property
-        return { ...player, deck: newDeck }
-      }
-      break
-    }
-    case "graveyard": {
-      const index = player.graveyard.findIndex((c) => c.id === cardId)
-      if (index !== -1) {
-        const newGraveyard = [...player.graveyard]
-        newGraveyard.splice(index, 1)
-        // Cards no longer need index property
-        return { ...player, graveyard: newGraveyard }
-      }
-      break
-    }
-    case "banished": {
-      const index = player.banished.findIndex((c) => c.id === cardId)
-      if (index !== -1) {
-        const newBanished = [...player.banished]
-        newBanished.splice(index, 1)
-        // Cards no longer need index property
-        return { ...player, banished: newBanished }
-      }
-      break
-    }
-    case "extraDeck": {
-      const index = player.extraDeck.findIndex((c) => c.id === cardId)
-      if (index !== -1) {
-        const newExtraDeck = [...player.extraDeck]
-        newExtraDeck.splice(index, 1)
-        // Cards no longer need index property
-        return { ...player, extraDeck: newExtraDeck }
-      }
-      break
-    }
-  }
-  return player
+  })
 }
 
 // Helper function: Add card to zone
 function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoard {
-  switch (zone.type) {
-    case "monsterZone": {
-      const newZones = [...player.monsterZones]
-
-      if (zone.index !== undefined) {
-        // Insert at specific zone
-        const cards = [...newZones[zone.index]]
-        const insertIndex = zone.cardIndex ?? 0
-        cards.splice(insertIndex, 0, card)
-        newZones[zone.index] = cards
-      } else {
-        // Find first empty zone
-        const emptyZoneIndex = newZones.findIndex((cards) => cards.length === 0)
-        if (emptyZoneIndex !== -1) {
-          newZones[emptyZoneIndex] = [card]
+  return produce(player, draft => {
+    switch (zone.type) {
+      case "monsterZone": {
+        if (zone.index !== undefined) {
+          // Insert at specific zone
+          const cards = draft.monsterZones[zone.index]
+          const insertIndex = zone.cardIndex ?? 0
+          cards.splice(insertIndex, 0, card)
         } else {
-          // No empty zones available
-          return player
+          // Find first empty zone
+          const emptyZoneIndex = draft.monsterZones.findIndex((cards) => cards.length === 0)
+          if (emptyZoneIndex !== -1) {
+            draft.monsterZones[emptyZoneIndex] = [card]
+          } else {
+            // No empty zones available - return unchanged
+            return
+          }
         }
+        break
       }
-
-      return { ...player, monsterZones: newZones }
-    }
-    case "spellTrapZone": {
-      const newZones = [...player.spellTrapZones]
-
-      if (zone.index !== undefined) {
-        // Insert at specific zone
-        const cards = [...newZones[zone.index]]
-        const insertIndex = zone.cardIndex ?? 0
-        cards.splice(insertIndex, 0, card)
-        newZones[zone.index] = cards
-      } else {
-        // Find first empty zone
-        const emptyZoneIndex = newZones.findIndex((cards) => cards.length === 0)
-        if (emptyZoneIndex !== -1) {
-          newZones[emptyZoneIndex] = [card]
+      case "spellTrapZone": {
+        if (zone.index !== undefined) {
+          // Insert at specific zone
+          const cards = draft.spellTrapZones[zone.index]
+          const insertIndex = zone.cardIndex ?? 0
+          cards.splice(insertIndex, 0, card)
         } else {
-          // No empty zones available
-          return player
+          // Find first empty zone
+          const emptyZoneIndex = draft.spellTrapZones.findIndex((cards) => cards.length === 0)
+          if (emptyZoneIndex !== -1) {
+            draft.spellTrapZones[emptyZoneIndex] = [card]
+          } else {
+            // No empty zones available - return unchanged
+            return
+          }
         }
+        break
       }
-
-      return { ...player, spellTrapZones: newZones }
-    }
-    case "fieldZone":
-      // Only allow placing if no card exists
-      if (player.fieldZone === null) {
-        return { ...player, fieldZone: card }
-      }
-      // Field zone already occupied
-      return player
-    case "extraMonsterZone": {
-      const newZones = [...player.extraMonsterZones]
-
-      if (zone.index !== undefined) {
-        // Insert at specific zone
-        const cards = [...newZones[zone.index]]
-        const insertIndex = zone.cardIndex ?? 0
-        cards.splice(insertIndex, 0, card)
-        newZones[zone.index] = cards
-      } else {
-        // Find first empty zone
-        const emptyZoneIndex = newZones.findIndex((cards) => cards.length === 0)
-        if (emptyZoneIndex !== -1) {
-          newZones[emptyZoneIndex] = [card]
+      case "fieldZone":
+        // Only allow placing if no card exists
+        if (draft.fieldZone === null) {
+          draft.fieldZone = card
+        }
+        // Field zone already occupied - return unchanged
+        break
+      case "extraMonsterZone": {
+        if (zone.index !== undefined) {
+          // Insert at specific zone
+          const cards = draft.extraMonsterZones[zone.index]
+          const insertIndex = zone.cardIndex ?? 0
+          cards.splice(insertIndex, 0, card)
         } else {
-          // No empty zones available
-          return player
+          // Find first empty zone
+          const emptyZoneIndex = draft.extraMonsterZones.findIndex((cards) => cards.length === 0)
+          if (emptyZoneIndex !== -1) {
+            draft.extraMonsterZones[emptyZoneIndex] = [card]
+          } else {
+            // No empty zones available - return unchanged
+            return
+          }
         }
+        break
       }
-
-      return { ...player, extraMonsterZones: newZones }
-    }
-    case "hand": {
-      // If index is specified, insert at that position
-      if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.hand.length) {
-        const newHand = [...player.hand]
-        // Insert card at specified position
-        newHand.splice(zone.index, 0, card)
-        // Cards no longer need index property
-        return { ...player, hand: newHand }
-      } else {
-        // Otherwise append to end
-        return { ...player, hand: [...player.hand, card] }
+      case "hand": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.hand.length) {
+          // Insert card at specified position
+          draft.hand.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.hand.push(card)
+        }
+        break
       }
-    }
-    case "deck": {
-      // If index is specified, insert at that position
-      if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.deck.length) {
-        const newDeck = [...player.deck]
-        // Insert card at specified position
-        newDeck.splice(zone.index, 0, card)
-        // Cards no longer need index property
-        return { ...player, deck: newDeck }
-      } else {
-        // Otherwise append to end
-        return { ...player, deck: [...player.deck, card] }
+      case "deck": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.deck.length) {
+          // Insert card at specified position
+          draft.deck.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.deck.push(card)
+        }
+        break
       }
-    }
-    case "graveyard": {
-      // If index is specified, insert at that position
-      if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.graveyard.length) {
-        const newGraveyard = [...player.graveyard]
-        // Insert card at specified position
-        newGraveyard.splice(zone.index, 0, card)
-        // Cards no longer need index property
-        return { ...player, graveyard: newGraveyard }
-      } else {
-        // Otherwise append to end
-        return { ...player, graveyard: [...player.graveyard, card] }
+      case "graveyard": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.graveyard.length) {
+          // Insert card at specified position
+          draft.graveyard.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.graveyard.push(card)
+        }
+        break
       }
-    }
-    case "banished": {
-      // If index is specified, insert at that position
-      if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.banished.length) {
-        const newBanished = [...player.banished]
-        // Insert card at specified position
-        newBanished.splice(zone.index, 0, card)
-        // Cards no longer need index property
-        return { ...player, banished: newBanished }
-      } else {
-        // Otherwise append to end
-        return { ...player, banished: [...player.banished, card] }
+      case "banished": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.banished.length) {
+          // Insert card at specified position
+          draft.banished.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.banished.push(card)
+        }
+        break
       }
-    }
-    case "extraDeck": {
-      // If index is specified, insert at that position
-      if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.extraDeck.length) {
-        const newExtraDeck = [...player.extraDeck]
-        // Insert card at specified position
-        newExtraDeck.splice(zone.index, 0, card)
-        // Cards no longer need index property
-        return { ...player, extraDeck: newExtraDeck }
-      } else {
-        // Otherwise append to end
-        return { ...player, extraDeck: [...player.extraDeck, card] }
+      case "extraDeck": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.extraDeck.length) {
+          // Insert card at specified position
+          draft.extraDeck.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.extraDeck.push(card)
+        }
+        break
       }
     }
-  }
-  return player
+  })
 }
 
 // Helper function: Update card in zone
 function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoard {
-  switch (zone.type) {
-    case "monsterZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.monsterZones]
-        // Update the top card (index 0) if it exists
-        if (newZones[zone.index].length > 0) {
-          const cards = [...newZones[zone.index]]
-          cards[0] = card
-          newZones[zone.index] = cards
+  return produce(player, draft => {
+    switch (zone.type) {
+      case "monsterZone":
+        if (zone.index !== undefined) {
+          // Update the top card (index 0) if it exists
+          if (draft.monsterZones[zone.index].length > 0) {
+            draft.monsterZones[zone.index][0] = card
+          }
         }
-        return { ...player, monsterZones: newZones }
-      }
-      break
-    case "spellTrapZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.spellTrapZones]
-        // Update the top card (index 0) if it exists
-        if (newZones[zone.index].length > 0) {
-          const cards = [...newZones[zone.index]]
-          cards[0] = card
-          newZones[zone.index] = cards
+        break
+      case "spellTrapZone":
+        if (zone.index !== undefined) {
+          // Update the top card (index 0) if it exists
+          if (draft.spellTrapZones[zone.index].length > 0) {
+            draft.spellTrapZones[zone.index][0] = card
+          }
         }
-        return { ...player, spellTrapZones: newZones }
-      }
-      break
-    case "fieldZone":
-      return { ...player, fieldZone: card }
-    case "extraMonsterZone":
-      if (zone.index !== undefined) {
-        const newZones = [...player.extraMonsterZones]
-        // Update the top card (index 0) if it exists
-        if (newZones[zone.index].length > 0) {
-          const cards = [...newZones[zone.index]]
-          cards[0] = card
-          newZones[zone.index] = cards
+        break
+      case "fieldZone":
+        draft.fieldZone = card
+        break
+      case "extraMonsterZone":
+        if (zone.index !== undefined) {
+          // Update the top card (index 0) if it exists
+          if (draft.extraMonsterZones[zone.index].length > 0) {
+            draft.extraMonsterZones[zone.index][0] = card
+          }
         }
-        return { ...player, extraMonsterZones: newZones }
-      }
-      break
-    // For array-based zones, update specific card by index
-    case "hand":
-      if (zone.index !== undefined) {
-        const newHand = [...player.hand]
-        newHand[zone.index] = card
-        return { ...player, hand: newHand }
-      }
-      break
-  }
-  return player
+        break
+      // For array-based zones, update specific card by index
+      case "hand":
+        if (zone.index !== undefined && zone.index < draft.hand.length) {
+          draft.hand[zone.index] = card
+        }
+        break
+    }
+  })
 }

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@client/components/ui/Card"
 import { GameField } from "@client/components/GameField"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
-import { saveGameState, type GameState } from "@client/api/gameState"
+import type { GameState } from "@client/api/gameState"
 import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
 import { useAtom, useAtomValue } from "jotai"
 import {
@@ -21,8 +21,6 @@ export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
   const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveId, setSaveId] = useState<string | null>(null)
   const [showGoToReplayDialog, setShowGoToReplayDialog] = useState(false)
   const extractedCards = useAtomValue(extractedCardsAtom)
   const gameState = useAtomValue(gameStateAtom)
@@ -121,29 +119,6 @@ export default function App() {
     }
   }, [draggedCard])
 
-  const handleSaveGame = async () => {
-    if (!deckMetadata) {
-      alert("デッキ画像を先に処理してください")
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      // TODO: Get actual game state from GameField
-      const saveData: GameState = gameState
-
-      const result = await saveGameState(saveData, deckMetadata)
-      setSaveId(result.id)
-      const replayUrl = `${window.location.origin}/replay/${result.id}`
-      alert(`ゲームを保存しました！\n\nリプレイURL:\n${replayUrl}`)
-    } catch (error) {
-      console.error("Failed to save game:", error)
-      alert("保存に失敗しました")
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8">
@@ -168,46 +143,6 @@ export default function App() {
         {uploadedImage !== null && processedCards.length === 0 && (
           <div className="max-w-2xl mx-auto mb-8">
             <DeckImageProcessor imageDataUrl={uploadedImage} onProcessComplete={handleProcessComplete} />
-          </div>
-        )}
-
-        {/* Game Controls */}
-        {processedCards.length > 0 && (
-          <div className="max-w-7xl mx-auto mb-4 space-y-2">
-            {/* {!isGameStarted && (                                                                                    */}
-            {/*   <div className="flex justify-center">                                                                 */}
-            {/*     <button                                                                                             */}
-            {/*       onClick={() => setIsGameStarted(true)}                                                            */}
-            {/*       className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold text-lg" */}
-            {/*     >                                                                                                   */}
-            {/*       ゲームを開始                                                                                      */}
-            {/*     </button>                                                                                           */}
-            {/*   </div>                                                                                                */}
-            {/* )}                                                                                                      */}
-            {isGameStarted && (
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={handleSaveGame}
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {isSaving ? "保存中..." : "ゲームを保存"}
-                </button>
-                {saveId !== null && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>リプレイURL:</span>
-                    <a
-                      href={`/replay/${saveId}`}
-                      className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono text-blue-600"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {window.location.origin}/replay/{saveId}
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 

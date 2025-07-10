@@ -47,3 +47,4 @@ export interface MoveTarget {
 }
 
 export type GamePhase = "draw" | "standby" | "main1" | "battle" | "main2" | "end"
+

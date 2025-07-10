@@ -4,7 +4,7 @@ import { z } from "zod"
 export const CardSchema = z.object({
   id: z.string(),
   name: z.string().optional(),
-  imageUrl: z.string(),
+  imageUrl: z.string().optional(), // サーバー側で削除されるためオプショナル
   position: z.enum(["attack", "defense", "facedown", "spell", "set"]),
   rotation: z.number().default(0),
   faceDown: z.boolean().optional(),

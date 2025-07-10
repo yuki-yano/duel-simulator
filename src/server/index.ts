@@ -126,8 +126,7 @@ app.post("/api/save-states", async (c) => {
     // Parse the state JSON and remove imageUrl from all cards
     const parsedState = JSON.parse(stateJson)
 
-    // Use deckCardIds from request or extract from state data
-    const finalDeckCardIds = deckCardIds ?? parsedState.data?.deckCardIds ?? { mainDeck: {}, extraDeck: {} }
+    // deckCardIds is already a JSON string from client, no need to process
 
     // Function to clean imageUrl from cards
     const cleanImageUrls = (obj: unknown): unknown => {
@@ -169,8 +168,8 @@ app.post("/api/save-states", async (c) => {
       description,
       type,
       version,
-      deckConfig: JSON.stringify(deckConfig), // Store deck configuration
-      deckCardIds: JSON.stringify(finalDeckCardIds), // Store deck card IDs mapping
+      deckConfig: deckConfig, // Already JSON string from client
+      deckCardIds: deckCardIds, // Already JSON string from client
       createdAt: new Date().toISOString(),
     })
 
