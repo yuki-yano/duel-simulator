@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react"
+import React, { useRef, useState } from "react"
 import { X } from "lucide-react"
 import { cn } from "@client/lib/utils"
 import { DraggableCard } from "@/client/components/DraggableCard"

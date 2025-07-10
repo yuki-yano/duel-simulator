@@ -1153,7 +1153,7 @@ export function GameFieldContent() {
       if (((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) || ((e.metaKey || e.ctrlKey) && e.key === "y")) {
         e.preventDefault()
         if (canRedo) {
-          redo()
+          void redo()
         }
       }
     }
@@ -1510,17 +1510,17 @@ export function GameFieldContent() {
         <div className="mb-2 flex flex-col gap-2">
           <div className="flex flex-row justify-start gap-2">
             <Tooltip
-              open={undoDescription !== null && canUndo && !isPlaying && hoveredButton === "undo" && !isTouchDevice}
+              open={undoDescription !== null && canUndo && (!isPlaying || isPaused) && hoveredButton === "undo" && !isTouchDevice}
             >
               <TooltipTrigger asChild>
                 <button
                   onClick={() => undo()}
                   onMouseEnter={() => setHoveredButton("undo")}
                   onMouseLeave={() => setHoveredButton(null)}
-                  disabled={!canUndo || isPlaying || !isDeckLoaded}
+                  disabled={!canUndo || (isPlaying && !isPaused) || !isDeckLoaded}
                   className={cn(
                     "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                    canUndo && !isPlaying && isDeckLoaded
+                    canUndo && (!isPlaying || isPaused) && isDeckLoaded
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "bg-muted text-muted-foreground cursor-not-allowed",
                   )}
@@ -1537,17 +1537,17 @@ export function GameFieldContent() {
               )}
             </Tooltip>
             <Tooltip
-              open={redoDescription !== null && canRedo && !isPlaying && hoveredButton === "redo" && !isTouchDevice}
+              open={redoDescription !== null && canRedo && (!isPlaying || isPaused || currentReplayIndex !== null) && hoveredButton === "redo" && !isTouchDevice}
             >
               <TooltipTrigger asChild>
                 <button
                   onClick={() => redo()}
                   onMouseEnter={() => setHoveredButton("redo")}
                   onMouseLeave={() => setHoveredButton(null)}
-                  disabled={!canRedo || isPlaying || !isDeckLoaded}
+                  disabled={!canRedo || (isPlaying && !isPaused) || !isDeckLoaded}
                   className={cn(
                     "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                    canRedo && !isPlaying && isDeckLoaded
+                    canRedo && (!isPlaying || isPaused || currentReplayIndex !== null) && isDeckLoaded
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "bg-muted text-muted-foreground cursor-not-allowed",
                   )}
@@ -1571,10 +1571,10 @@ export function GameFieldContent() {
               }}
               onMouseEnter={() => setHoveredButton("reset")}
               onMouseLeave={() => setHoveredButton(null)}
-              disabled={!isDeckLoaded || !initialStateAfterDeckLoad || isPlaying}
+              disabled={!isDeckLoaded || !initialStateAfterDeckLoad || (isPlaying && !isPaused)}
               className={cn(
                 "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                isDeckLoaded && initialStateAfterDeckLoad && !isPlaying
+                isDeckLoaded && initialStateAfterDeckLoad && (!isPlaying || isPaused)
                   ? "bg-amber-500 text-white hover:bg-amber-600"
                   : "bg-muted text-muted-foreground cursor-not-allowed",
               )}

@@ -15,9 +15,11 @@ import {
   deckMetadataAtom,
   playReplayAtom,
   stopReplayAtom,
+  replayTotalOperationsAtom,
 } from "@/client/atoms/boardAtoms"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
 import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema } from "@/client/schemas/replay"
+import { cn } from "@/client/lib/utils"
 
 export default function Replay() {
   const { id } = useParams<{ id: string }>()
@@ -46,6 +48,8 @@ export default function Replay() {
   const playReplay = useSetAtom(playReplayAtom)
   const stopReplay = useSetAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
+  const setReplayTotalOperations = useSetAtom(replayTotalOperationsAtom)
+  const [copyFeedback, setCopyFeedback] = useState(false)
 
   useEffect(() => {
     if (id == null || id === "") {
@@ -512,6 +516,9 @@ export default function Replay() {
       // If we reach here, replay data should be valid - proceed with auto play dialog
       setShowDeckProcessor(false)
       setShowAutoPlayDialog(true)
+      
+      // Set total operations for redo functionality
+      setReplayTotalOperations(replaySaveData.data.operations.length)
     } catch (e) {
       console.error("Failed to prepare replay:", e)
       setError("リプレイの準備に失敗しました")
@@ -553,25 +560,32 @@ export default function Replay() {
           {description !== "" && <p className="text-gray-600 mb-2">{description}</p>}
           <p className="text-sm text-gray-500">
             リプレイID:{" "}
-            <code
-              className="px-2 py-1 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-              onClick={() => {
-                navigator.clipboard.writeText(id || "").then(() => {
-                  // 短い時間だけ背景色を変更してフィードバックを提供
-                  const element = document.querySelector(`code[data-replay-id="${id}"]`) as HTMLElement
-                  if (element) {
-                    element.classList.add("bg-green-200")
+            <span className="relative inline-block">
+              <code
+                className={cn(
+                  "px-2 py-1 rounded cursor-pointer transition-all duration-300",
+                  copyFeedback 
+                    ? "bg-green-100 text-green-800 border border-green-300" 
+                    : "bg-gray-100 hover:bg-gray-200"
+                )}
+                onClick={() => {
+                  void navigator.clipboard.writeText(id ?? "").then(() => {
+                    setCopyFeedback(true)
                     setTimeout(() => {
-                      element.classList.remove("bg-green-200")
-                    }, 300)
-                  }
-                })
-              }}
-              data-replay-id={id}
-              title="クリックしてコピー"
-            >
-              {id}
-            </code>
+                      setCopyFeedback(false)
+                    }, 2000)
+                  })
+                }}
+                title="クリックしてコピー"
+              >
+                {id}
+              </code>
+              {copyFeedback && (
+                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-green-800 text-white text-xs rounded whitespace-nowrap animate-fade-in-out">
+                  コピーしました！
+                </span>
+              )}
+            </span>
           </p>
         </div>
 

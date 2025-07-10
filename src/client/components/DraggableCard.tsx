@@ -7,7 +7,7 @@ import { cn } from "@/client/lib/utils"
 
 // Constants
 const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu (600ms)
-const DRAG_THRESHOLD_MS = 100 // Minimum time before drag starts (100ms)
+const _DRAG_THRESHOLD_MS = 100 // Minimum time before drag starts (100ms)
 const TOUCH_MOVE_THRESHOLD = 5 // Pixels of movement to cancel long press
 
 interface DraggableCardProps {
@@ -39,7 +39,7 @@ export function DraggableCard({
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
   const [highlightAnimating, setHighlightAnimating] = useState(false)
-  const [isDragEnabled, setIsDragEnabled] = useState(false)
+  const [_isDragEnabled, _setIsDragEnabled] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
@@ -202,7 +202,7 @@ export function DraggableCard({
     
     // Set high z-index for the dragging element
     const element = e.currentTarget as HTMLElement
-    if (element) {
+    if (element !== null) {
       element.style.zIndex = "9999"
       element.style.position = "relative"
     }
@@ -213,7 +213,7 @@ export function DraggableCard({
     
     // Reset z-index
     const element = e.currentTarget as HTMLElement
-    if (element) {
+    if (element !== null) {
       element.style.zIndex = ""
       element.style.position = ""
     }

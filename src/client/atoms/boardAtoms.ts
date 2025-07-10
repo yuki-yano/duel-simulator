@@ -30,6 +30,109 @@ function getAnimationDuration(baseDuration: number, speedMultiplier: number): nu
   return Math.round(baseDuration / speedMultiplier)
 }
 
+// Helper function from redoAtom (was duplicated)
+// Find moved cards between states
+function findMovedCards(
+  prevState: GameState,
+  nextState: GameState,
+): Array<{
+  card: Card
+  fromZone: ZoneId
+  toZone: ZoneId
+}> {
+  const movedCards: Array<{ card: Card; fromZone: ZoneId; toZone: ZoneId }> = []
+
+  // Helper to find card in all zones
+  const findCardInState = (state: GameState, cardId: string): { card: Card; zone: ZoneId } | null => {
+    for (const [player, board] of Object.entries(state.players) as [keyof GameState["players"], PlayerBoard][]) {
+      // Check all zones
+      // Monster zones
+      for (let i = 0; i < board.monsterZones.length; i++) {
+        const card = board.monsterZones[i].find((c) => c.id === cardId)
+        if (card) return { card, zone: { player, type: "monsterZone", index: i } }
+      }
+      // Spell/trap zones
+      for (let i = 0; i < board.spellTrapZones.length; i++) {
+        const card = board.spellTrapZones[i].find((c) => c.id === cardId)
+        if (card) return { card, zone: { player, type: "spellTrapZone", index: i } }
+      }
+      // Extra monster zones
+      for (let i = 0; i < board.extraMonsterZones.length; i++) {
+        const card = board.extraMonsterZones[i].find((c) => c.id === cardId)
+        if (card) return { card, zone: { player, type: "extraMonsterZone", index: i } }
+      }
+      // Field zone
+      if (board.fieldZone?.id === cardId) {
+        return { card: board.fieldZone, zone: { player, type: "fieldZone" } }
+      }
+      // Hand
+      const handCard = board.hand.find((c) => c.id === cardId)
+      if (handCard) return { card: handCard, zone: { player, type: "hand" } }
+      // Deck
+      const deckCard = board.deck.find((c) => c.id === cardId)
+      if (deckCard) return { card: deckCard, zone: { player, type: "deck" } }
+      // Graveyard
+      const graveyardCard = board.graveyard.find((c) => c.id === cardId)
+      if (graveyardCard) return { card: graveyardCard, zone: { player, type: "graveyard" } }
+      // Banished
+      const banishedCard = board.banished.find((c) => c.id === cardId)
+      if (banishedCard) return { card: banishedCard, zone: { player, type: "banished" } }
+      // Extra deck
+      const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
+      if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck" } }
+    }
+    return null
+  }
+
+  // Get all card IDs from both states
+  const allCardIds = new Set<string>()
+  for (const board of Object.values(prevState.players)) {
+    board.monsterZones.flat().forEach((c) => allCardIds.add(c.id))
+    board.spellTrapZones.flat().forEach((c) => allCardIds.add(c.id))
+    board.extraMonsterZones.flat().forEach((c) => allCardIds.add(c.id))
+    if (board.fieldZone) allCardIds.add(board.fieldZone.id)
+    board.hand.forEach((c) => allCardIds.add(c.id))
+    board.deck.forEach((c) => allCardIds.add(c.id))
+    board.graveyard.forEach((c) => allCardIds.add(c.id))
+    board.banished.forEach((c) => allCardIds.add(c.id))
+    board.extraDeck.forEach((c) => allCardIds.add(c.id))
+  }
+
+  // Check each card for position changes
+  for (const cardId of allCardIds) {
+    const prevPosition = findCardInState(prevState, cardId)
+    const nextPosition = findCardInState(nextState, cardId)
+
+    if (prevPosition && nextPosition) {
+      // Check if zone changed
+      const prevZone = prevPosition.zone
+      const nextZone = nextPosition.zone
+
+      if (prevZone.player !== nextZone.player || prevZone.type !== nextZone.type || prevZone.index !== nextZone.index) {
+        movedCards.push({
+          card: nextPosition.card,
+          fromZone: prevZone,
+          toZone: nextZone,
+        })
+      }
+    }
+  }
+
+  return movedCards
+}
+
+// Get card element position
+function getCardElementPosition(cardId: string): { x: number; y: number } | null {
+  const element = document.querySelector(`[data-card-id="${cardId}"]`)
+  if (!element) return null
+
+  const rect = element.getBoundingClientRect()
+  return {
+    x: rect.left,
+    y: rect.top,
+  }
+}
+
 // Initial player board
 const createInitialPlayerBoard = (): PlayerBoard => ({
   monsterZones: Array(5)
@@ -186,6 +289,8 @@ export const resetHistoryAtom = atom(null, (get, set, newState: GameState) => {
 export const undoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
 
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
@@ -197,6 +302,14 @@ export const undoAtom = atom(null, (get, set) => {
 
     // Restore operations from history
     set(operationsAtom, [...previousEntry.operations])
+    
+    // Update replay current index if we're paused
+    if (isPlaying && isPaused) {
+      const replayCurrentIndex = get(replayCurrentIndexAtom)
+      if (replayCurrentIndex !== null && replayCurrentIndex > 0) {
+        set(replayCurrentIndexAtom, replayCurrentIndex - 1)
+      }
+    }
 
     // Also trim replay operations if recording
     if (get(replayRecordingAtom)) {
@@ -214,10 +327,225 @@ export const undoAtom = atom(null, (get, set) => {
 })
 
 // Redo atom
-export const redoAtom = atom(null, (get, set) => {
+export const redoAtom = atom(null, async (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
+  const replayData = get(replayDataAtom)
+  const replayCurrentIndex = get(replayCurrentIndexAtom)
+  const totalOperations = get(replayTotalOperationsAtom)
+  const speedMultiplier = get(replaySpeedAtom)
 
+  // Handle redo for stopped replay - continue replay from where it stopped
+  if (!isPlaying && replayCurrentIndex !== null && replayCurrentIndex < totalOperations && replayData) {
+    // Resume replay from current position
+    set(replayPlayingAtom, true)
+    set(replayPausedAtom, false)
+    
+    // Keep track of current state
+    let currentState = get(gameStateAtom)
+    
+    // Play remaining operations
+    for (let i = replayCurrentIndex; i < replayData.operations.length; i++) {
+      // Check if paused or stopped
+      if (!get(replayPlayingAtom)) break
+
+      // Wait while paused
+      while (get(replayPausedAtom) && get(replayPlayingAtom)) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+
+      if (!get(replayPlayingAtom)) break
+
+      const operation = replayData.operations[i]
+
+      // Apply operation to get next state
+      const nextState = applyOperation(currentState, operation)
+
+      // Find moved cards
+      const movedCards = findMovedCards(currentState, nextState)
+
+      if (movedCards.length > 0) {
+        // Get positions before state update
+        const cardPositions = movedCards.map(({ card }) => ({
+          cardId: card.id,
+          position: getCardElementPosition(card.id),
+        }))
+
+        // Create animations for moved cards BEFORE updating state
+        const animations: CardAnimation[] = []
+        const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * speedMultiplier))
+
+        // First, create animations with current positions
+        for (const { card } of movedCards) {
+          const prevPos = cardPositions.find((p) => p.cardId === card.id)?.position
+
+          if (prevPos) {
+            animations.push({
+              id: uuidv4(),
+              type: "move",
+              cardId: card.id,
+              cardImageUrl: card.imageUrl,
+              fromPosition: prevPos,
+              toPosition: prevPos, // Will be updated after state change
+              startTime: Date.now(),
+              duration: animationDuration,
+            })
+          }
+        }
+
+        // Start animations (cards will be hidden)
+        if (animations.length > 0) {
+          set(cardAnimationsAtom, animations)
+        }
+
+        // Apply next state WITHOUT adding to history (history is pre-built)
+        set(gameStateAtom, nextState)
+        set(gameHistoryIndexAtom, i + 1)
+        set(replayCurrentIndexAtom, i + 1)
+        currentState = nextState
+
+        // Small delay to ensure DOM is updated
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+        )
+
+        // Update animations with actual end positions
+        const updatedAnimations = animations.map((anim) => {
+          const nextPos = anim.cardId !== undefined ? getCardElementPosition(anim.cardId) : null
+          return nextPos !== null ? { ...anim, toPosition: nextPos } : anim
+        })
+
+        // Update animations with correct end positions
+        set(cardAnimationsAtom, updatedAnimations)
+
+        // Wait for animation to complete
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+        )
+      } else {
+        // Handle non-movement operations
+        if (operation.type === "rotate") {
+          set(gameStateAtom, nextState)
+          set(gameHistoryIndexAtom, i + 1)
+          set(replayCurrentIndexAtom, i + 1)
+          currentState = nextState
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+          )
+        } else if (operation.type === "activate" && operation.to) {
+          set(gameStateAtom, nextState)
+          set(gameHistoryIndexAtom, i + 1)
+          set(replayCurrentIndexAtom, i + 1)
+          currentState = nextState
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+          )
+
+          // Create activation animation
+          const animationId = uuidv4()
+          const animations = get(cardAnimationsAtom)
+
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          }
+
+          let cardRotation: number | undefined = 0
+          if (operation.to != null && operation.cardId != null) {
+            const player = currentState.players[operation.to.player]
+            const result = getCardById(player, operation.cardId)
+            if (result != null) {
+              cardRotation = result.card.rotation
+            }
+          }
+
+          const position: Position | undefined =
+            operation.to != null
+              ? {
+                  zone: {
+                    player: operation.to.player,
+                    type: operation.to.zoneType,
+                    index: operation.to.zoneIndex,
+                    cardId: operation.cardId,
+                  },
+                  cardId: operation.cardId,
+                }
+              : undefined
+
+          set(cardAnimationsAtom, [
+            ...animations,
+            {
+              id: animationId,
+              type: "activate",
+              position,
+              cardRect,
+              cardRotation,
+              startTime: Date.now(),
+            },
+          ])
+
+          setTimeout(
+            () => {
+              set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
+            },
+            getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, speedMultiplier),
+          )
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+          )
+        } else {
+          set(gameStateAtom, nextState)
+          set(gameHistoryIndexAtom, i + 1)
+          set(replayCurrentIndexAtom, i + 1)
+          currentState = nextState
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+          )
+        }
+      }
+    }
+
+    // Wait for final animation
+    const finalOperation = replayData.operations[replayData.operations.length - 1]
+    if (finalOperation !== undefined) {
+      if (finalOperation.type === "move" || finalOperation.type === "draw") {
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+        )
+      } else if (finalOperation.type === "rotate") {
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+        )
+      } else if (finalOperation.type === "activate") {
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+        )
+      }
+    }
+
+    // End replay
+    set(replayPlayingAtom, false)
+    set(replayPausedAtom, false)
+    set(replayCurrentIndexAtom, null)
+    set(cardAnimationsAtom, [])
+    set(highlightedZonesAtom, [])
+    return
+  }
+
+  // Normal redo during pause or non-replay
   if (currentIndex < history.length - 1) {
     const newIndex = currentIndex + 1
     const nextEntry = history[newIndex]
@@ -229,6 +557,14 @@ export const redoAtom = atom(null, (get, set) => {
 
     // Restore operations from history
     set(operationsAtom, [...nextEntry.operations])
+    
+    // Update replay current index if we're paused
+    if (isPlaying && isPaused) {
+      const replayCurrentIndex = get(replayCurrentIndexAtom)
+      if (replayCurrentIndex !== null && replayCurrentIndex < totalOperations - 1) {
+        set(replayCurrentIndexAtom, replayCurrentIndex + 1)
+      }
+    }
 
     // Find operations that need to be added to replay
     const operationsToAdd = nextEntry.operations.slice(currentEntry.operationCount, nextEntry.operationCount)
@@ -254,13 +590,48 @@ export const redoAtom = atom(null, (get, set) => {
 // Can undo/redo atoms
 export const canUndoAtom = atom((get) => {
   const currentIndex = get(gameHistoryIndexAtom)
-  return currentIndex > 0
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
+  
+  // Enable undo during replay pause
+  if (isPlaying && isPaused) {
+    return currentIndex > 0
+  }
+  
+  // Normal undo logic when not replaying
+  if (!isPlaying) {
+    return currentIndex > 0
+  }
+  
+  // Disable during active replay
+  return false
 })
 
 export const canRedoAtom = atom((get) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
-  return currentIndex < history.length - 1
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
+  const replayCurrentIndex = get(replayCurrentIndexAtom)
+  const totalOperations = get(replayTotalOperationsAtom)
+  
+  // Enable redo during replay pause
+  if (isPlaying && isPaused) {
+    return currentIndex < history.length - 1
+  }
+  
+  // After replay is stopped, enable redo if there are more operations
+  if (!isPlaying && replayCurrentIndex !== null && replayCurrentIndex < totalOperations) {
+    return currentIndex < history.length - 1
+  }
+  
+  // Normal redo logic when not replaying
+  if (!isPlaying && replayCurrentIndex === null) {
+    return currentIndex < history.length - 1
+  }
+  
+  // Disable during active replay
+  return false
 })
 
 // Reset to initial state (deck loaded state)
@@ -554,10 +925,12 @@ export const replayPausedAtom = atom<boolean>(false)
 export const replayCurrentIndexAtom = atom<number | null>(null)
 export const replaySpeedAtom = atom<number>(1) // Default 1x speed
 export const replayStartDelayAtom = atom<number>(0) // Default 0 seconds delay
+// Track the total number of operations in replay for redo after stop
+export const replayTotalOperationsAtom = atom<number>(0)
 
 // Start replay recording
 export const startReplayRecordingAtom = atom(null, (get, set) => {
-  const currentIndex = get(gameHistoryIndexAtom)
+  const _currentIndex = get(gameHistoryIndexAtom)
   const currentState = get(gameStateAtom)
   const currentOperations = get(operationsAtom)
 
@@ -580,7 +953,7 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
 
 // Stop replay recording
 export const stopReplayRecordingAtom = atom(null, (get, set) => {
-  const currentIndex = get(gameHistoryIndexAtom)
+  const _currentIndex = get(gameHistoryIndexAtom)
   const replayData = get(replayDataAtom)
 
   if (replayData) {
@@ -597,111 +970,10 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
   }
 
   set(replayRecordingAtom, false)
-  set(replayEndIndexAtom, currentIndex)
+  set(replayEndIndexAtom, _currentIndex)
   set(replayOperationsAtom, []) // Clear replay operations
 })
 
-// Helper function to find moved cards between states
-function findMovedCards(
-  prevState: GameState,
-  nextState: GameState,
-): Array<{
-  card: Card
-  fromZone: ZoneId
-  toZone: ZoneId
-}> {
-  const movedCards: Array<{ card: Card; fromZone: ZoneId; toZone: ZoneId }> = []
-
-  // Helper to find card in all zones
-  const findCardInState = (state: GameState, cardId: string): { card: Card; zone: ZoneId } | null => {
-    for (const [player, board] of Object.entries(state.players) as [keyof GameState["players"], PlayerBoard][]) {
-      // Check all zones
-      // Monster zones
-      for (let i = 0; i < board.monsterZones.length; i++) {
-        const card = board.monsterZones[i].find((c) => c.id === cardId)
-        if (card) return { card, zone: { player, type: "monsterZone", index: i } }
-      }
-      // Spell/trap zones
-      for (let i = 0; i < board.spellTrapZones.length; i++) {
-        const card = board.spellTrapZones[i].find((c) => c.id === cardId)
-        if (card) return { card, zone: { player, type: "spellTrapZone", index: i } }
-      }
-      // Extra monster zones
-      for (let i = 0; i < board.extraMonsterZones.length; i++) {
-        const card = board.extraMonsterZones[i].find((c) => c.id === cardId)
-        if (card) return { card, zone: { player, type: "extraMonsterZone", index: i } }
-      }
-      // Field zone
-      if (board.fieldZone?.id === cardId) {
-        return { card: board.fieldZone, zone: { player, type: "fieldZone" } }
-      }
-      // Hand
-      const handCard = board.hand.find((c) => c.id === cardId)
-      if (handCard) return { card: handCard, zone: { player, type: "hand" } }
-      // Deck
-      const deckCard = board.deck.find((c) => c.id === cardId)
-      if (deckCard) return { card: deckCard, zone: { player, type: "deck" } }
-      // Graveyard
-      const graveyardCard = board.graveyard.find((c) => c.id === cardId)
-      if (graveyardCard) return { card: graveyardCard, zone: { player, type: "graveyard" } }
-      // Banished
-      const banishedCard = board.banished.find((c) => c.id === cardId)
-      if (banishedCard) return { card: banishedCard, zone: { player, type: "banished" } }
-      // Extra deck
-      const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
-      if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck" } }
-    }
-    return null
-  }
-
-  // Get all card IDs from both states
-  const allCardIds = new Set<string>()
-  for (const board of Object.values(prevState.players)) {
-    board.monsterZones.flat().forEach((c) => allCardIds.add(c.id))
-    board.spellTrapZones.flat().forEach((c) => allCardIds.add(c.id))
-    board.extraMonsterZones.flat().forEach((c) => allCardIds.add(c.id))
-    if (board.fieldZone) allCardIds.add(board.fieldZone.id)
-    board.hand.forEach((c) => allCardIds.add(c.id))
-    board.deck.forEach((c) => allCardIds.add(c.id))
-    board.graveyard.forEach((c) => allCardIds.add(c.id))
-    board.banished.forEach((c) => allCardIds.add(c.id))
-    board.extraDeck.forEach((c) => allCardIds.add(c.id))
-  }
-
-  // Check each card for position changes
-  for (const cardId of allCardIds) {
-    const prevPosition = findCardInState(prevState, cardId)
-    const nextPosition = findCardInState(nextState, cardId)
-
-    if (prevPosition && nextPosition) {
-      // Check if zone changed
-      const prevZone = prevPosition.zone
-      const nextZone = nextPosition.zone
-
-      if (prevZone.player !== nextZone.player || prevZone.type !== nextZone.type || prevZone.index !== nextZone.index) {
-        movedCards.push({
-          card: nextPosition.card,
-          fromZone: prevZone,
-          toZone: nextZone,
-        })
-      }
-    }
-  }
-
-  return movedCards
-}
-
-// Get card element position
-function getCardElementPosition(cardId: string): { x: number; y: number } | null {
-  const element = document.querySelector(`[data-card-id="${cardId}"]`)
-  if (!element) return null
-
-  const rect = element.getBoundingClientRect()
-  return {
-    x: rect.left,
-    y: rect.top,
-  }
-}
 
 // Helper to apply operation to state
 function applyOperation(state: GameState, operation: GameOperation): GameState {
@@ -778,8 +1050,8 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
 
 // Play replay
 export const playReplayAtom = atom(null, async (get, set) => {
-  // Check if already playing
-  if (get(replayPlayingAtom)) {
+  // Check if already playing and not paused (allow resume from pause)
+  if (get(replayPlayingAtom) && !get(replayPausedAtom)) {
     console.warn("Replay is already playing")
     return
   }
@@ -793,32 +1065,71 @@ export const playReplayAtom = atom(null, async (get, set) => {
     return
   }
 
-  // Set initial state from snapshot
-  set(replayPlayingAtom, true)
-  set(replayPausedAtom, false)
-  set(replayCurrentIndexAtom, 0)
+  // Check if resuming from pause
+  const wasPlaying = get(replayPlayingAtom)
+  const wasPaused = get(replayPausedAtom)
+  const currentIndex = get(replayCurrentIndexAtom)
 
-  // Initialize history with snapshot
-  const initialState = produce(replayData.startSnapshot, () => {})
-  set(resetHistoryAtom, initialState)
+  // Set initial state from snapshot only if starting fresh
+  if (!wasPlaying || currentIndex === null || currentIndex === 0) {
+    set(replayPlayingAtom, true)
+    set(replayPausedAtom, false)
+    set(replayCurrentIndexAtom, 0)
+    set(replayTotalOperationsAtom, replayData.operations.length)
+
+    // Build full history for redo functionality
+    const initialState = produce(replayData.startSnapshot, () => {})
+    
+    // Reset history with initial state
+    set(resetHistoryAtom, initialState)
+    
+    // Build complete history by applying all operations
+    let tempState = initialState
+    const fullHistory: HistoryEntry[] = [{
+      gameState: initialState,
+      operationCount: 0,
+      operations: [],
+    }]
+    
+    // Apply all operations to build history
+    for (let i = 0; i < replayData.operations.length; i++) {
+      const operation = replayData.operations[i]
+      tempState = applyOperation(tempState, operation)
+      fullHistory.push({
+        gameState: tempState,
+        operationCount: i + 1,
+        operations: replayData.operations.slice(0, i + 1),
+      })
+    }
+    
+    // Set the complete history
+    set(gameHistoryAtom, fullHistory)
+    set(gameHistoryIndexAtom, 0) // Start at the beginning
+  } else {
+    // Resuming from pause
+    set(replayPausedAtom, false)
+  }
 
   // Clear any existing animations and UI state
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 
   // Keep track of current state
-  let currentState = produce(replayData.startSnapshot, () => {})
+  let currentState = wasPlaying && wasPaused ? get(gameStateAtom) : produce(replayData.startSnapshot, () => {})
 
   // Wait for DOM to update after snapshot restore
   await new Promise((resolve) => setTimeout(resolve, 100))
 
-  // Apply start delay if set
-  if (startDelay > 0) {
+  // Apply start delay if set (only for fresh start, not resume)
+  if (startDelay > 0 && (!wasPlaying || currentIndex === 0)) {
     await new Promise((resolve) => setTimeout(resolve, startDelay * 1000))
   }
 
+  // Resume from current index if it was set (after pause/resume)
+  const _startIndex = get(replayCurrentIndexAtom) ?? 0
+
   // Play through each operation
-  for (let i = 0; i < replayData.operations.length; i++) {
+  for (let i = _startIndex; i < replayData.operations.length; i++) {
     // Check if paused or stopped
     if (!get(replayPlayingAtom)) break
 
@@ -872,8 +1183,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
         set(cardAnimationsAtom, animations)
       }
 
-      // Apply next state with history
-      set(setGameStateWithHistoryAtom, nextState)
+      // Apply next state WITHOUT adding to history (history is pre-built)
+      set(gameStateAtom, nextState)
+      set(gameHistoryIndexAtom, i + 1)
       set(replayCurrentIndexAtom, i + 1)
       currentState = nextState
 
@@ -898,8 +1210,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
     } else {
       // No card movement, but check for rotation or activation
       if (operation.type === "rotate") {
-        // Update state immediately for rotation
-        set(setGameStateWithHistoryAtom, nextState)
+        // Update state immediately for rotation WITHOUT adding to history
+        set(gameStateAtom, nextState)
+        set(gameHistoryIndexAtom, i + 1)
         set(replayCurrentIndexAtom, i + 1)
         currentState = nextState
 
@@ -908,8 +1221,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
           setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
         )
       } else if (operation.type === "activate" && operation.to) {
-        // Update state (no change for activate)
-        set(setGameStateWithHistoryAtom, nextState)
+        // Update state (no change for activate) WITHOUT adding to history
+        set(gameStateAtom, nextState)
+        set(gameHistoryIndexAtom, i + 1)
         set(replayCurrentIndexAtom, i + 1)
         currentState = nextState
 
@@ -984,8 +1298,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
           setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
         )
       } else {
-        // Other operations (no movement, no rotation, no activation)
-        set(setGameStateWithHistoryAtom, nextState)
+        // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
+        set(gameStateAtom, nextState)
+        set(gameHistoryIndexAtom, i + 1)
         set(replayCurrentIndexAtom, i + 1)
         currentState = nextState
 
@@ -1037,11 +1352,19 @@ export const toggleReplayPauseAtom = atom(null, (get, set) => {
 export const stopReplayAtom = atom(null, (get, set) => {
   const _currentState = get(gameStateAtom)
   const _wasPlaying = get(replayPlayingAtom)
-  const _currentIndex = get(replayCurrentIndexAtom) // Get index before clearing
+  const currentIndex = get(replayCurrentIndexAtom) // Get index before clearing
 
   set(replayPlayingAtom, false)
   set(replayPausedAtom, false)
-  set(replayCurrentIndexAtom, null)
+  
+  // Keep the currentIndex if replay was stopped midway for redo functionality
+  // Only clear it if replay finished naturally (currentIndex === total operations)
+  const totalOperations = get(replayTotalOperationsAtom)
+  if (currentIndex !== null && currentIndex >= totalOperations) {
+    set(replayCurrentIndexAtom, null)
+  }
+  // Otherwise keep replayCurrentIndexAtom to allow redo to continue from this point
+  
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 
