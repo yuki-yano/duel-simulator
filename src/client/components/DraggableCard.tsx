@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
@@ -260,6 +261,13 @@ export function DraggableCard({
       setTimeout(() => {
         // Use clientX/clientY directly for elementFromPoint
         const element = document.elementFromPoint(touch.clientX, touch.clientY)
+        console.log("Element at touch point:", {
+          element,
+          className: element?.className,
+          tagName: element?.tagName,
+          x: touch.clientX,
+          y: touch.clientY,
+        })
 
         // Trigger drag and drop events on the element under touch point
         if (element) {
@@ -274,7 +282,9 @@ export function DraggableCard({
               (targetElement as HTMLElement).ondragover ||
               targetElement.classList.contains("zone") ||
               targetElement.classList.contains("deck-zone") ||
-              targetElement.classList.contains("grave-zone")
+              targetElement.classList.contains("grave-zone") ||
+              targetElement.classList.contains("zone-expand-modal-drop") ||
+              targetElement.getAttribute("data-droppable") === "true"
             ) {
               foundDroppable = true
               break
@@ -283,6 +293,11 @@ export function DraggableCard({
           }
 
           if (foundDroppable && targetElement) {
+            console.log("Found droppable target:", {
+              element: targetElement,
+              classList: targetElement.classList.toString(),
+              dataDroppable: targetElement.getAttribute("data-droppable"),
+            })
             // Create and dispatch dragenter, dragover, and drop events
             const dragOverEvent = new DragEvent("dragover", {
               bubbles: true,
@@ -302,6 +317,7 @@ export function DraggableCard({
                 clientX: touch.clientX,
                 clientY: touch.clientY,
               })
+              console.log("Dispatching drop event to:", targetElement)
               targetElement.dispatchEvent(dropEvent)
 
               // Clear dragged card after drop event is processed
@@ -477,61 +493,65 @@ export function DraggableCard({
       {isTouching &&
         touchPosition &&
         dragOffsetRef.current &&
-        (() => {
-          // Use fixed size for drag image
-          const baseWidth = 60
-          const baseHeight = 86
+        createPortal(
+          (() => {
+            // Use fixed size for drag image
+            const baseWidth = 60
+            const baseHeight = 86
 
-          // Adjust container size based on rotation
-          const isRotated = card.rotation === -90 || card.rotation === 90
-          const dragImageWidth = isRotated ? baseHeight : baseWidth
-          const dragImageHeight = isRotated ? baseWidth : baseHeight
+            // Adjust container size based on rotation
+            const isRotated = card.rotation === -90 || card.rotation === 90
+            const dragImageWidth = isRotated ? baseHeight : baseWidth
+            const dragImageHeight = isRotated ? baseWidth : baseHeight
 
-          // Simple positioning without any pinch zoom adjustments
-          const displayX = touchPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
-          const displayY = touchPosition.y + dragOffsetRef.current.y - dragImageHeight / 2
+            // Simple positioning without any pinch zoom adjustments
+            const displayX = touchPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
+            const displayY = touchPosition.y + dragOffsetRef.current.y - dragImageHeight / 2
 
-          return (
-            <div
-              className="fixed pointer-events-none z-[9999]"
-              style={{
-                left: `${displayX}px`,
-                top: `${displayY}px`,
-                width: `${dragImageWidth}px`,
-                height: `${dragImageHeight}px`,
-                pointerEvents: "none",
-              }}
-            >
+            return (
               <div
-                className="relative"
+                className="fixed pointer-events-none"
                 style={{
-                  width: `${baseWidth}px`,
-                  height: `${baseHeight}px`,
-                  position: "absolute",
-                  left: "50%",
-                  top: "50%",
-                  transform: `translate(-50%, -50%) rotate(${card.rotation}deg)`,
+                  left: `${displayX}px`,
+                  top: `${displayY}px`,
+                  width: `${dragImageWidth}px`,
+                  height: `${dragImageHeight}px`,
+                  pointerEvents: "none",
+                  zIndex: 99999,
                 }}
               >
-                <img
-                  src={card.imageUrl}
-                  alt="Dragging card"
-                  draggable={false}
-                  className="w-full h-full object-cover rounded shadow-xl"
+                <div
+                  className="relative"
                   style={{
-                    WebkitUserSelect: "none",
-                    userSelect: "none",
-                    WebkitTouchCallout: "none",
-                    pointerEvents: "none",
+                    width: `${baseWidth}px`,
+                    height: `${baseHeight}px`,
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    transform: `translate(-50%, -50%) rotate(${card.rotation}deg)`,
                   }}
-                  onContextMenu={(e) => e.preventDefault()}
-                />
-                {/* Face down overlay for drag image */}
-                {card.faceDown === true && <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />}
+                >
+                  <img
+                    src={card.imageUrl}
+                    alt="Dragging card"
+                    draggable={false}
+                    className="w-full h-full object-cover rounded shadow-xl"
+                    style={{
+                      WebkitUserSelect: "none",
+                      userSelect: "none",
+                      WebkitTouchCallout: "none",
+                      pointerEvents: "none",
+                    }}
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
+                  {/* Face down overlay for drag image */}
+                  {card.faceDown === true && <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />}
+                </div>
               </div>
-            </div>
-          )
-        })()}
+            )
+          })(),
+          document.body
+        )}
     </>
   )
 }

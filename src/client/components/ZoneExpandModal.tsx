@@ -182,11 +182,12 @@ export function ZoneExpandModal({
       {/* Cards grid */}
       <div
         ref={contentRef}
-        className="p-3 overflow-auto"
+        className="p-3 overflow-auto zone-expand-modal-drop"
         style={{ height: `calc(100% - ${headerHeight}px)` }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        data-droppable="true"
       >
         <div 
           className="relative" 
@@ -194,6 +195,7 @@ export function ZoneExpandModal({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          data-droppable="true"
         >
           {cards.map((card, index) => {
             const row = Math.floor(index / cardsPerRow)
