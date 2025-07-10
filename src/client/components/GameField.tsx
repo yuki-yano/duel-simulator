@@ -1670,17 +1670,7 @@ export function GameFieldContent() {
 
           {isOpponentFieldOpen && (
             <div className="space-y-2 mb-2">
-              {/* Opponent's Deck & Extra Deck (Top) - viewed from opponent's perspective */}
-              <DeckZone
-                type="extra"
-                zone={{ player: "opponent", type: "extraDeck" }}
-                isOpponent={true}
-                cardCount={opponentBoard.extraDeck.length}
-                cards={opponentBoard.extraDeck}
-                onDrop={handleCardDrop}
-                onContextMenu={handleCardContextMenu}
-                onContextMenuClose={() => setContextMenu(null)}
-              />
+              {/* Opponent's Deck */}
               <DeckZone
                 type="deck"
                 zone={{ player: "opponent", type: "deck" }}
@@ -1692,17 +1682,31 @@ export function GameFieldContent() {
                 onContextMenuClose={() => setContextMenu(null)}
               />
 
-              {/* Opponent's Hand */}
-              <DeckZone
-                type="hand"
-                zone={{ player: "opponent", type: "hand" }}
-                isOpponent={true}
-                cardCount={opponentBoard.hand.length}
-                cards={opponentBoard.hand}
-                onDrop={handleCardDrop}
-                onContextMenu={handleCardContextMenu}
-                onContextMenuClose={() => setContextMenu(null)}
-              />
+              {/* Opponent's Hand & Extra Deck */}
+              <div className="flex gap-2 items-start">
+                <DeckZone
+                  type="hand"
+                  zone={{ player: "opponent", type: "hand" }}
+                  isOpponent={true}
+                  cardCount={opponentBoard.hand.length}
+                  cards={opponentBoard.hand}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  style={{ flex: "0 0 35%" }}
+                />
+                <DeckZone
+                  type="extra"
+                  zone={{ player: "opponent", type: "extraDeck" }}
+                  isOpponent={true}
+                  cardCount={opponentBoard.extraDeck.length}
+                  cards={opponentBoard.extraDeck}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  style={{ flex: "0 0 65%" }}
+                />
+              </div>
             </div>
           )}
         </div>
