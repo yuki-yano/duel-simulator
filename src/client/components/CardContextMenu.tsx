@@ -97,15 +97,15 @@ export function CardContextMenu({ card, zone, position, onClose, onAction }: Car
             "w-full px-4 py-2 text-left",
             "text-sm",
             "transition-colors duration-150",
-            item.enabled === true
+            item.enabled
               ? "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
               : "text-gray-400 dark:text-gray-500 cursor-not-allowed",
           )}
-          disabled={item.enabled !== true}
+          disabled={!item.enabled}
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            if (item.enabled === true) {
+            if (item.enabled) {
               try {
                 onAction(item.id, card)
               } catch (error) {
@@ -119,7 +119,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction }: Car
             // Handle touch events for mobile
             e.preventDefault()
             e.stopPropagation()
-            if (item.enabled === true) {
+            if (item.enabled) {
               try {
                 onAction(item.id, card)
               } catch (error) {

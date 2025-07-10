@@ -66,7 +66,6 @@ import { ShareUrlDisplay } from "@/client/components/ShareUrlDisplay"
 import { saveReplayData } from "@/client/api/gameState"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 import type { ReplaySaveData } from "@/shared/types/game"
-import type { DeckConfiguration } from "./DeckImageProcessor"
 
 interface ZoneProps {
   className?: string
@@ -124,7 +123,7 @@ function Zone({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    if (zone && draggedCard) {
+    if (zone != null && draggedCard != null) {
       setHoveredZone(zone)
     }
   }
@@ -136,7 +135,7 @@ function Zone({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (zone && draggedCard && onDrop && draggedCard.zone) {
+    if (zone != null && draggedCard != null && onDrop != null && draggedCard.zone != null) {
       onDrop(draggedCard.zone, zone, e.shiftKey)
     }
     setHoveredZone(null)
@@ -392,7 +391,7 @@ function DeckZone({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    if (draggedCard && onDrop && draggedCard.zone) {
+    if (draggedCard != null && onDrop != null && draggedCard.zone != null) {
       const targetZone: ZoneId = {
         player: isOpponent ? "opponent" : "self",
         type: type === "deck" ? "deck" : type === "extra" ? "extraDeck" : "hand",
@@ -739,7 +738,7 @@ function GraveZone({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    if (draggedCard && zone) {
+    if (draggedCard != null && zone != null) {
       setHoveredZone(zone)
 
       // Calculate drop index based on mouse position
@@ -798,7 +797,7 @@ function GraveZone({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    if (draggedCard && onDrop && draggedCard.zone && zone) {
+    if (draggedCard != null && onDrop != null && draggedCard.zone != null && zone != null) {
       // Check if the source is from graveyard/banished
       const isFromGraveOrBanished = draggedCard.zone.type === "graveyard" || draggedCard.zone.type === "banished"
 
@@ -1054,12 +1053,12 @@ export function GameFieldContent() {
 
     // Prepare options with separate mobile toggle states
     const options = {
-      shiftKey: shiftKey === true,
-      defenseMode: mobileDefenseMode === true,
-      faceDownMode: mobileFaceDownMode === true,
+      shiftKey: shiftKey,
+      defenseMode: mobileDefenseMode,
+      faceDownMode: mobileFaceDownMode,
     }
 
-    if (draggedCard.zone && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
+    if (draggedCard.zone != null && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
       // draggedCardのzone情報にindexを含める
       const fromWithIndex = { ...from, index: draggedCard.zone.cardIndex }
       // Include card ID for ID-based tracking
@@ -1366,13 +1365,7 @@ export function GameFieldContent() {
         <div className="mb-2 flex flex-col gap-2">
           <div className="flex flex-row justify-start gap-2">
             <Tooltip
-              open={
-                undoDescription !== null &&
-                canUndo === true &&
-                isPlaying === false &&
-                hoveredButton === "undo" &&
-                isTouchDevice === false
-              }
+              open={undoDescription !== null && canUndo && !isPlaying && hoveredButton === "undo" && !isTouchDevice}
             >
               <TooltipTrigger asChild>
                 <button
@@ -1399,13 +1392,7 @@ export function GameFieldContent() {
               )}
             </Tooltip>
             <Tooltip
-              open={
-                redoDescription !== null &&
-                canRedo === true &&
-                isPlaying === false &&
-                hoveredButton === "redo" &&
-                isTouchDevice === false
-              }
+              open={redoDescription !== null && canRedo && !isPlaying && hoveredButton === "redo" && !isTouchDevice}
             >
               <TooltipTrigger asChild>
                 <button

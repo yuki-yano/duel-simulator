@@ -1,5 +1,5 @@
-import type { Card as GameCard, DeckCardIdsMapping } from "@/shared/types/game"
-import type { DeckConfiguration, DeckProcessMetadata } from "@/client/components/DeckImageProcessor"
+import type { DeckCardIdsMapping } from "@/shared/types/game"
+import type { DeckProcessMetadata } from "@/client/components/DeckImageProcessor"
 
 // Position ratios based on image width
 const LAYOUT_RATIOS = {
@@ -31,7 +31,7 @@ export async function extractCardsFromDeckImage(
   const cardImageMap = new Map<string, string>()
   const { deckConfig } = deckMetadata
 
-  if (!deckConfig || typeof deckConfig !== "object") {
+  if (deckConfig == null || typeof deckConfig !== "object") {
     console.error("Invalid deckConfig:", deckConfig)
     return cardImageMap
   }
@@ -134,72 +134,37 @@ function extractCardImage(
   return tempCanvas.toDataURL("image/png")
 }
 
-// Helper function to get all cards from game state
-function getAllCards(gameState: any): any[] {
-  const cards: any[] = []
-
-  if (gameState.players) {
-    for (const player of Object.values(gameState.players)) {
-      if (player && typeof player === "object") {
-        const playerAny = player as any
-
-        // Add cards from all zones
-        if (playerAny.deck) cards.push(...playerAny.deck)
-        if (playerAny.hand) cards.push(...playerAny.hand)
-        if (playerAny.graveyard) cards.push(...playerAny.graveyard)
-        if (playerAny.banished) cards.push(...playerAny.banished)
-        if (playerAny.extraDeck) cards.push(...playerAny.extraDeck)
-        if (playerAny.fieldZone) cards.push(playerAny.fieldZone)
-
-        // Add cards from zone arrays
-        const zoneArrays = ["monsterZones", "spellTrapZones", "extraMonsterZones"]
-        for (const zoneName of zoneArrays) {
-          if (playerAny[zoneName]) {
-            for (const zone of playerAny[zoneName]) {
-              if (Array.isArray(zone)) {
-                cards.push(...zone)
-              } else if (zone) {
-                cards.push(zone)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return cards.filter((card) => card && typeof card === "object")
-}
-
 // Restore card images to game state
 export function restoreCardImages(
-  gameState: any, // Using any to avoid circular dependency
+  gameState: unknown, // Using unknown instead of any
   cardImageMap: Map<string, string>,
 ): void {
   // Helper function to restore images for cards in any zone
-  const restoreImagesInZone = (cards: any[]) => {
+  const restoreImagesInZone = (cards: unknown[]) => {
     if (!Array.isArray(cards)) return
 
-    cards.forEach((card, arrayIndex) => {
+    cards.forEach((card, _arrayIndex) => {
       if (Array.isArray(card)) {
         // Handle nested arrays (like monsterZones)
         restoreImagesInZone(card)
-      } else if (card && typeof card === "object" && "id" in card) {
+      } else if (card != null && typeof card === "object" && "id" in card) {
         // Use card ID to get the image
-        const imageUrl = cardImageMap.get(card.id)
-        if (imageUrl) {
-          card.imageUrl = imageUrl
+        const cardObj = card as { id: string; imageUrl?: string }
+        const imageUrl = cardImageMap.get(cardObj.id)
+        if (imageUrl != null) {
+          cardObj.imageUrl = imageUrl
         }
       }
     })
   }
 
   // Restore images for all zones
-  if (gameState.players) {
-    for (const player of Object.values(gameState.players)) {
-      if (player && typeof player === "object") {
-        // Cast player to any to access dynamic properties
-        const playerAny = player as any
+  const state = gameState as { players?: Record<string, unknown> }
+  if (state.players != null) {
+    for (const player of Object.values(state.players)) {
+      if (player != null && typeof player === "object") {
+        // Cast player to Record to access dynamic properties
+        const playerAny = player as Record<string, unknown>
 
         // Check all possible zones
         const zones = [
@@ -214,17 +179,17 @@ export function restoreCardImages(
         ]
 
         for (const zoneName of zones) {
-          if (playerAny[zoneName]) {
-            restoreImagesInZone(playerAny[zoneName])
+          if (playerAny[zoneName] != null && Array.isArray(playerAny[zoneName])) {
+            restoreImagesInZone(playerAny[zoneName] as unknown[])
           }
         }
 
         // Handle single card zones
-        if (playerAny.fieldZone && typeof playerAny.fieldZone === "object" && "id" in playerAny.fieldZone) {
-          const card = playerAny.fieldZone
-          if (!card.imageUrl || card.imageUrl === "") {
+        if (playerAny.fieldZone != null && typeof playerAny.fieldZone === "object" && "id" in playerAny.fieldZone) {
+          const card = playerAny.fieldZone as { id: string; imageUrl?: string }
+          if (card.imageUrl == null || card.imageUrl === "") {
             const firstImage = cardImageMap.values().next().value
-            if (firstImage) {
+            if (firstImage != null) {
               card.imageUrl = firstImage
             }
           }

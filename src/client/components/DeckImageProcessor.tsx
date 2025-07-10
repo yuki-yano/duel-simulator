@@ -54,7 +54,12 @@ const LAYOUT_RATIOS = {
   textHeight: 0.035, // Text area height is 3.5% of image width
 }
 
-export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMode = false, onReplayStart }: DeckImageProcessorProps) {
+export function DeckImageProcessor({
+  imageDataUrl,
+  onProcessComplete,
+  isReplayMode = false,
+  onReplayStart,
+}: DeckImageProcessorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const debugCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -557,7 +562,7 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMo
       }
 
       onProcessComplete(cards, metadata)
-      
+
       // If in replay mode, trigger onReplayStart immediately
       // (the actual 2-second delay is handled in the parent component)
       if (isReplayMode && onReplayStart) {

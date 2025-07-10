@@ -17,14 +17,14 @@ interface ErrorDialogProps {
   actionHref?: string
 }
 
-export function ErrorDialog({ 
+export function ErrorDialog({
   open,
   onOpenChange,
-  title, 
-  message, 
-  details, 
+  title,
+  message,
+  details,
   actionLabel = "ホームに戻る",
-  actionHref = "/"
+  actionHref = "/",
 }: ErrorDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -40,31 +40,27 @@ export function ErrorDialog({
             <DialogTitle>{title}</DialogTitle>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4">
-          <DialogDescription className="text-base">
-            {message}
-          </DialogDescription>
+          <DialogDescription className="text-base">{message}</DialogDescription>
 
           {/* Details (optional) */}
-          {details && (
+          {details != null && (
             <div className="bg-gray-50 rounded p-3">
-              <p className="text-sm text-gray-500 font-mono">
-                {details}
-              </p>
+              <p className="text-sm text-gray-500 font-mono">{details}</p>
             </div>
           )}
         </div>
 
         <DialogFooter className="gap-2">
-          <button 
+          <button
             onClick={() => onOpenChange(false)}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-10 px-4 py-2"
           >
             閉じる
           </button>
-          <button 
-            onClick={() => window.location.href = actionHref}
+          <button
+            onClick={() => (window.location.href = actionHref)}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           >
             {actionLabel}

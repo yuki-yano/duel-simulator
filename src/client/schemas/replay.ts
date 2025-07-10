@@ -59,20 +59,24 @@ const GameOperationSchema = z.object({
 export const DeckCardIdsMappingSchema = z.union([
   // New format (array of objects)
   z.object({
-    mainDeck: z.array(z.object({
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number(),
-      id: z.string(),
-    })),
-    extraDeck: z.array(z.object({
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number(),
-      id: z.string(),
-    })),
+    mainDeck: z.array(
+      z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+        id: z.string(),
+      }),
+    ),
+    extraDeck: z.array(
+      z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+        id: z.string(),
+      }),
+    ),
   }),
   // Old format (index -> cardId mapping)
   z.object({

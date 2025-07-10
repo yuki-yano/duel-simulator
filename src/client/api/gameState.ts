@@ -1,6 +1,6 @@
 import { saveDeckImage, calculateImageHash } from "./deck"
 import type { DeckProcessMetadata, DeckConfiguration } from "@/client/components/DeckImageProcessor"
-import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
+import type { ReplaySaveData, DeckCardIdsMapping, GameState } from "@/shared/types/game"
 
 export interface SaveGameStateRequest {
   sessionId?: string

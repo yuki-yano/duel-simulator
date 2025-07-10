@@ -110,12 +110,12 @@ app.post("/api/save-states", async (c) => {
     const finalDeckCardIds = deckCardIds ?? parsedState.data?.deckCardIds ?? { mainDeck: {}, extraDeck: {} }
 
     // Function to clean imageUrl from cards
-    const cleanImageUrls = (obj: any): any => {
+    const cleanImageUrls = (obj: unknown): unknown => {
       if (Array.isArray(obj)) {
         return obj.map(cleanImageUrls)
       }
-      if (obj && typeof obj === "object") {
-        const cleaned = { ...obj }
+      if (obj != null && typeof obj === "object") {
+        const cleaned = { ...obj } as Record<string, unknown>
         // Remove imageUrl if it exists
         if ("imageUrl" in cleaned && typeof cleaned.imageUrl === "string" && cleaned.imageUrl.startsWith("data:")) {
           delete cleaned.imageUrl
@@ -133,10 +133,10 @@ app.post("/api/save-states", async (c) => {
     const cleanedStateJson = JSON.stringify(cleanedState)
 
     // Validate required fields
-    if (!title) {
+    if (title == null || title === "") {
       throw new Error("Title is required")
     }
-    if (!deckConfig) {
+    if (deckConfig == null) {
       throw new Error("Deck configuration is required")
     }
 

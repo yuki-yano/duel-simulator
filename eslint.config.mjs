@@ -20,9 +20,7 @@ export default [
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
-        ecmaFeatures: {
-          jsx: true,
-        },
+        ecmaFeatures: { jsx: true },
       },
     },
   },
@@ -52,6 +50,7 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      eqeqeq: ["error", "always", { null: "ignore" }],
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/display-name": "off",

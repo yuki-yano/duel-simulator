@@ -9,7 +9,12 @@ interface EffectActivationAnimationProps {
   onComplete: () => void
 }
 
-export function EffectActivationAnimation({ position, cardRect, cardRotation = 0, onComplete }: EffectActivationAnimationProps) {
+export function EffectActivationAnimation({
+  position,
+  cardRect,
+  cardRotation = 0,
+  onComplete,
+}: EffectActivationAnimationProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [effectPosition, setEffectPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(
     null,
@@ -101,7 +106,7 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
       {/* Card zoom effect - カード自体の拡大 */}
       <style>
         {`
-          [data-card-id="${position.zone?.cardId || position.cardId || ""}"] {
+          [data-card-id="${position.zone?.cardId ?? position.cardId ?? ""}"] {
             transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
             transition: transform 0.3s ease-out !important;
             z-index: ${isVisible ? "9997" : "auto"} !important;
@@ -119,7 +124,7 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
         )}
         style={{
           // 守備表示の場合、カードの中心に合わせて位置調整
-          left: isRotated 
+          left: isRotated
             ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
             : `${effectPosition.x - 2}px`,
           top: isRotated
@@ -145,7 +150,7 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
         )}
         style={{
           // 守備表示の場合、カードの中心に合わせて位置調整
-          left: isRotated 
+          left: isRotated
             ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
             : `${effectPosition.x - 2}px`,
           top: isRotated

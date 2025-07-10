@@ -72,26 +72,26 @@ export default function Replay() {
       let savedState
       try {
         savedState = await loadGameState(id ?? "")
-      } catch (e) {
+      } catch (_e) {
         // Handle API errors (404, network errors, etc)
         setIsFatalError(true)
         throw new Error("リプレイが見つかりません")
       }
-      
+
       // Store saved state for later use
       setSavedStateData(savedState)
-      
+
       // Early validation of replay data to detect compatibility issues
-      let isReplayCompatible = false
+      const _isReplayCompatible = false
       let replayValidationError: string | null = null
       try {
         const parsedData = JSON.parse(savedState.stateJson)
         const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
-        
+
         if (!validationResult.success) {
           const errors = validationResult.error.format()
           console.error("Early replay validation errors:", errors)
-          
+
           // Determine specific compatibility issue
           if (errors.data?.deckCardIds) {
             replayValidationError = "古い形式のリプレイです（カードIDマッピングが不足）"
@@ -102,17 +102,15 @@ export default function Replay() {
           } else {
             replayValidationError = "リプレイデータの形式が不正です"
           }
-        } else {
-          isReplayCompatible = true
         }
       } catch (e) {
         console.error("Failed to parse replay data:", e)
         replayValidationError = "リプレイデータの解析に失敗しました"
       }
-      
+
       // Store replay compatibility status for later use
       setReplayDataError(replayValidationError)
-      
+
       let deckData
       try {
         deckData = await getDeckImage(savedState.deckImageHash)
@@ -128,10 +126,10 @@ export default function Replay() {
       try {
         const parsedConfig = JSON.parse(savedState.deckConfig)
         const validationResult = DeckConfigurationSchema.safeParse(parsedConfig)
-        
+
         if (!validationResult.success) {
           console.error("Deck config validation errors:", validationResult.error.format())
-          if (!replayValidationError) {
+          if (replayValidationError == null) {
             replayValidationError = "デッキ設定データが不正です"
           }
         } else {
@@ -139,7 +137,7 @@ export default function Replay() {
         }
       } catch (e) {
         console.error("Failed to parse deck config:", e)
-        if (!replayValidationError) {
+        if (replayValidationError == null) {
           replayValidationError = "デッキ設定の解析に失敗しました"
         }
       }
@@ -149,10 +147,10 @@ export default function Replay() {
       try {
         const parsedIds = JSON.parse(savedState.deckCardIds)
         const validationResult = DeckCardIdsMappingSchema.safeParse(parsedIds)
-        
+
         if (!validationResult.success) {
           console.error("Deck card IDs validation errors:", validationResult.error.format())
-          if (!replayValidationError) {
+          if (replayValidationError == null) {
             replayValidationError = "カードIDマッピングが不正です"
           }
         } else {
@@ -160,16 +158,16 @@ export default function Replay() {
         }
       } catch (e) {
         console.error("Failed to parse deck card IDs:", e)
-        if (!replayValidationError) {
+        if (replayValidationError == null) {
           replayValidationError = "カードIDマッピングの解析に失敗しました"
         }
       }
-      
+
       // Check if we have minimum requirements to proceed
       const canProceedWithDeck = deckConfig !== null && deckCardIds !== null && deckData !== null
-      
+
       // If we have critical data missing that prevents deck display, it's fatal
-      if (!deckData.mainDeckCount && !deckData.extraDeckCount) {
+      if (deckData.mainDeckCount === 0 && deckData.extraDeckCount === 0) {
         setIsFatalError(true)
         throw new Error("デッキ情報が破損しています")
       }
@@ -192,14 +190,14 @@ export default function Replay() {
           deckCardIds: deckCardIds,
         }
         setDeckMetadata(metadata)
-        
+
         // Try to extract cards from deck for initial setup
         try {
           const cardImageMap = await extractCardsFromDeckImage(metadata, deckCardIds)
-          
+
           // Create initial state with deck cards
           const mainDeckCards = Object.entries(cardImageMap)
-            .filter(([id]) => id.startsWith('main-'))
+            .filter(([id]) => id.startsWith("main-"))
             .map(([id, imageUrl]) => ({
               id,
               name: `Card ${id}`,
@@ -208,9 +206,9 @@ export default function Replay() {
               rotation: 0,
               faceDown: true,
             }))
-          
+
           const extraDeckCards = Object.entries(cardImageMap)
-            .filter(([id]) => id.startsWith('extra-'))
+            .filter(([id]) => id.startsWith("extra-"))
             .map(([id, imageUrl]) => ({
               id,
               name: `Card ${id}`,
@@ -219,32 +217,44 @@ export default function Replay() {
               rotation: 0,
               faceDown: true,
             }))
-          
+
           // Set initial game state with cards in deck
           setGameState({
             players: {
               self: {
-                monsterZones: Array(5).fill(null).map(() => []),
-                spellTrapZones: Array(5).fill(null).map(() => []),
+                monsterZones: Array(5)
+                  .fill(null)
+                  .map(() => []),
+                spellTrapZones: Array(5)
+                  .fill(null)
+                  .map(() => []),
                 fieldZone: null,
                 graveyard: [],
                 banished: [],
                 extraDeck: extraDeckCards,
                 deck: mainDeckCards,
                 hand: [],
-                extraMonsterZones: Array(2).fill(null).map(() => []),
+                extraMonsterZones: Array(2)
+                  .fill(null)
+                  .map(() => []),
                 lifePoints: 8000,
               },
               opponent: {
-                monsterZones: Array(5).fill(null).map(() => []),
-                spellTrapZones: Array(5).fill(null).map(() => []),
+                monsterZones: Array(5)
+                  .fill(null)
+                  .map(() => []),
+                spellTrapZones: Array(5)
+                  .fill(null)
+                  .map(() => []),
                 fieldZone: null,
                 graveyard: [],
                 banished: [],
                 extraDeck: [],
                 deck: [],
                 hand: [],
-                extraMonsterZones: Array(2).fill(null).map(() => []),
+                extraMonsterZones: Array(2)
+                  .fill(null)
+                  .map(() => []),
                 lifePoints: 8000,
               },
             },
@@ -267,9 +277,9 @@ export default function Replay() {
       setDeckImage(deckData.imageDataUrl)
       setShowDeckProcessor(true)
       setIsLoading(false)
-      
+
       // Show compatibility error dialog if needed (non-fatal)
-      if (replayValidationError) {
+      if (replayValidationError != null) {
         // Delay showing dialog to ensure page is rendered
         setTimeout(() => {
           setError(replayValidationError)
@@ -279,14 +289,14 @@ export default function Replay() {
       }
     } catch (error) {
       console.error("Failed to load replay:", error)
-      
+
       // For fatal errors, just set the error and let the UI handle it
       if (error instanceof Error) {
         setError(error.message)
       } else {
         setError("リプレイの読み込みに失敗しました")
       }
-      
+
       setIsLoading(false)
     }
   }
@@ -296,27 +306,39 @@ export default function Replay() {
     setGameState({
       players: {
         self: {
-          monsterZones: Array(5).fill(null).map(() => []),
-          spellTrapZones: Array(5).fill(null).map(() => []),
+          monsterZones: Array(5)
+            .fill(null)
+            .map(() => []),
+          spellTrapZones: Array(5)
+            .fill(null)
+            .map(() => []),
           fieldZone: null,
           graveyard: [],
           banished: [],
           extraDeck: [],
           deck: [],
           hand: [],
-          extraMonsterZones: Array(2).fill(null).map(() => []),
+          extraMonsterZones: Array(2)
+            .fill(null)
+            .map(() => []),
           lifePoints: 8000,
         },
         opponent: {
-          monsterZones: Array(5).fill(null).map(() => []),
-          spellTrapZones: Array(5).fill(null).map(() => []),
+          monsterZones: Array(5)
+            .fill(null)
+            .map(() => []),
+          spellTrapZones: Array(5)
+            .fill(null)
+            .map(() => []),
           fieldZone: null,
           graveyard: [],
           banished: [],
           extraDeck: [],
           deck: [],
           hand: [],
-          extraMonsterZones: Array(2).fill(null).map(() => []),
+          extraMonsterZones: Array(2)
+            .fill(null)
+            .map(() => []),
           lifePoints: 8000,
         },
       },
@@ -351,7 +373,6 @@ export default function Replay() {
     )
   }
 
-
   // Handle deck process complete (dummy handler for replay mode)
   const handleProcessComplete = () => {
     // Processing is already done, this is just for UI consistency
@@ -360,17 +381,17 @@ export default function Replay() {
   // Handle replay start
   const handleReplayStart = async () => {
     // Check if we have a compatibility error
-    if (replayDataError) {
+    if (replayDataError != null) {
       // Show error dialog but still proceed to game field
       setError(replayDataError)
       setErrorDetails("このリプレイは現在のバージョンで再生できません。通常の操作は可能です。")
       setShowErrorDialog(true)
-      
+
       // Show the game field for normal play
       setShowDeckProcessor(false)
       return
     }
-    
+
     // Check if saved state data is available
     if (!savedStateData) {
       setError("リプレイデータが利用できません")
@@ -378,7 +399,7 @@ export default function Replay() {
       setShowDeckProcessor(false)
       return
     }
-    
+
     // If we reach here, replay data should be valid - proceed with auto play dialog
     setShowDeckProcessor(false)
     setShowAutoPlayDialog(true)
@@ -387,27 +408,27 @@ export default function Replay() {
   // Handle auto play start
   const handleAutoPlayStart = async () => {
     setShowAutoPlayDialog(false)
-    
+
     if (!savedStateData || !deckMetadata) {
       setError("リプレイデータが利用できません")
       setShowErrorDialog(true)
       return
     }
-    
+
     // Parse and start replay (validation should have already passed)
     try {
       const parsedData = JSON.parse(savedStateData.stateJson)
       const replaySaveData = parsedData as ReplaySaveData
-      
+
       // Extract card images from deck metadata
       const cardImageMap = await extractCardsFromDeckImage(deckMetadata, deckMetadata.deckCardIds)
-      
+
       // Restore card images to initial state
       restoreCardImages(replaySaveData.data.initialState, cardImageMap)
-      
+
       // Set initial game state with restored images
       setGameState(replaySaveData.data.initialState)
-      
+
       // Set replay data
       setReplayData({
         startSnapshot: replaySaveData.data.initialState,
@@ -415,7 +436,7 @@ export default function Replay() {
         startTime: Date.now(),
         endTime: Date.now() + replaySaveData.metadata.duration,
       })
-      
+
       // Start replay
       void playReplay()
     } catch (e) {
@@ -445,10 +466,10 @@ export default function Replay() {
         </div>
 
         {/* Deck Image Processor for replay mode */}
-        {showDeckProcessor && deckImage && (
+        {showDeckProcessor && deckImage != null && (
           <div className="max-w-2xl mx-auto mb-8">
-            <DeckImageProcessor 
-              imageDataUrl={deckImage} 
+            <DeckImageProcessor
+              imageDataUrl={deckImage}
               onProcessComplete={handleProcessComplete}
               isReplayMode={true}
               onReplayStart={handleReplayStart}
@@ -467,11 +488,7 @@ export default function Replay() {
 
         {/* Auto Play Dialog */}
         {showAutoPlayDialog && (
-          <AutoPlayDialog
-            onStart={handleAutoPlayStart}
-            onCancel={handleAutoPlayCancel}
-            countdown={3}
-          />
+          <AutoPlayDialog onStart={handleAutoPlayStart} onCancel={handleAutoPlayCancel} countdown={3} />
         )}
 
         {/* Error Dialog */}

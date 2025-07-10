@@ -16,7 +16,7 @@ export function AutoPlayDialog({ onStart, onCancel, countdown = 3 }: AutoPlayDia
     const animationTimer = setInterval(() => {
       const elapsed = (Date.now() - startTime) / 1000
       setElapsedTime(elapsed)
-      
+
       if (elapsed >= countdown) {
         clearInterval(animationTimer)
       }
@@ -46,10 +46,8 @@ export function AutoPlayDialog({ onStart, onCancel, countdown = 3 }: AutoPlayDia
         <CardContent className="p-6">
           <div className="text-center space-y-4">
             <h3 className="text-xl font-semibold">自動再生</h3>
-            <p className="text-gray-600">
-              デッキを読み込みました。{remainingTime}秒後に自動再生を開始します
-            </p>
-            
+            <p className="text-gray-600">デッキを読み込みました。{remainingTime}秒後に自動再生を開始します</p>
+
             {/* カウントダウン表示 */}
             <div className="relative w-24 h-24 mx-auto">
               <svg className="w-24 h-24 transform -rotate-90">

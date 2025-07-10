@@ -128,11 +128,7 @@ export default function App() {
     setIsSaving(true)
     try {
       // TODO: Get actual game state from GameField
-      const saveData: GameState = {
-        cards: processedCards,
-        field: {},
-        turn: 1,
-      }
+      const saveData: GameState = gameState
 
       const result = await saveGameState(saveData, deckMetadata)
       setSaveId(result.id)

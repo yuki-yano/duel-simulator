@@ -77,7 +77,17 @@ export type GamePhase = "draw" | "standby" | "main1" | "battle" | "main2" | "end
 export interface GameOperation {
   id: string
   timestamp: number
-  type: "move" | "summon" | "set" | "attack" | "activate" | "draw" | "shuffle" | "rotate" | "changePosition" | "toggleHighlight"
+  type:
+    | "move"
+    | "summon"
+    | "set"
+    | "attack"
+    | "activate"
+    | "draw"
+    | "shuffle"
+    | "rotate"
+    | "changePosition"
+    | "toggleHighlight"
   cardId: string // Always track by card ID
   from?: {
     player: "self" | "opponent"
