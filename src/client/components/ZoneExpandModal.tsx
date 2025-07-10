@@ -79,14 +79,21 @@ export function ZoneExpandModal({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     if (draggedCard != null && zone != null) {
       setHoveredZone(zone)
 
       // Calculate drop index based on mouse position
-      if (contentRef.current && cards.length > 0) {
+      if (contentRef.current) {
         const rect = contentRef.current.getBoundingClientRect()
         const relativeX = e.clientX - rect.left
         const relativeY = e.clientY - rect.top
+
+        // For empty zones, set index to 0
+        if (cards.length === 0) {
+          setDropIndex(0)
+          return
+        }
 
         // Determine which column
         const column = Math.floor(relativeX / (availableWidth / cardsPerRow))
@@ -117,10 +124,12 @@ export function ZoneExpandModal({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     if (draggedCard != null && onDrop != null && draggedCard.zone != null && zone != null) {
+      // For graveyard/banished zones, always allow position-based insertion
       const targetZone: ZoneId = {
         ...zone,
-        index: dropIndex !== null ? dropIndex : undefined,
+        index: dropIndex !== null ? dropIndex : 0,
       }
       onDrop(draggedCard.zone, targetZone, e.shiftKey)
     }
@@ -154,9 +163,6 @@ export function ZoneExpandModal({
         width: `${modalWidth}px`,
         height: `${modalHeight}px`,
       }}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {/* Header with close button */}
       <div className="flex items-center justify-between h-7 px-2 border-b border-border">
@@ -177,6 +183,9 @@ export function ZoneExpandModal({
         ref={contentRef}
         className="p-3 overflow-auto"
         style={{ height: `calc(100% - ${headerHeight}px)` }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <div className="relative" style={{ minHeight: `${availableHeight}px` }}>
           {cards.map((card, index) => {
