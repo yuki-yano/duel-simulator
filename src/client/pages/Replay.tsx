@@ -573,7 +573,7 @@ export default function Replay() {
         <h1 className="text-2xl sm:text-4xl font-bold text-center mb-4 sm:mb-8">Duel Simulator - リプレイ</h1>
 
         {/* Replay Info */}
-        <div className="max-w-7xl mx-auto mb-4 text-center">
+        <div className="max-w-5xl mx-auto mb-4 text-center">
           {title !== "" && <h2 className="text-xl font-semibold mb-2">{title}</h2>}
           {description !== "" && <p className="text-gray-600 mb-2">{description}</p>}
           <p className="text-sm text-gray-500">
@@ -619,7 +619,7 @@ export default function Replay() {
 
         {/* Game Field */}
         {!showDeckProcessor && (
-          <Card className="max-w-7xl mx-auto">
+          <Card className="max-w-5xl mx-auto">
             <CardContent>
               <GameField />
             </CardContent>

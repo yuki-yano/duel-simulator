@@ -140,7 +140,7 @@ export default function App() {
         )}
 
         {/* Game Field */}
-        <Card className="max-w-7xl mx-auto">
+        <Card className="max-w-5xl mx-auto">
           <CardContent>
             <GameField />
           </CardContent>

@@ -156,7 +156,7 @@ function Zone({
   return (
     <div
       className={cn(
-        "zone relative h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
+        "zone relative h-14 sm:h-20 md:h-24 aspect-[59/86] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
         typeStyles[type],
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
         className,
@@ -178,21 +178,19 @@ function Zone({
             // Add padding to accommodate stacked cards
             paddingRight:
               cards.length > 1
-                ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
+                ? `${(cards.length - 1) * (window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
                 : 0,
             paddingBottom:
               cards.length > 1
-                ? `${(cards.length - 1) * (window.innerWidth >= 1024 ? 16 : window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
+                ? `${(cards.length - 1) * (window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
                 : 0,
           }}
         >
           {cards.map((c, index) => {
             // Calculate offset based on screen size
             let offsetPx: number
-            if (window.innerWidth >= 1024) {
-              offsetPx = 16 // Desktop: 16px offset (about 15% of card height)
-            } else if (window.innerWidth >= 768) {
-              offsetPx = 13 // Tablet: 13px offset
+            if (window.innerWidth >= 768) {
+              offsetPx = 13 // Tablet and Desktop: 13px offset
             } else if (window.innerWidth >= 640) {
               offsetPx = 10 // Small tablet: 10px offset
             } else {
@@ -256,6 +254,7 @@ interface DeckZoneProps {
   onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
   className?: string
+  style?: React.CSSProperties
 }
 
 function DeckZone({
@@ -269,6 +268,7 @@ function DeckZone({
   onContextMenu,
   onContextMenuClose,
   className,
+  style,
 }: DeckZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -497,6 +497,7 @@ function DeckZone({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        style={style}
       >
         <span className="absolute top-1 left-1 text-[10px] sm:text-xs font-medium text-muted-foreground z-10">
           {type === "deck" ? "デッキ" : type === "extra" ? "EXデッキ" : "手札"} ({cardCount})
@@ -707,13 +708,12 @@ function GraveZone({
   const getInitialHeight = useCallback(() => {
     if (isOpponent) {
       // 2 rows for opponent
-      if (window.innerWidth >= 1024) return 232 // lg: h-28 * 2 + gap
       if (window.innerWidth >= 768) return 200 // md: h-24 * 2 + gap
       if (window.innerWidth >= 640) return 168 // sm: h-20 * 2 + gap
       return 116 // mobile: h-14 * 2 + gap
     } else {
       // 3 rows for player
-      if (window.innerWidth >= 768) return 348 // md: h-28 * 3 + gap
+      if (window.innerWidth >= 768) return 300 // md: h-24 * 3 + gap
       if (window.innerWidth >= 640) return 252 // sm: h-20 * 3 + gap
       return 174 // mobile: h-14 * 3 + gap
     }
@@ -730,7 +730,7 @@ function GraveZone({
 
   // Card dimensions based on height (maintaining 59:86 ratio)
   const cardHeightPx =
-    window.innerWidth >= 1024 ? 112 : window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // lg:h-28 (112px), md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+    window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
   const spacing = 4 // gap between cards when not overlapping
 
@@ -738,7 +738,7 @@ function GraveZone({
   // Container has padding applied via className, so we need to subtract it
   // Also reserve space for the label at the bottom (20px)
   const containerPaddingY =
-    window.innerWidth >= 1024 ? 8 : window.innerWidth >= 768 ? 8 : window.innerWidth >= 640 ? 6 : 4 // py-2, py-1.5, py-1 in pixels
+    window.innerWidth >= 768 ? 8 : window.innerWidth >= 640 ? 6 : 4 // py-2, py-1.5, py-1 in pixels
   const labelHeight = 20 // Height reserved for label
   const availableHeight = containerHeight - containerPaddingY * 2 - labelHeight
 
@@ -878,13 +878,11 @@ function GraveZone({
         typeStyles[type],
         isHovered && "border-2 border-blue-400/70",
         isDisabled && "opacity-50",
-        window.innerWidth >= 1024
+        window.innerWidth >= 768
           ? "px-2 pt-2 pb-6"
-          : window.innerWidth >= 768
-            ? "px-2 pt-2 pb-6"
-            : window.innerWidth >= 640
-              ? "px-1.5 pt-1.5 pb-5"
-              : "px-1 pt-1 pb-5",
+          : window.innerWidth >= 640
+            ? "px-1.5 pt-1.5 pb-5"
+            : "px-1 pt-1 pb-5",
         className,
       )}
       style={style}
@@ -1231,8 +1229,9 @@ export function GameFieldContent() {
       const extraDeckElement = document.querySelector(".extra-zone-self")
       const graveElement = document.querySelector(".grave-zone-self")
       const banishElement = document.querySelector(".banish-zone-self")
+      const deckElement = document.querySelector(".deck-zone-self")
 
-      if (!handElement || !extraDeckElement || !graveElement || !banishElement) {
+      if (!handElement || !extraDeckElement || !graveElement || !banishElement || !deckElement) {
         console.error("Could not find required zone elements")
         return null
       }
@@ -1241,12 +1240,13 @@ export function GameFieldContent() {
       const extraDeckRect = extraDeckElement.getBoundingClientRect()
       const graveRect = graveElement.getBoundingClientRect()
       const banishRect = banishElement.getBoundingClientRect()
+      const deckRect = deckElement.getBoundingClientRect()
 
       return {
-        top: handRect.top + window.scrollY,
+        top: Math.max(graveRect.bottom, banishRect.bottom) + window.scrollY,
         left: graveRect.left + window.scrollX,
         right: banishRect.right + window.scrollX,
-        bottom: extraDeckRect.bottom + window.scrollY,
+        bottom: deckRect.bottom + window.scrollY,
       }
     }
 
@@ -1958,18 +1958,32 @@ export function GameFieldContent() {
           </div>
         </div>
 
-        {/* Player's Hand, Deck & Extra Deck (Bottom) */}
+        {/* Player's Hand & Extra Deck (Bottom) */}
         <div className="space-y-2">
-          <DeckZone
-            type="hand"
-            zone={{ player: "self", type: "hand" }}
-            cardCount={playerBoard.hand.length}
-            cards={playerBoard.hand}
-            onDrop={handleCardDrop}
-            onContextMenu={handleCardContextMenu}
-            onContextMenuClose={() => setContextMenu(null)}
-            className="hand-zone-self"
-          />
+          <div className="flex gap-2 items-start">
+            <DeckZone
+              type="hand"
+              zone={{ player: "self", type: "hand" }}
+              cardCount={playerBoard.hand.length}
+              cards={playerBoard.hand}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+              className="hand-zone-self"
+              style={{ flex: "0 0 35%" }}
+            />
+            <DeckZone
+              type="extra"
+              zone={{ player: "self", type: "extraDeck" }}
+              cardCount={playerBoard.extraDeck.length}
+              cards={playerBoard.extraDeck}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+              className="extra-zone-self"
+              style={{ flex: "0 0 65%" }}
+            />
+          </div>
           <DeckZone
             type="deck"
             zone={{ player: "self", type: "deck" }}
@@ -1979,16 +1993,6 @@ export function GameFieldContent() {
             onContextMenu={handleCardContextMenu}
             onContextMenuClose={() => setContextMenu(null)}
             className="deck-zone-self"
-          />
-          <DeckZone
-            type="extra"
-            zone={{ player: "self", type: "extraDeck" }}
-            cardCount={playerBoard.extraDeck.length}
-            cards={playerBoard.extraDeck}
-            onDrop={handleCardDrop}
-            onContextMenu={handleCardContextMenu}
-            onContextMenuClose={() => setContextMenu(null)}
-            className="extra-zone-self"
           />
         </div>
       </div>
