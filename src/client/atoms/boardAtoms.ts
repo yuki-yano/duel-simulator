@@ -223,8 +223,18 @@ export const redoAtom = atom(null, (get, set) => {
     set(gameStateAtom, nextEntry.gameState)
     set(gameHistoryIndexAtom, newIndex)
 
-    // Operations should already contain the correct operations
-    // No need to modify operationsAtom during redo
+    // Restore operations to match the next state
+    const operations = get(operationsAtom)
+    const currentEntry = history[currentIndex]
+    
+    // Find operations that need to be added back
+    const operationsToAdd = operations.slice(currentEntry.operationCount, nextEntry.operationCount)
+    
+    // Also add to replay operations if recording
+    if (get(replayRecordingAtom) && operationsToAdd.length > 0) {
+      const replayOps = get(replayOperationsAtom)
+      set(replayOperationsAtom, [...replayOps, ...operationsToAdd])
+    }
   }
 })
 
