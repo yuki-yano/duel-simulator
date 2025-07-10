@@ -217,7 +217,7 @@ export function ZoneExpandModal({
                   top: `${top}px`,
                   width: `${actualCardWidth}px`,
                   height: `${cardHeightPx}px`,
-                  zIndex: hoveredCardIndex === index ? 1000 : 100 + cards.length - index,
+                  zIndex: hoveredCardIndex === index ? 1000 : 100 + index,
                 }}
                 onMouseEnter={() => setHoveredCardIndex(index)}
                 onMouseLeave={() => setHoveredCardIndex(null)}
