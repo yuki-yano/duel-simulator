@@ -290,7 +290,6 @@ export const undoAtom = atom(null, (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   const isPlaying = get(replayPlayingAtom)
-  const isPaused = get(replayPausedAtom)
 
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
@@ -303,12 +302,10 @@ export const undoAtom = atom(null, (get, set) => {
     // Restore operations from history
     set(operationsAtom, [...previousEntry.operations])
 
-    // Update replay current index if we're paused
-    if (isPlaying && isPaused) {
-      const replayCurrentIndex = get(replayCurrentIndexAtom)
-      if (replayCurrentIndex !== null && replayCurrentIndex > 0) {
-        set(replayCurrentIndexAtom, replayCurrentIndex - 1)
-      }
+    // Update replay current index if replay was stopped (for resume functionality)
+    if (!isPlaying && get(replayCurrentIndexAtom) != null) {
+      // Set the operation count (not history index) as replay current index
+      set(replayCurrentIndexAtom, previousEntry.operationCount)
     }
 
     // Also trim replay operations if recording
@@ -331,7 +328,6 @@ export const redoAtom = atom(null, async (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   const isPlaying = get(replayPlayingAtom)
-  const isPaused = get(replayPausedAtom)
   const replayData = get(replayDataAtom)
   const replayCurrentIndex = get(replayCurrentIndexAtom)
   const totalOperations = get(replayTotalOperationsAtom)
@@ -558,12 +554,10 @@ export const redoAtom = atom(null, async (get, set) => {
     // Restore operations from history
     set(operationsAtom, [...nextEntry.operations])
 
-    // Update replay current index if we're paused
-    if (isPlaying && isPaused) {
-      const replayCurrentIndex = get(replayCurrentIndexAtom)
-      if (replayCurrentIndex !== null && replayCurrentIndex < totalOperations - 1) {
-        set(replayCurrentIndexAtom, replayCurrentIndex + 1)
-      }
+    // Update replay current index if replay was stopped (for resume functionality)
+    if (!isPlaying && get(replayCurrentIndexAtom) != null) {
+      // Set the operation count (not history index) as replay current index
+      set(replayCurrentIndexAtom, nextEntry.operationCount)
     }
 
     // Find operations that need to be added to replay
@@ -593,13 +587,8 @@ export const canUndoAtom = atom((get) => {
   const isPlaying = get(replayPlayingAtom)
   const isPaused = get(replayPausedAtom)
 
-  // Enable undo during replay pause
-  if (isPlaying && isPaused) {
-    return currentIndex > 0
-  }
-
-  // Normal undo logic when not replaying
-  if (!isPlaying) {
+  // Enable undo when not replaying or when paused
+  if (!isPlaying || isPaused) {
     return currentIndex > 0
   }
 
@@ -615,7 +604,7 @@ export const canRedoAtom = atom((get) => {
   const replayCurrentIndex = get(replayCurrentIndexAtom)
   const totalOperations = get(replayTotalOperationsAtom)
 
-  // Enable redo during replay pause
+  // Enable redo when paused
   if (isPlaying && isPaused) {
     return currentIndex < history.length - 1
   }
@@ -1052,11 +1041,50 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
   return newState
 }
 
+// Build full history from initial state and operations
+const buildReplayHistory = (initialState: GameState, operations: GameOperation[]): HistoryEntry[] => {
+  let tempState = initialState
+  const fullHistory: HistoryEntry[] = [
+    {
+      gameState: initialState,
+      operationCount: 0,
+      operations: [],
+    },
+  ]
+
+  // Apply all operations to build history
+  for (let i = 0; i < operations.length; i++) {
+    const operation = operations[i]
+    tempState = applyOperation(tempState, operation)
+    fullHistory.push({
+      gameState: tempState,
+      operationCount: i + 1,
+      operations: operations.slice(0, i + 1),
+    })
+  }
+
+  return fullHistory
+}
+
+// Update replay state during playback
+const updateReplayState = (
+  set: <T>(atom: WritableAtom<T, [T], void>, value: T) => void,
+  nextState: GameState,
+  index: number
+) => {
+  set(gameStateAtom, nextState)
+  set(gameHistoryIndexAtom, index)
+  set(replayCurrentIndexAtom, index)
+}
+
 // Play replay
 export const playReplayAtom = atom(null, async (get, set) => {
-  // Check if already playing and not paused (allow resume from pause)
-  if (get(replayPlayingAtom) && !get(replayPausedAtom)) {
-    console.warn("Replay is already playing")
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
+  
+  // Check if already playing and not paused
+  if (isPlaying && !isPaused) {
+    console.warn("Replay is already playing - blocking duplicate execution")
     return
   }
 
@@ -1069,15 +1097,21 @@ export const playReplayAtom = atom(null, async (get, set) => {
     return
   }
 
-  // Check if resuming from pause
-  const wasPlaying = get(replayPlayingAtom)
-  const wasPaused = get(replayPausedAtom)
-  const currentIndex = get(replayCurrentIndexAtom)
+  // No need for replay ID anymore - using playing/paused state instead
 
-  // Set initial state from snapshot only if starting fresh
-  if (!wasPlaying || currentIndex === null || currentIndex === 0) {
-    set(replayPlayingAtom, true)
-    set(replayPausedAtom, false)
+  // Check if resuming from a saved position
+  const currentIndex = get(replayCurrentIndexAtom)
+  const historyIndex = get(gameHistoryIndexAtom)
+
+  // Determine if this is a resume (has a saved index or is paused) or fresh start
+  const isResume = (currentIndex != null && currentIndex > 0) || (isPlaying && isPaused)
+
+  // Set playing state
+  set(replayPlayingAtom, true)
+  set(replayPausedAtom, false)
+  
+  // Set initial state and build history only if starting fresh
+  if (!isResume) {
     set(replayCurrentIndexAtom, 0)
     set(replayTotalOperationsAtom, replayData.operations.length)
 
@@ -1087,66 +1121,80 @@ export const playReplayAtom = atom(null, async (get, set) => {
     // Reset history with initial state
     set(resetHistoryAtom, initialState)
 
-    // Build complete history by applying all operations
-    let tempState = initialState
-    const fullHistory: HistoryEntry[] = [
-      {
-        gameState: initialState,
-        operationCount: 0,
-        operations: [],
-      },
-    ]
-
-    // Apply all operations to build history
-    for (let i = 0; i < replayData.operations.length; i++) {
-      const operation = replayData.operations[i]
-      tempState = applyOperation(tempState, operation)
-      fullHistory.push({
-        gameState: tempState,
-        operationCount: i + 1,
-        operations: replayData.operations.slice(0, i + 1),
-      })
-    }
+    // Build complete history using helper function
+    const fullHistory = buildReplayHistory(initialState, replayData.operations)
 
     // Set the complete history
     set(gameHistoryAtom, fullHistory)
     set(gameHistoryIndexAtom, 0) // Start at the beginning
+    set(gameStateAtom, replayData.startSnapshot)
   } else {
-    // Resuming from pause
-    set(replayPausedAtom, false)
+    // Resuming - use existing history and current position
+    set(replayTotalOperationsAtom, replayData.operations.length)
   }
 
   // Clear any existing animations and UI state
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 
-  // Keep track of current state
-  let currentState = wasPlaying && wasPaused ? get(gameStateAtom) : produce(replayData.startSnapshot, () => {})
-
   // Wait for DOM to update after snapshot restore
   await new Promise((resolve) => setTimeout(resolve, 100))
 
   // Apply start delay if set (only for fresh start, not resume)
-  if (startDelay > 0 && (!wasPlaying || currentIndex === 0)) {
+  if (startDelay > 0 && !isResume) {
     await new Promise((resolve) => setTimeout(resolve, startDelay * 1000))
   }
 
-  // Resume from current index if it was set (after pause/resume)
-  const _startIndex = get(replayCurrentIndexAtom) ?? 0
+  // Determine start index
+  let startIndex: number
+  if (isResume) {
+    // When resuming, use the operation count from current history entry
+    const currentHistoryEntry = get(gameHistoryAtom)[historyIndex]
+    startIndex = currentHistoryEntry?.operationCount ?? currentIndex ?? 0
+    // Update the atom for consistency
+    set(replayCurrentIndexAtom, startIndex)
+  } else {
+    // For fresh start
+    startIndex = 0
+  }
+
+  // 常に履歴から操作を取得する一貫したアプローチ
+  // リプレイ開始時は履歴がreplayData.operationsと同じ内容を持っているはず
+  // undo/redo後も履歴が最新の状態を反映している
+  const currentHistory = get(gameHistoryAtom)
+  const lastHistoryEntry = currentHistory[currentHistory.length - 1]
+  
+  // 履歴の最後のエントリには、現在までのすべての操作が含まれている
+  const operationsToPlay = lastHistoryEntry?.operations ?? replayData.operations
+
+  // Always recalculate from snapshot to ensure consistency
+  let currentState: GameState = produce(replayData.startSnapshot, () => {})
+  
+  // If resuming, apply operations up to the start index instantly
+  if (isResume && startIndex > 0) {
+    // Apply operations up to startIndex to reconstruct current state
+    const operationsToApply = operationsToPlay.slice(0, startIndex)
+    
+    for (const operation of operationsToApply) {
+      currentState = applyOperation(currentState, operation)
+    }
+    
+    // Set the recalculated state
+    set(gameStateAtom, currentState)
+    set(gameHistoryIndexAtom, startIndex)
+  }
 
   // Play through each operation
-  for (let i = _startIndex; i < replayData.operations.length; i++) {
-    // Check if paused or stopped
-    if (!get(replayPlayingAtom)) break
-
-    // Wait while paused
-    while (get(replayPausedAtom) && get(replayPlayingAtom)) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
+  for (let i = startIndex; i < operationsToPlay.length; i++) {
+    // Check if replay was paused
+    if (get(replayPausedAtom)) {
+      break
     }
 
+    // Check if stopped
     if (!get(replayPlayingAtom)) break
 
-    const operation = replayData.operations[i]
+    const operation = operationsToPlay[i]
 
     // Apply operation to get next state
     const nextState = applyOperation(currentState, operation)
@@ -1190,9 +1238,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
       }
 
       // Apply next state WITHOUT adding to history (history is pre-built)
-      set(gameStateAtom, nextState)
-      set(gameHistoryIndexAtom, i + 1)
-      set(replayCurrentIndexAtom, i + 1)
+      updateReplayState(set, nextState, i + 1)
       currentState = nextState
 
       // Small delay to ensure DOM is updated
@@ -1217,9 +1263,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
       // No card movement, but check for rotation or activation
       if (operation.type === "rotate") {
         // Update state immediately for rotation WITHOUT adding to history
-        set(gameStateAtom, nextState)
-        set(gameHistoryIndexAtom, i + 1)
-        set(replayCurrentIndexAtom, i + 1)
+        updateReplayState(set, nextState, i + 1)
         currentState = nextState
 
         // Use shorter delay for rotation
@@ -1228,9 +1272,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         )
       } else if (operation.type === "activate" && operation.to) {
         // Update state (no change for activate) WITHOUT adding to history
-        set(gameStateAtom, nextState)
-        set(gameHistoryIndexAtom, i + 1)
-        set(replayCurrentIndexAtom, i + 1)
+        updateReplayState(set, nextState, i + 1)
         currentState = nextState
 
         // Small delay to ensure DOM is updated
@@ -1305,9 +1347,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         )
       } else {
         // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
-        set(gameStateAtom, nextState)
-        set(gameHistoryIndexAtom, i + 1)
-        set(replayCurrentIndexAtom, i + 1)
+        updateReplayState(set, nextState, i + 1)
         currentState = nextState
 
         // Wait for next step
@@ -1318,39 +1358,68 @@ export const playReplayAtom = atom(null, async (get, set) => {
     }
   }
 
-  // Wait for final animation to complete
-  const finalOperation = replayData.operations[replayData.operations.length - 1]
-  if (finalOperation !== undefined) {
-    if (finalOperation.type === "move" || finalOperation.type === "draw") {
-      // Wait for move/draw animation
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
-      )
-    } else if (finalOperation.type === "rotate") {
-      // Wait for rotation animation
-      await new Promise((resolve) =>
-        setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
-      )
-    } else if (finalOperation.type === "activate") {
-      // Wait for activation animation
-      await new Promise((resolve) =>
-        setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
-      )
+  // Wait for final animation to complete (only if not paused)
+  const wasPausedDuringReplay = get(replayPausedAtom)
+  
+  if (!wasPausedDuringReplay) {
+    // Use operationsToPlay instead of replayData.operations for consistency
+    const finalOperation = operationsToPlay[operationsToPlay.length - 1]
+    if (finalOperation !== undefined) {
+      if (finalOperation.type === "move" || finalOperation.type === "draw") {
+        // Wait for move/draw animation
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+        )
+      } else if (finalOperation.type === "rotate") {
+        // Wait for rotation animation
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+        )
+      } else if (finalOperation.type === "activate") {
+        // Wait for activation animation
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+        )
+      }
     }
   }
 
-  // End replay
-  set(replayPlayingAtom, false)
-  set(replayPausedAtom, false)
-  set(replayCurrentIndexAtom, null)
+  // End replay - check if it was paused or completed
+  const wasPaused = get(replayPausedAtom)
+  
+  if (!wasPaused) {
+    // Only set to false if not paused (i.e., replay completed naturally or was stopped)
+    set(replayPlayingAtom, false)
+    set(replayCurrentIndexAtom, null)
+  }
+  // If paused, keep replayPlayingAtom true and current index for resume
+  
+  // No need to clear replay ID anymore
+  
+  // Don't reset pause state here - let toggleReplayPauseAtom handle it
+  if (!wasPaused) {
+    set(replayPausedAtom, false)
+  }
+  
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 })
 
-// Pause/resume replay
-export const toggleReplayPauseAtom = atom(null, (get, set) => {
-  if (get(replayPlayingAtom)) {
-    set(replayPausedAtom, !get(replayPausedAtom))
+// Pause/resume replay - Pause completely stops the replay, resume starts from beginning
+export const toggleReplayPauseAtom = atom(null, async (get, set) => {
+  const isPlaying = get(replayPlayingAtom)
+  const isPaused = get(replayPausedAtom)
+  
+  if (isPlaying && !isPaused) {
+    // Pause the replay - stop it completely but keep isPlaying true for UI
+    set(replayPausedAtom, true)
+    // Keep replayPlayingAtom true so the pause/resume button stays visible
+    // Keep the current index for resume
+  } else if (isPlaying && isPaused) {
+    // Resume from the saved position
+    set(replayPausedAtom, false)
+    // playReplayAtom will handle starting from the current index
+    await set(playReplayAtom)
   }
 })
 
@@ -1543,7 +1612,6 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
   try {
-    console.log("activateEffectAtom called with:", position)
 
     // Get the card at this position to get its ID
     const state = get(gameStateAtom)
@@ -1570,8 +1638,6 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
       },
     }
 
-    console.log("Creating operation for card:", card)
-
     // Effect activation doesn't change game state, only visual effect
     const operation: GameOperation = {
       id: uuidv4(),
@@ -1586,7 +1652,6 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
       player: position.zone.player,
     }
 
-    console.log("Adding operation:", operation)
     set(operationsAtom, [...get(operationsAtom), operation])
 
     // Also record to replay operations if recording
@@ -1603,9 +1668,6 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     // Trigger visual effect animation
     const animations = get(cardAnimationsAtom)
     const animationId = uuidv4()
-
-    console.log("Current animations before adding:", animations)
-    console.log("Adding activation animation with id:", animationId)
 
     const newAnimation = {
       id: animationId,
@@ -1624,7 +1686,6 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     }
 
     set(cardAnimationsAtom, [...animations, newAnimation])
-    console.log("Animation added successfully")
 
     // Remove animation after duration
     setTimeout(() => {
@@ -1634,8 +1695,6 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     // Add to history for undo/redo support (same gameState, but new operation)
     const currentState = get(gameStateAtom)
     addToHistory(get, set, currentState)
-
-    console.log("activateEffectAtom completed successfully")
   } catch (error) {
     console.error("Error in activateEffectAtom:", error)
     throw error

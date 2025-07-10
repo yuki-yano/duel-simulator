@@ -544,17 +544,20 @@ export default function Replay() {
 
   // Handle auto play start
   const handleAutoPlayStart = () => {
-    setShowAutoPlayDialog(false)
-
-    // snapshotは既にhandleReplayStartで復元済みなので、単にリプレイを開始するだけ
-    try {
-      // Start replay
-      void playReplay()
-    } catch (e) {
-      console.error("Failed to start replay:", e)
-      setError("リプレイの開始に失敗しました")
-      setShowErrorDialog(true)
-    }
+    // ReactのレンダリングサイクルとsetStateの競合を避けるため、
+    // 次のイベントループでsetStateとplayReplayを実行
+    setTimeout(() => {
+      setShowAutoPlayDialog(false)
+      // snapshotは既にhandleReplayStartで復元済みなので、単にリプレイを開始するだけ
+      try {
+        // Start replay
+        void playReplay()
+      } catch (e) {
+        console.error("Failed to start replay:", e)
+        setError("リプレイの開始に失敗しました")
+        setShowErrorDialog(true)
+      }
+    }, 0)
   }
 
   // Handle auto play cancel

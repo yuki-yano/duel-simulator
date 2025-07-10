@@ -1479,7 +1479,13 @@ export function GameFieldContent() {
           {isPlaying && (
             <>
               <button
-                onClick={() => togglePause()}
+                onClick={() => {
+                  if (isPaused) {
+                    void playReplay()
+                  } else {
+                    void togglePause()
+                  }
+                }}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
                 aria-label={isPaused ? "Resume" : "Pause"}
               >
