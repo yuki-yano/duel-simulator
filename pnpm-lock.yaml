@@ -59,6 +59,9 @@ importers:
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
+      zod:
+        specifier: ^4.0.0
+        version: 4.0.0
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250705.0
@@ -3207,6 +3210,9 @@ packages:
   zod@3.22.3:
     resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
 
+  zod@4.0.0:
+    resolution: {integrity: sha512-9diLdTPc/L7w/5jI4C3gHYNiGHDV9IZYxo1e5LSD8cabi65WVTWWb+g2BGPEpUUCOxR4D+6O5B0AzyMdUAXwrw==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -6185,3 +6191,5 @@ snapshots:
   zlibjs@0.3.1: {}
 
   zod@3.22.3: {}
+
+  zod@4.0.0: {}

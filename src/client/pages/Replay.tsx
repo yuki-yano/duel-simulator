@@ -18,6 +18,8 @@ import {
 } from "@/client/atoms/boardAtoms"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
 import type { DeckConfiguration } from "@/client/components/DeckImageProcessor"
+import { ReplaySaveDataSchema, DeckConfigurationSchema, DeckCardIdsMappingSchema } from "@/client/schemas/replay"
+import { z } from "zod"
 
 export default function Replay() {
   const { id } = useParams<{ id: string }>()
@@ -64,36 +66,89 @@ export default function Replay() {
   const loadReplay = async () => {
     try {
       // Load saved state
-      const savedState = await loadGameState(id ?? "")
+      let savedState
+      try {
+        savedState = await loadGameState(id ?? "")
+      } catch (e) {
+        // Handle API errors (404, network errors, etc)
+        throw new Error("リプレイが見つかりません")
+      }
+      
       const deckData = await getDeckImage(savedState.deckImageHash)
 
-      // Parse replay data with validation
+      // Parse and validate replay data with Zod
       let replaySaveData: ReplaySaveData
       try {
-        replaySaveData = JSON.parse(savedState.stateJson) as ReplaySaveData
+        const parsedData = JSON.parse(savedState.stateJson)
         
-        // Validate replay data structure
-        if (!replaySaveData.data || !replaySaveData.data.initialState || !replaySaveData.data.operations) {
-          throw new Error("Invalid replay data structure")
+        // Check version before full validation
+        if (parsedData.version && parsedData.version !== "1.0") {
+          console.warn(`Unknown replay version: ${parsedData.version}`)
         }
+        
+        const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
+        
+        if (!validationResult.success) {
+          const errors = validationResult.error.format()
+          console.error("Replay validation errors:", errors)
+          
+          // Check for specific missing fields to provide better error messages
+          if (errors.data?.deckCardIds) {
+            throw new Error("古い形式のリプレイです（カードIDマッピングが不足）")
+          }
+          if (errors.data?.initialState) {
+            throw new Error("古い形式のリプレイです（初期状態データが不正）")
+          }
+          if (errors.data?.operations) {
+            throw new Error("古い形式のリプレイです（操作履歴が不正）")
+          }
+          throw new Error("リプレイデータの形式が不正です")
+        }
+        
+        replaySaveData = validationResult.data as ReplaySaveData
       } catch (e) {
-        throw new Error("リプレイデータの形式が不正です")
+        if (e instanceof Error && e.message.includes("古い形式")) {
+          throw e
+        }
+        throw new Error("リプレイデータの解析に失敗しました")
       }
 
-      // Parse deck config
+      // Parse and validate deck config
       let deckConfig: DeckConfiguration
       try {
-        deckConfig = JSON.parse(savedState.deckConfig) as DeckConfiguration
+        const parsedConfig = JSON.parse(savedState.deckConfig)
+        const validationResult = DeckConfigurationSchema.safeParse(parsedConfig)
+        
+        if (!validationResult.success) {
+          console.error("Deck config validation errors:", validationResult.error.format())
+          throw new Error("デッキ設定の形式が不正です")
+        }
+        
+        deckConfig = validationResult.data
       } catch (e) {
-        throw new Error("デッキ設定の形式が不正です")
+        if (e instanceof Error && e.message.includes("形式が不正")) {
+          throw e
+        }
+        throw new Error("デッキ設定の解析に失敗しました")
       }
 
-      // Parse deck card IDs
+      // Parse and validate deck card IDs
       let deckCardIds: DeckCardIdsMapping
       try {
-        deckCardIds = JSON.parse(savedState.deckCardIds) as DeckCardIdsMapping
+        const parsedIds = JSON.parse(savedState.deckCardIds)
+        const validationResult = DeckCardIdsMappingSchema.safeParse(parsedIds)
+        
+        if (!validationResult.success) {
+          console.error("Deck card IDs validation errors:", validationResult.error.format())
+          throw new Error("カードIDマッピングの形式が不正です")
+        }
+        
+        deckCardIds = validationResult.data as DeckCardIdsMapping
       } catch (e) {
-        throw new Error("カードIDマッピングの形式が不正です")
+        if (e instanceof Error && e.message.includes("形式が不正")) {
+          throw e
+        }
+        throw new Error("カードIDマッピングの解析に失敗しました")
       }
 
       // Set title and description
