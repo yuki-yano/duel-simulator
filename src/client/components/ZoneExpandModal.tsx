@@ -152,12 +152,13 @@ export function ZoneExpandModal({
     <div
       ref={modalRef}
       className={cn(
-        "absolute border-2 rounded-lg shadow-lg z-50 overflow-hidden",
+        "absolute border-2 rounded-lg shadow-lg overflow-hidden",
         bgColor,
         borderColor,
         isHovered && "border-2 border-blue-400/70 shadow-lg",
       )}
       style={{
+        zIndex: 40,
         top: `${modalBounds.top}px`,
         left: `${modalBounds.left}px`,
         width: `${modalWidth}px`,
@@ -188,12 +189,6 @@ export function ZoneExpandModal({
         onDrop={handleDrop}
       >
         <div className="relative" style={{ minHeight: `${availableHeight}px` }}>
-          {/* Drop indicator when dragging over empty zone */}
-          {cards.length === 0 && isHovered && (
-            <div className="absolute inset-0 border-2 border-dashed border-blue-400/50 rounded-lg flex items-center justify-center">
-              <span className="text-sm text-muted-foreground">ここにドロップ</span>
-            </div>
-          )}
           {cards.map((card, index) => {
             const row = Math.floor(index / cardsPerRow)
             const col = index % cardsPerRow
