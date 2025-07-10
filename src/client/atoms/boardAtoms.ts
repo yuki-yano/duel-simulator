@@ -194,6 +194,19 @@ export const undoAtom = atom(null, (get, set) => {
     // Trim operations to match the previous state
     const trimmedOperations = operations.slice(0, previousEntry.operationCount)
     set(operationsAtom, trimmedOperations)
+
+    // Also trim replay operations if recording
+    if (get(replayRecordingAtom)) {
+      // Calculate how many operations to trim from replay operations
+      const currentOperationCount = history[currentIndex].operationCount
+      const previousOperationCount = previousEntry.operationCount
+      const operationsToRemove = currentOperationCount - previousOperationCount
+      
+      const replayOps = get(replayOperationsAtom)
+      // Remove the last N operations from replay operations
+      const trimmedReplayOps = replayOps.slice(0, replayOps.length - operationsToRemove)
+      set(replayOperationsAtom, trimmedReplayOps)
+    }
   }
 })
 
