@@ -552,7 +552,26 @@ export default function Replay() {
           {title !== "" && <h2 className="text-xl font-semibold mb-2">{title}</h2>}
           {description !== "" && <p className="text-gray-600 mb-2">{description}</p>}
           <p className="text-sm text-gray-500">
-            リプレイID: <code className="px-2 py-1 bg-gray-100 rounded">{id}</code>
+            リプレイID:{" "}
+            <code
+              className="px-2 py-1 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+              onClick={() => {
+                navigator.clipboard.writeText(id || "").then(() => {
+                  // 短い時間だけ背景色を変更してフィードバックを提供
+                  const element = document.querySelector(`code[data-replay-id="${id}"]`) as HTMLElement
+                  if (element) {
+                    element.classList.add("bg-green-200")
+                    setTimeout(() => {
+                      element.classList.remove("bg-green-200")
+                    }, 300)
+                  }
+                })
+              }}
+              data-replay-id={id}
+              title="クリックしてコピー"
+            >
+              {id}
+            </code>
           </p>
         </div>
 

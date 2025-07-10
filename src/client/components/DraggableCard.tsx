@@ -5,7 +5,9 @@ import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
 // Constants
-const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu
+const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu (600ms)
+const DRAG_THRESHOLD_MS = 100 // Minimum time before drag starts (100ms)
+const TOUCH_MOVE_THRESHOLD = 5 // Pixels of movement to cancel long press
 
 interface DraggableCardProps {
   card: GameCard
@@ -36,11 +38,16 @@ export function DraggableCard({
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
   const [highlightAnimating, setHighlightAnimating] = useState(false)
+  const [isDragEnabled, setIsDragEnabled] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
   const suppressDragImageRef = useRef<boolean>(false)
+  const touchStartTimeRef = useRef<number | null>(null)
+  const dragEnabledRef = useRef<boolean>(false)
+  const dragEnableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isScrollingRef = useRef<boolean>(false)
 
   // Check if this card is currently animating
   const isAnimating = cardAnimations.some((anim) => anim.cardId === card.id)
@@ -57,13 +64,13 @@ export function DraggableCard({
     setPrevHighlighted(card.highlighted)
   }, [card.highlighted, prevHighlighted])
 
-  // Clean up timers on unmount and setup non-passive touch listeners
+  // Clean up timers on unmount and setup touch listeners
   useEffect(() => {
     const element = cardRef.current
     if (!element) return
 
-    // Non-passive touch event handlers
-    const handleTouchStartNonPassive = (e: TouchEvent) => {
+    // Touch event handlers
+    const handleTouchStart = (e: TouchEvent) => {
       // Only handle touch events, not mouse events
       if (e.type !== "touchstart") return
 
@@ -73,26 +80,27 @@ export function DraggableCard({
         return
       }
 
-      // Clear any existing long press timer
+      // Clear any existing timers
       if (longPressTimerRef.current != null) {
         clearTimeout(longPressTimerRef.current)
       }
+      if (dragEnableTimerRef.current != null) {
+        clearTimeout(dragEnableTimerRef.current)
+      }
 
-      // Prevent default to avoid scrolling, text selection, and iOS context menu
+      // Prevent default to avoid scrolling when touching a card
       e.preventDefault()
       e.stopPropagation()
-
-      // Clear any existing text/image selection
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-      }
 
       if (e.touches.length > 0) {
         const touch = e.touches[0]
 
-        // Store initial touch position for detecting movement
+        // Store initial touch position and time
         touchStartPosRef.current = { x: touch.clientX, y: touch.clientY }
+        touchStartTimeRef.current = Date.now()
+        dragEnabledRef.current = false
+        setIsDragEnabled(false)
+        isScrollingRef.current = false
 
         // Calculate offset from touch point to card center
         if (cardRef.current) {
@@ -110,7 +118,35 @@ export function DraggableCard({
           dragOffsetRef.current = { x: 0, y: 0 }
         }
 
-        // Set up long press detection
+        // Start dragging immediately
+        setIsTouching(true)
+        const cardWithZone = {
+          ...card,
+          zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
+        }
+        setDraggedCard(cardWithZone)
+        setTouchPosition({ x: touch.clientX, y: touch.clientY })
+        
+        // Disable body scrolling
+        document.body.style.overflow = "hidden"
+        document.body.style.touchAction = "none"
+        
+        /* TODO: Implement drag delay for better scroll handling
+        // Set up drag enable timer (100ms)
+        dragEnableTimerRef.current = setTimeout(() => {
+          // Only enable drag if not scrolling
+          if (!isScrollingRef.current) {
+            dragEnabledRef.current = true
+            setIsDragEnabled(true)
+            setIsTouching(true)  // Enable hover effect after threshold
+            // Disable body scrolling when drag is enabled
+            document.body.style.overflow = "hidden"
+            document.body.style.touchAction = "none"
+          }
+        }, DRAG_THRESHOLD_MS)
+        */
+
+        // Set up long press detection (600ms)
         longPressTimerRef.current = setTimeout(() => {
           if (touchStartPosRef.current && onContextMenu) {
             // Hide drag image when showing context menu
@@ -130,32 +166,20 @@ export function DraggableCard({
             onContextMenu(syntheticEvent, card, zone)
           }
         }, LONG_PRESS_DURATION_MS)
-
-        // Start dragging immediately
-        setIsTouching(true)
-        const cardWithZone = {
-          ...card,
-          zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
-        }
-        setDraggedCard(cardWithZone)
-
-        // Get current touch position in client coordinates
-        setTouchPosition({ x: touch.clientX, y: touch.clientY })
       }
-
-      // Disable body scrolling
-      document.body.style.overflow = "hidden"
-      document.body.style.touchAction = "none"
     }
 
-    // Add non-passive touch listener
-    element.addEventListener("touchstart", handleTouchStartNonPassive, { passive: false })
+    // Add non-passive touch listener to prevent scrolling on card touch
+    element.addEventListener("touchstart", handleTouchStart, { passive: false })
 
     return () => {
       if (longPressTimerRef.current != null) {
         clearTimeout(longPressTimerRef.current)
       }
-      element.removeEventListener("touchstart", handleTouchStartNonPassive)
+      if (dragEnableTimerRef.current != null) {
+        clearTimeout(dragEnableTimerRef.current)
+      }
+      element.removeEventListener("touchstart", handleTouchStart)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReplayPlaying, card, stackIndex, onContextMenu, setDraggedCard, setTouchPosition])
@@ -181,14 +205,21 @@ export function DraggableCard({
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    // Clear long press timer
+    // Clear timers
     if (longPressTimerRef.current != null) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
     }
+    if (dragEnableTimerRef.current != null) {
+      clearTimeout(dragEnableTimerRef.current)
+      dragEnableTimerRef.current = null
+    }
 
-    // If context menu was shown and no movement occurred, keep menu open
-    // const noMovement = touchStartPosRef.current && contextMenuShownRef.current
+    // Reset touch action on element
+    if (cardRef.current) {
+      cardRef.current.style.touchAction = ""
+    }
+
 
     if (isTouching && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0]
@@ -197,7 +228,7 @@ export function DraggableCard({
       if (suppressDragImageRef.current && touchStartPosRef.current) {
         const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x)
         const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y)
-        if (deltaX <= 10 && deltaY <= 10) {
+        if (deltaX <= TOUCH_MOVE_THRESHOLD && deltaY <= TOUCH_MOVE_THRESHOLD) {
           // User hasn't moved, keep context menu open
           setIsTouching(false)
           setDraggedCard(null)
@@ -285,6 +316,10 @@ export function DraggableCard({
     touchStartPosRef.current = null
     dragOffsetRef.current = null
     suppressDragImageRef.current = false
+    touchStartTimeRef.current = null
+    dragEnabledRef.current = false
+    setIsDragEnabled(false)
+    isScrollingRef.current = false
 
     // Restore body scrolling
     document.body.style.overflow = ""
@@ -292,16 +327,20 @@ export function DraggableCard({
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (isTouching && e.touches.length > 0) {
+    if (e.touches.length > 0) {
       const touch = e.touches[0]
 
-      // Cancel long press if finger moved more than 10 pixels
-      if (longPressTimerRef.current != null && touchStartPosRef.current != null) {
+      // Check if finger moved
+      if (touchStartPosRef.current != null) {
         const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x)
         const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y)
-        if (deltaX > 10 || deltaY > 10) {
-          clearTimeout(longPressTimerRef.current)
-          longPressTimerRef.current = null
+        
+        // Cancel long press if moved more than threshold
+        if (deltaX > TOUCH_MOVE_THRESHOLD || deltaY > TOUCH_MOVE_THRESHOLD) {
+          if (longPressTimerRef.current != null) {
+            clearTimeout(longPressTimerRef.current)
+            longPressTimerRef.current = null
+          }
         }
       }
 
@@ -309,7 +348,7 @@ export function DraggableCard({
       if (suppressDragImageRef.current && touchStartPosRef.current != null) {
         const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x)
         const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y)
-        if (deltaX > 10 || deltaY > 10) {
+        if (deltaX > TOUCH_MOVE_THRESHOLD || deltaY > TOUCH_MOVE_THRESHOLD) {
           suppressDragImageRef.current = false
           if (onContextMenuClose) {
             onContextMenuClose()
@@ -356,12 +395,7 @@ export function DraggableCard({
           }
         }}
         onTouchEnd={handleTouchEnd}
-        onTouchMove={(e) => {
-          // Only call handleTouchMove if dragging
-          if (isTouching) {
-            handleTouchMove(e)
-          }
-        }}
+        onTouchMove={handleTouchMove}
         style={{
           cursor: isReplayPlaying ? "not-allowed" : "grab",
           opacity: isAnimating ? 0 : isTouching ? 0.5 : 1,
