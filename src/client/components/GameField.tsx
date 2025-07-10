@@ -748,7 +748,7 @@ function GraveZone({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    if (draggedCard != null && zone != null && !isDisabled) {
+    if (draggedCard != null && zone != null) {
       setHoveredZone(zone)
 
       // Calculate drop index based on mouse position
@@ -807,7 +807,7 @@ function GraveZone({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    if (draggedCard != null && onDrop != null && draggedCard.zone != null && zone != null && !isDisabled) {
+    if (draggedCard != null && onDrop != null && draggedCard.zone != null && zone != null) {
       // Check if the source is from graveyard/banished
       const isFromGraveOrBanished = draggedCard.zone.type === "graveyard" || draggedCard.zone.type === "banished"
 
@@ -876,7 +876,7 @@ function GraveZone({
       className={cn(
         "grave-zone relative rounded-md border-2 border-dashed h-full flex flex-col transition-colors overflow-visible",
         typeStyles[type],
-        isHovered && "border-4 border-blue-500 bg-blue-500/20",
+        isHovered && "border-2 border-blue-400/70",
         isDisabled && "opacity-50",
         window.innerWidth >= 1024
           ? "px-2 pt-2 pb-6"
