@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { Card, CardContent } from "@client/components/Card"
+import { Card, CardContent } from "@client/components/ui/Card"
 import { GameField } from "@client/components/GameField"
 import { loadGameState } from "@client/api/gameState"
 import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
-import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
+import type { DeckCardIdsMapping, DeckConfiguration } from "@/shared/types/game"
 import { DeckImageProcessor } from "@client/components/DeckImageProcessor"
 import { AutoPlayDialog } from "@client/components/AutoPlayDialog"
 import { ErrorDialog } from "@client/components/ErrorDialog"
@@ -17,8 +17,7 @@ import {
   stopReplayAtom,
 } from "@/client/atoms/boardAtoms"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
-import type { DeckConfiguration } from "@/client/components/DeckImageProcessor"
-import { ReplaySaveDataSchema, DeckConfigurationSchema, DeckCardIdsMappingSchema } from "@/client/schemas/replay"
+import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema } from "@/client/schemas/replay"
 
 export default function Replay() {
   const { id } = useParams<{ id: string }>()
@@ -31,14 +30,13 @@ export default function Replay() {
   const [showDeckProcessor, setShowDeckProcessor] = useState(false)
   const [deckImage, setDeckImage] = useState<string | null>(null)
   const [showAutoPlayDialog, setShowAutoPlayDialog] = useState(false)
-  const [replayDataError, setReplayDataError] = useState<string | null>(null)
   const [savedStateData, setSavedStateData] = useState<{
     stateJson: string
     deckConfig: string
     deckCardIds: string
     deckImageHash: string
     title: string
-    description?: string
+    description: string | null
   } | null>(null)
   const [isFatalError, setIsFatalError] = useState(false)
 
@@ -81,35 +79,8 @@ export default function Replay() {
       // Store saved state for later use
       setSavedStateData(savedState)
 
-      // Early validation of replay data to detect compatibility issues
-      const _isReplayCompatible = false
-      let replayValidationError: string | null = null
-      try {
-        const parsedData = JSON.parse(savedState.stateJson)
-        const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
-
-        if (!validationResult.success) {
-          const errors = validationResult.error.format()
-          console.error("Early replay validation errors:", errors)
-
-          // Determine specific compatibility issue
-          if (errors.data?.deckCardIds) {
-            replayValidationError = "古い形式のリプレイです（カードIDマッピングが不足）"
-          } else if (errors.data?.initialState) {
-            replayValidationError = "古い形式のリプレイです（初期状態データが不正）"
-          } else if (errors.data?.operations) {
-            replayValidationError = "古い形式のリプレイです（操作履歴が不正）"
-          } else {
-            replayValidationError = "リプレイデータの形式が不正です"
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse replay data:", e)
-        replayValidationError = "リプレイデータの解析に失敗しました"
-      }
-
-      // Store replay compatibility status for later use
-      setReplayDataError(replayValidationError)
+      // Validation will be done when replay starts
+      // バリデーションは「再生を開始」ボタンクリック時に実行する
 
       let deckData
       try {
@@ -124,47 +95,33 @@ export default function Replay() {
       // Parse and validate deck config - but don't fail if it's invalid
       let deckConfig: DeckConfiguration | null = null
       try {
-        const parsedConfig = JSON.parse(savedState.deckConfig)
-        const validationResult = DeckConfigurationSchema.safeParse(parsedConfig)
+        const validationResult = DeckConfigurationSchema.safeParse(JSON.parse(savedState.deckConfig))
 
         if (!validationResult.success) {
           console.error("Deck config validation errors:", validationResult.error.format())
-          if (replayValidationError == null) {
-            replayValidationError = "デッキ設定データが不正です"
-          }
         } else {
           deckConfig = validationResult.data
         }
       } catch (e) {
         console.error("Failed to parse deck config:", e)
-        if (replayValidationError == null) {
-          replayValidationError = "デッキ設定の解析に失敗しました"
-        }
       }
 
       // Parse and validate deck card IDs - but don't fail if it's invalid
       let deckCardIds: DeckCardIdsMapping | null = null
       try {
-        const parsedIds = JSON.parse(savedState.deckCardIds)
-        const validationResult = DeckCardIdsMappingSchema.safeParse(parsedIds)
+        const validationResult = DeckCardIdsMappingSchema.safeParse(JSON.parse(savedState.deckCardIds))
 
         if (!validationResult.success) {
           console.error("Deck card IDs validation errors:", validationResult.error.format())
-          if (replayValidationError == null) {
-            replayValidationError = "カードIDマッピングが不正です"
-          }
         } else {
           deckCardIds = validationResult.data as DeckCardIdsMapping
         }
       } catch (e) {
         console.error("Failed to parse deck card IDs:", e)
-        if (replayValidationError == null) {
-          replayValidationError = "カードIDマッピングの解析に失敗しました"
-        }
       }
 
       // Check if we have minimum requirements to proceed
-      const canProceedWithDeck = deckConfig !== null && deckCardIds !== null && deckData !== null
+      const _canProceedWithDeck = deckConfig !== null && deckCardIds !== null && deckData !== null
 
       // If we have critical data missing that prevents deck display, it's fatal
       if (deckData.mainDeckCount === 0 && deckData.extraDeckCount === 0) {
@@ -176,9 +133,29 @@ export default function Replay() {
       setTitle(savedState.title)
       setDescription(savedState.description ?? "")
 
-      // Set deck metadata with deckCardIds - only if we have valid data
-      if (canProceedWithDeck && deckConfig && deckCardIds) {
+      // Set deck metadata - always set if we have deck image data
+      // This allows deck display even if deckCardIds is invalid
+      if (deckData !== null && deckConfig !== null) {
         const imageUrl = getDeckImageUrl(savedState.deckImageHash)
+        
+        // If deckCardIds is null, generate default mapping
+        let finalDeckCardIds = deckCardIds
+        if (finalDeckCardIds === null) {
+          console.warn("deckCardIds is null, generating default mapping...")
+          finalDeckCardIds = {
+            mainDeck: {},
+            extraDeck: {},
+          }
+          // Generate default IDs for main deck
+          for (let i = 0; i < deckData.mainDeckCount; i++) {
+            finalDeckCardIds.mainDeck[`main-${i}`] = `main-${i}`
+          }
+          // Generate default IDs for extra deck
+          for (let i = 0; i < deckData.extraDeckCount; i++) {
+            finalDeckCardIds.extraDeck[`extra-${i}`] = `extra-${i}`
+          }
+        }
+        
         const metadata = {
           imageDataUrl: deckData.imageDataUrl,
           imageUrl,
@@ -187,13 +164,14 @@ export default function Replay() {
           extraDeckCount: deckData.extraDeckCount,
           sourceWidth: deckData.sourceWidth,
           sourceHeight: deckData.sourceHeight,
-          deckCardIds: deckCardIds,
+          deckCardIds: finalDeckCardIds,
         }
         setDeckMetadata(metadata)
 
         // Try to extract cards from deck for initial setup
         try {
-          const cardImageMap = await extractCardsFromDeckImage(metadata, deckCardIds)
+          // Extract cards using the deckCardIds from metadata (which is guaranteed to be non-null)
+          const cardImageMap = await extractCardsFromDeckImage(metadata, metadata.deckCardIds)
 
           // Create initial state with deck cards
           const mainDeckCards = Object.entries(cardImageMap)
@@ -202,9 +180,9 @@ export default function Replay() {
               id,
               name: `Card ${id}`,
               imageUrl,
-              position: "facedown" as const,
+              position: "attack" as const,
               rotation: 0,
-              faceDown: true,
+              faceDown: false,
             }))
 
           const extraDeckCards = Object.entries(cardImageMap)
@@ -213,9 +191,9 @@ export default function Replay() {
               id,
               name: `Card ${id}`,
               imageUrl,
-              position: "facedown" as const,
+              position: "attack" as const,
               rotation: 0,
-              faceDown: true,
+              faceDown: false,
             }))
 
           // Set initial game state with cards in deck
@@ -277,16 +255,6 @@ export default function Replay() {
       setDeckImage(deckData.imageDataUrl)
       setShowDeckProcessor(true)
       setIsLoading(false)
-
-      // Show compatibility error dialog if needed (non-fatal)
-      if (replayValidationError != null) {
-        // Delay showing dialog to ensure page is rendered
-        setTimeout(() => {
-          setError(replayValidationError)
-          setErrorDetails("このリプレイは現在のバージョンと互換性がありませんが、通常の操作は可能です。")
-          setShowErrorDialog(true)
-        }, 500)
-      }
     } catch (error) {
       console.error("Failed to load replay:", error)
 
@@ -376,49 +344,154 @@ export default function Replay() {
   // Handle deck process complete (dummy handler for replay mode)
   const handleProcessComplete = () => {
     // Processing is already done, this is just for UI consistency
+    console.log("Deck process complete in replay mode")
   }
 
   // Handle replay start
   const handleReplayStart = async () => {
-    // Check if we have a compatibility error
-    if (replayDataError != null) {
-      // Show error dialog but still proceed to game field
-      setError(replayDataError)
-      setErrorDetails("このリプレイは現在のバージョンで再生できません。通常の操作は可能です。")
-      setShowErrorDialog(true)
-
-      // Show the game field for normal play
-      setShowDeckProcessor(false)
-      return
-    }
-
     // Check if saved state data is available
-    if (!savedStateData) {
-      setError("リプレイデータが利用できません")
-      setShowErrorDialog(true)
-      setShowDeckProcessor(false)
-      return
-    }
-
-    // If we reach here, replay data should be valid - proceed with auto play dialog
-    setShowDeckProcessor(false)
-    setShowAutoPlayDialog(true)
-  }
-
-  // Handle auto play start
-  const handleAutoPlayStart = async () => {
-    setShowAutoPlayDialog(false)
-
     if (!savedStateData || !deckMetadata) {
       setError("リプレイデータが利用できません")
       setShowErrorDialog(true)
+      setShowDeckProcessor(false)
       return
     }
 
-    // Parse and start replay (validation should have already passed)
+    // リプレイデータをパースしてバリデーション
     try {
-      const parsedData = JSON.parse(savedStateData.stateJson)
-      const replaySaveData = parsedData as ReplaySaveData
+      // Zodバリデーションを実行（JSON.parseも含めて安全に実行）
+      const validationResult = ReplaySaveDataSchema.safeParse(JSON.parse(savedStateData.stateJson))
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.format()
+        console.error("Replay validation errors:", errors)
+        
+        // Determine specific compatibility issue
+        let validationError = "リプレイデータの形式が不正です"
+        if (errors.data?.deckCardIds?._errors && errors.data.deckCardIds._errors.length > 0) {
+          validationError = "古い形式のリプレイです（カードIDマッピングが不足）"
+        } else if (errors.data?.initialState?._errors && errors.data.initialState._errors.length > 0) {
+          validationError = "古い形式のリプレイです（初期状態データが不正）"
+        } else if (errors.data?.operations?._errors && errors.data.operations._errors.length > 0) {
+          validationError = "古い形式のリプレイです（操作履歴が不正）"
+        }
+        
+        // Show error dialog but still allow normal play
+        setError(validationError)
+        setErrorDetails("このリプレイは現在のバージョンで再生できません。通常の操作は可能です。")
+        setShowErrorDialog(true)
+        
+        // バリデーションエラーでも、デッキの初期状態を設定して通常操作可能にする
+        try {
+          console.log("Validation error - attempting to load deck anyway")
+          
+          // deckMetadataから画像データを除外してログ出力
+          const metadataForLog = deckMetadata != null ? {
+            ...deckMetadata,
+            imageDataUrl: "[DATA URI OMITTED]",
+            imageUrl: deckMetadata.imageUrl ?? "",
+          } : null
+          console.log("deckMetadata (without image):", metadataForLog)
+          console.log("deckMetadata?.deckCardIds:", deckMetadata?.deckCardIds)
+          
+          // 既にデッキメタデータがある場合はそれを使用
+          if (deckMetadata != null) {
+            console.log("Regenerating deck from image due to validation error...")
+            
+            // バリデーションエラー時は新しいカードIDマッピングを生成
+            const regeneratedCardIds = {
+              mainDeck: {} as Record<string, string>,
+              extraDeck: {} as Record<string, string>,
+            }
+            
+            // 新しいカードIDを生成
+            const timestamp = Date.now()
+            for (let i = 0; i < deckMetadata.mainDeckCount; i++) {
+              const newId = `regen-main-${i}-${timestamp}`
+              regeneratedCardIds.mainDeck[i.toString()] = newId
+            }
+            
+            for (let i = 0; i < deckMetadata.extraDeckCount; i++) {
+              const newId = `regen-extra-${i}-${timestamp}`
+              regeneratedCardIds.extraDeck[i.toString()] = newId
+            }
+            
+            console.log("Generated new card IDs:", regeneratedCardIds)
+            
+            // 新しいIDマッピングで画像を切り出し
+            const cardImageMap = await extractCardsFromDeckImage(deckMetadata, regeneratedCardIds)
+            console.log("Extracted cards count:", cardImageMap.size)
+            
+            // カードオブジェクトを作成
+            const mainDeckCards = []
+            const extraDeckCards = []
+            
+            for (const [id, imageUrl] of cardImageMap.entries()) {
+              const card = {
+                id,
+                name: `Card ${id}`,
+                imageUrl,
+                position: "attack" as const,
+                rotation: 0,
+                faceDown: false,
+              }
+              
+              if (id.includes("main")) {
+                mainDeckCards.push(card)
+              } else if (id.includes("extra")) {
+                extraDeckCards.push(card)
+              }
+            }
+              
+            console.log("mainDeckCards count:", mainDeckCards.length)
+            console.log("extraDeckCards count:", extraDeckCards.length)
+              
+            // 初期状態を設定
+            setGameState({
+              players: {
+                self: {
+                  monsterZones: Array(5).fill(null).map(() => []),
+                  spellTrapZones: Array(5).fill(null).map(() => []),
+                  fieldZone: null,
+                  graveyard: [],
+                  banished: [],
+                  extraDeck: extraDeckCards,
+                  deck: mainDeckCards,
+                  hand: [],
+                  extraMonsterZones: Array(2).fill(null).map(() => []),
+                  lifePoints: 8000,
+                },
+                opponent: {
+                  monsterZones: Array(5).fill(null).map(() => []),
+                  spellTrapZones: Array(5).fill(null).map(() => []),
+                  fieldZone: null,
+                  graveyard: [],
+                  banished: [],
+                  extraDeck: [],
+                  deck: [],
+                  hand: [],
+                  extraMonsterZones: Array(2).fill(null).map(() => []),
+                  lifePoints: 8000,
+                },
+              },
+              turn: 1,
+              phase: "main1",
+              currentPlayer: "self",
+            })
+            console.log("Game state set successfully")
+          } else {
+            console.log("deckMetadata or deckCardIds is null, cannot load deck")
+          }
+        } catch (e) {
+          console.error("Failed to setup initial state on validation error:", e)
+        }
+        
+        setShowDeckProcessor(false)
+        return
+      }
+      
+      // バリデーション成功 - リプレイデータを使用
+      const replaySaveData = validationResult.data
 
       // Extract card images from deck metadata
       const cardImageMap = await extractCardsFromDeckImage(deckMetadata, deckMetadata.deckCardIds)
@@ -437,6 +510,23 @@ export default function Replay() {
         endTime: Date.now() + replaySaveData.metadata.duration,
       })
 
+      // If we reach here, replay data should be valid - proceed with auto play dialog
+      setShowDeckProcessor(false)
+      setShowAutoPlayDialog(true)
+    } catch (e) {
+      console.error("Failed to prepare replay:", e)
+      setError("リプレイの準備に失敗しました")
+      setShowErrorDialog(true)
+      setShowDeckProcessor(false)
+    }
+  }
+
+  // Handle auto play start
+  const handleAutoPlayStart = () => {
+    setShowAutoPlayDialog(false)
+
+    // snapshotは既にhandleReplayStartで復元済みなので、単にリプレイを開始するだけ
+    try {
       // Start replay
       void playReplay()
     } catch (e) {
@@ -449,6 +539,8 @@ export default function Replay() {
   // Handle auto play cancel
   const handleAutoPlayCancel = () => {
     setShowAutoPlayDialog(false)
+    // キャンセル時も初期状態は維持する（デッキにカードが入った状態）
+    // すでにhandleReplayStartでsnapshotを復元済みなので、追加の処理は不要
   }
 
   return (

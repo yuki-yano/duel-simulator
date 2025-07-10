@@ -1,17 +1,24 @@
 import { z } from "zod"
 
 // Card schema
-const CardSchema = z.object({
+export const CardSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  name: z.string().optional(),
   imageUrl: z.string(),
+  position: z.enum(["attack", "defense", "facedown", "spell", "set"]),
   rotation: z.number().default(0),
   faceDown: z.boolean().optional(),
   highlighted: z.boolean().optional(),
+  // Optional fields from Card interface
+  attack: z.number().optional(),
+  defense: z.number().optional(),
+  level: z.number().optional(),
+  type: z.string().optional(),
+  description: z.string().optional(),
 })
 
 // PlayerBoard schema
-const PlayerBoardSchema = z.object({
+export const PlayerBoardSchema = z.object({
   monsterZones: z.array(z.array(CardSchema)),
   spellTrapZones: z.array(z.array(CardSchema)),
   fieldZone: z.nullable(CardSchema),
@@ -25,7 +32,7 @@ const PlayerBoardSchema = z.object({
 })
 
 // GameState schema
-const GameStateSchema = z.object({
+export const GameStateSchema = z.object({
   players: z.object({
     self: PlayerBoardSchema,
     opponent: PlayerBoardSchema,
@@ -36,57 +43,58 @@ const GameStateSchema = z.object({
 })
 
 // OperationZone schema
-const OperationZoneSchema = z.object({
+export const OperationZoneSchema = z.object({
   player: z.enum(["self", "opponent"]),
-  zoneType: z.string(),
+  zoneType: z.enum([
+    "monsterZone",
+    "spellTrapZone",
+    "fieldZone",
+    "graveyard",
+    "banished",
+    "extraDeck",
+    "deck",
+    "hand",
+    "extraMonsterZone"
+  ]),
   zoneIndex: z.number().optional(),
   insertPosition: z.union([z.number(), z.literal("last")]).optional(),
 })
 
 // GameOperation schema
-const GameOperationSchema = z.object({
+export const GameOperationSchema = z.object({
   id: z.string(),
   timestamp: z.number(),
-  type: z.enum(["move", "rotate", "draw", "activate", "shuffle", "changePosition", "toggleHighlight"]),
-  cardId: z.string().optional(),
+  type: z.enum([
+    "move",
+    "summon",
+    "set",
+    "attack",
+    "activate",
+    "draw",
+    "shuffle",
+    "rotate",
+    "changePosition",
+    "toggleHighlight"
+  ]),
+  cardId: z.string(),
   from: OperationZoneSchema.optional(),
   to: OperationZoneSchema.optional(),
   player: z.enum(["self", "opponent"]),
-  metadata: z.any().optional(),
+  metadata: z.union([
+    z.object({ angle: z.number() }), // rotate操作時
+    z.object({ flip: z.boolean() }), // changePosition操作時  
+    z.record(z.string(), z.unknown()), // その他の任意のメタデータ
+  ]).optional(),
 })
 
-// DeckCardIdsMapping schema - supports both old and new formats
-export const DeckCardIdsMappingSchema = z.union([
-  // New format (array of objects)
-  z.object({
-    mainDeck: z.array(
-      z.object({
-        x: z.number(),
-        y: z.number(),
-        width: z.number(),
-        height: z.number(),
-        id: z.string(),
-      }),
-    ),
-    extraDeck: z.array(
-      z.object({
-        x: z.number(),
-        y: z.number(),
-        width: z.number(),
-        height: z.number(),
-        id: z.string(),
-      }),
-    ),
-  }),
-  // Old format (index -> cardId mapping)
-  z.object({
-    mainDeck: z.record(z.string(), z.string()),
-    extraDeck: z.record(z.string(), z.string()),
-  }),
-])
+// DeckCardIdsMapping schema - only supports old format (index -> cardId mapping)
+export const DeckCardIdsMappingSchema = z.object({
+  mainDeck: z.record(z.string(), z.string()),
+  extraDeck: z.record(z.string(), z.string()),
+})
 
 // DeckSection schema
-const DeckSectionSchema = z.object({
+export const DeckSectionSchema = z.object({
   label: z.string(),
   count: z.number(),
   yPosition: z.number(),
@@ -106,7 +114,7 @@ export const DeckConfigurationSchema = z.object({
 
 // ReplaySaveData schema - flexible to support different formats
 export const ReplaySaveDataSchema = z.object({
-  version: z.string(),
+  version: z.literal("1.0"),
   type: z.literal("replay"),
   data: z.object({
     initialState: GameStateSchema,
@@ -138,6 +146,30 @@ export const SavedStateResponseSchema = z.object({
   deckCardIds: z.string(),
 })
 
+// SavedState schema
+export const SavedStateSchema = z.object({
+  id: z.string(),
+  type: z.enum(["snapshot", "replay"]),
+  initialState: GameStateSchema,
+  operations: z.array(GameOperationSchema),
+  metadata: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    createdAt: z.number(),
+    originalStartIndex: z.number().optional(),
+    originalEndIndex: z.number().optional(),
+    deckImageHash: z.string().optional(),
+  }),
+})
+
 // Type exports
-export type ValidatedReplaySaveData = z.infer<typeof ReplaySaveDataSchema>
-export type ValidatedSavedStateResponse = z.infer<typeof SavedStateResponseSchema>
+export type Card = z.infer<typeof CardSchema>
+export type PlayerBoard = z.infer<typeof PlayerBoardSchema>
+export type GameState = z.infer<typeof GameStateSchema>
+export type GameOperation = z.infer<typeof GameOperationSchema>
+export type DeckCardIdsMapping = z.infer<typeof DeckCardIdsMappingSchema>
+export type DeckSection = z.infer<typeof DeckSectionSchema>
+export type DeckConfiguration = z.infer<typeof DeckConfigurationSchema>
+export type ReplaySaveData = z.infer<typeof ReplaySaveDataSchema>
+export type SavedState = z.infer<typeof SavedStateSchema>
+export type SavedStateResponse = z.infer<typeof SavedStateResponseSchema>

@@ -1,18 +1,15 @@
-export interface Card {
-  id: string
-  imageUrl: string
-  name?: string
-  attack?: number
-  defense?: number
-  level?: number
-  type?: string
-  description?: string
-  position: "attack" | "defense" | "facedown" | "spell" | "set"
-  rotation: number
-  faceDown?: boolean
-  highlighted?: boolean
-  // Note: zone and index are removed - card location is determined by its position in PlayerBoard arrays
-}
+// Re-export types from Zod schemas
+export type { 
+  Card,
+  PlayerBoard,
+  GameState,
+  GameOperation,
+  DeckCardIdsMapping,
+  DeckSection,
+  DeckConfiguration,
+  ReplaySaveData,
+  SavedState
+} from "@/client/schemas/replay"
 
 export type ZoneType =
   | "monsterZone"
@@ -49,95 +46,4 @@ export interface MoveTarget {
   insertPosition?: number | "last" // Where to insert: specific index or last
 }
 
-export interface PlayerBoard {
-  monsterZones: Card[][]
-  spellTrapZones: Card[][]
-  fieldZone: Card | null
-  graveyard: Card[]
-  banished: Card[]
-  extraDeck: Card[]
-  deck: Card[]
-  hand: Card[]
-  extraMonsterZones: Card[][]
-  lifePoints: number
-}
-
-export interface GameState {
-  players: {
-    self: PlayerBoard
-    opponent: PlayerBoard
-  }
-  turn: number
-  phase: GamePhase
-  currentPlayer: "self" | "opponent"
-}
-
 export type GamePhase = "draw" | "standby" | "main1" | "battle" | "main2" | "end"
-
-export interface GameOperation {
-  id: string
-  timestamp: number
-  type:
-    | "move"
-    | "summon"
-    | "set"
-    | "attack"
-    | "activate"
-    | "draw"
-    | "shuffle"
-    | "rotate"
-    | "changePosition"
-    | "toggleHighlight"
-  cardId: string // Always track by card ID
-  from?: {
-    player: "self" | "opponent"
-    zoneType: ZoneType
-    zoneIndex?: number // Which zone slot (for multi-slot zones)
-  }
-  to?: {
-    player: "self" | "opponent"
-    zoneType: ZoneType
-    zoneIndex?: number // Which zone slot (for multi-slot zones)
-    insertPosition?: number | "last" // Where to insert in the target zone
-  }
-  player: "self" | "opponent"
-  metadata?: Record<string, unknown>
-}
-
-export interface SavedState {
-  id: string
-  type: "snapshot" | "replay"
-  initialState: GameState
-  operations: GameOperation[]
-  metadata: {
-    title?: string
-    description?: string
-    createdAt: number
-    originalStartIndex?: number
-    originalEndIndex?: number
-    deckImageHash?: string
-  }
-}
-
-export interface DeckCardIdsMapping {
-  mainDeck: { [index: number]: string } // index -> cardId
-  extraDeck: { [index: number]: string } // index -> cardId
-}
-
-export interface ReplaySaveData {
-  version: "1.0"
-  type: "replay"
-  data: {
-    initialState: GameState
-    operations: GameOperation[]
-    deckImageHash: string
-    deckCardIds: DeckCardIdsMapping // カードIDマッピング
-  }
-  metadata: {
-    title: string
-    description?: string
-    createdAt: number
-    duration: number
-    operationCount: number
-  }
-}

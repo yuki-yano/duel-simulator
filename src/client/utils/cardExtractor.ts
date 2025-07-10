@@ -61,7 +61,7 @@ export async function extractCardsFromDeckImage(
           })
 
           // Use actual card ID from mapping
-          const cardId = deckCardIds.mainDeck[cardIndex]
+          const cardId = deckCardIds.mainDeck[cardIndex.toString()]
           if (cardId) {
             cardImageMap.set(cardId, cardDataUrl)
           }
@@ -93,7 +93,7 @@ export async function extractCardsFromDeckImage(
           })
 
           // Use actual card ID from mapping
-          const cardId = deckCardIds.extraDeck[cardIndex]
+          const cardId = deckCardIds.extraDeck[cardIndex.toString()]
           if (cardId) {
             cardImageMap.set(cardId, cardDataUrl)
           }

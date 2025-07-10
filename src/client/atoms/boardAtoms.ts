@@ -727,7 +727,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       }
       break
     case "rotate":
-      if (operation.to && typeof operation.metadata?.angle === "number" && operation.cardId) {
+      if (operation.to && operation.metadata && 'angle' in operation.metadata && typeof operation.metadata.angle === "number" && operation.cardId) {
         // Reconstruct Position object
         const position: Position = {
           zone: {

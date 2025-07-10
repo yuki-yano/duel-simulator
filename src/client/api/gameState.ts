@@ -1,23 +1,11 @@
 import { saveDeckImage, calculateImageHash } from "./deck"
-import type { DeckProcessMetadata, DeckConfiguration } from "@/client/components/DeckImageProcessor"
-import type { ReplaySaveData, DeckCardIdsMapping, GameState } from "@/shared/types/game"
+import type { DeckProcessMetadata } from "@/client/components/DeckImageProcessor"
+import type { ReplaySaveData, DeckCardIdsMapping, GameState, DeckConfiguration } from "@/shared/types/game"
+import { ErrorResponseSchema, SaveStateSuccessResponseSchema, SavedStateResponseSchema, SaveGameStateRequestSchema } from "@/shared/types/api"
+import { z } from "zod"
 
-export interface SaveGameStateRequest {
-  sessionId?: string
-  stateJson: string
-  deckImageHash: string
-  title: string
-  description?: string
-  type?: "replay" | "snapshot"
-  version?: string
-}
-
-export interface SaveGameStateResponse {
-  success: boolean
-  id: string
-  sessionId: string
-  shareUrl: string
-}
+export type SaveGameStateRequest = z.infer<typeof SaveGameStateRequestSchema>
+export type SaveGameStateResponse = z.infer<typeof SaveStateSuccessResponseSchema>
 
 // Re-export GameState from shared types
 export type { GameState } from "@/shared/types/game"
@@ -61,34 +49,28 @@ export async function saveGameState(
   })
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string }
-    throw new Error(error.error ?? "Failed to save game state")
+    const errorData = await response.json()
+    const validatedError = ErrorResponseSchema.parse(errorData)
+    throw new Error(validatedError.error ?? "Failed to save game state")
   }
 
-  return response.json()
+  const responseData = await response.json()
+  return SaveStateSuccessResponseSchema.parse(responseData)
 }
 
-export async function loadGameState(id: string): Promise<{
-  id: string
-  sessionId: string
-  stateJson: string
-  deckImageHash: string
-  createdAt: string
-  title: string
-  description?: string
-  type: string
-  version: string
-  deckConfig: string
-  deckCardIds: string
-}> {
+export type LoadGameStateResponse = z.infer<typeof SavedStateResponseSchema>
+
+export async function loadGameState(id: string): Promise<LoadGameStateResponse> {
   const response = await fetch(`/api/save-states/${id}`)
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string }
-    throw new Error(error.error ?? "Failed to load game state")
+    const errorData = await response.json()
+    const validatedError = ErrorResponseSchema.parse(errorData)
+    throw new Error(validatedError.error ?? "Failed to load game state")
   }
 
-  return response.json()
+  const responseData = await response.json()
+  return SavedStateResponseSchema.parse(responseData)
 }
 
 // Save replay data
@@ -116,9 +98,11 @@ export async function saveReplayData(
   })
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string }
-    throw new Error(error.error ?? "Failed to save replay")
+    const errorData = await response.json()
+    const validatedError = ErrorResponseSchema.parse(errorData)
+    throw new Error(validatedError.error ?? "Failed to save replay")
   }
 
-  return response.json()
+  const responseData = await response.json()
+  return SaveStateSuccessResponseSchema.parse(responseData)
 }

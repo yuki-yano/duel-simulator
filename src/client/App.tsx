@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@client/components/Card"
+import { Card, CardContent } from "@client/components/ui/Card"
 import { GameField } from "@client/components/GameField"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 import { saveGameState, type GameState } from "@client/api/gameState"
+import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
 import { useAtom, useAtomValue } from "jotai"
 import {
   extractedCardsAtom,
@@ -22,6 +23,7 @@ export default function App() {
   const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveId, setSaveId] = useState<string | null>(null)
+  const [showGoToReplayDialog, setShowGoToReplayDialog] = useState(false)
   const extractedCards = useAtomValue(extractedCardsAtom)
   const gameState = useAtomValue(gameStateAtom)
   const [, resetHistory] = useAtom(resetHistoryAtom)
@@ -149,8 +151,16 @@ export default function App() {
 
         {/* Image Upload Section */}
         {uploadedImage === null && (
-          <div className="max-w-2xl mx-auto mb-8">
+          <div className="max-w-2xl mx-auto mb-8 space-y-4">
             <DeckImageUploader onImageUpload={handleImageUpload} />
+            <div className="text-center">
+              <button
+                onClick={() => setShowGoToReplayDialog(true)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium"
+              >
+                リプレイIDからリプレイを開く
+              </button>
+            </div>
           </div>
         )}
 
@@ -242,6 +252,12 @@ export default function App() {
         {/*     )}                                                                                                  */}
         {/*   </div>                                                                                                */}
         {/* )}                                                                                                      */}
+
+        {/* Go to Replay Dialog */}
+        <GoToReplayDialog
+          isOpen={showGoToReplayDialog}
+          onOpenChange={setShowGoToReplayDialog}
+        />
       </div>
     </div>
   )

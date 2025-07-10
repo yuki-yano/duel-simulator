@@ -34,6 +34,8 @@ export function DraggableCard({
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
+  const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
+  const [highlightAnimating, setHighlightAnimating] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
@@ -42,6 +44,18 @@ export function DraggableCard({
 
   // Check if this card is currently animating
   const isAnimating = cardAnimations.some((anim) => anim.cardId === card.id)
+
+  // Detect highlight state changes and trigger animation
+  useEffect(() => {
+    if (card.highlighted !== prevHighlighted && card.highlighted === true) {
+      // Highlight was just turned on
+      setHighlightAnimating(true)
+      setTimeout(() => {
+        setHighlightAnimating(false)
+      }, 300) // Animation duration
+    }
+    setPrevHighlighted(card.highlighted)
+  }, [card.highlighted, prevHighlighted])
 
   // Clean up timers on unmount and setup non-passive touch listeners
   useEffect(() => {
@@ -143,6 +157,7 @@ export function DraggableCard({
       }
       element.removeEventListener("touchstart", handleTouchStartNonPassive)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReplayPlaying, card, stackIndex, onContextMenu, setDraggedCard, setTouchPosition])
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -355,7 +370,9 @@ export function DraggableCard({
           WebkitUserSelect: "none",
           position: "relative",
           transform:
-            (isHovered || isTouching) && !isReplayPlaying
+            highlightAnimating
+              ? "scale(1.1)"
+              : (isHovered || isTouching) && !isReplayPlaying
               ? hoverDirection === "left"
                 ? "translateX(-8px)"
                 : hoverDirection === "right"
@@ -363,7 +380,7 @@ export function DraggableCard({
                   : "translateY(-8px)"
               : "translate(0)",
           zIndex: (isHovered || isTouching) && !isReplayPlaying ? 1000 : 1,
-          transition: "transform 0.2s ease",
+          transition: highlightAnimating ? "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)" : "transform 0.2s ease",
           ...style,
         }}
       >

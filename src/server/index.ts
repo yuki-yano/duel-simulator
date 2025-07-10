@@ -4,6 +4,8 @@ import { logger } from "hono/logger"
 import { createDb, schema } from "./db"
 import { eq } from "drizzle-orm"
 import { customAlphabet } from "nanoid"
+import { z } from "zod"
+import { SaveDeckImageRequestSchema, SaveGameStateRequestSchema } from "@/shared/types/api"
 
 type Bindings = {
   DB: D1Database
@@ -40,7 +42,10 @@ app.get("/api/health", (c) => {
 // Save deck image with metadata
 app.post("/api/deck-images", async (c) => {
   try {
-    const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } = await c.req.json()
+    // リクエストボディのバリデーション
+    const body = await c.req.json()
+    const validated = SaveDeckImageRequestSchema.parse(body)
+    const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } = validated
     const db = createDb(c.env.DB)
 
     // Save image to R2 (convert base64 to ArrayBuffer)
@@ -74,6 +79,18 @@ app.post("/api/deck-images", async (c) => {
     return c.json({ success: true, hash })
   } catch (error) {
     console.error("Failed to save deck image:", error)
+    
+    // Zodバリデーションエラーの場合は400を返す
+    if (error instanceof z.ZodError) {
+      return c.json(
+        {
+          error: "Validation error",
+          details: error.flatten(),
+        },
+        400,
+      )
+    }
+    
     return c.json(
       {
         error: "Failed to save deck image",
@@ -87,17 +104,20 @@ app.post("/api/deck-images", async (c) => {
 // Save game state
 app.post("/api/save-states", async (c) => {
   try {
+    // リクエストボディのバリデーション
+    const body = await c.req.json()
+    const validated = SaveGameStateRequestSchema.parse(body)
     const {
       sessionId,
       stateJson,
       deckImageHash,
       title,
       description,
-      type = "replay",
-      version = "1.0",
+      type,
+      version,
       deckConfig,
       deckCardIds,
-    } = await c.req.json()
+    } = validated
     const db = createDb(c.env.DB)
     const id = generateReplayId() // Use 8-character ID for replays
     // Auto-generate sessionId if not provided
@@ -168,6 +188,18 @@ app.post("/api/save-states", async (c) => {
     })
   } catch (error) {
     console.error("Failed to save state:", error)
+    
+    // Zodバリデーションエラーの場合は400を返す
+    if (error instanceof z.ZodError) {
+      return c.json(
+        {
+          error: "Validation error",
+          details: error.flatten(),
+        },
+        400,
+      )
+    }
+    
     return c.json(
       {
         error: "Failed to save state",

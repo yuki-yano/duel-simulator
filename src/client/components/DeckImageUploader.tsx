@@ -1,5 +1,5 @@
 import { useState, useRef, ChangeEvent, DragEvent } from "react"
-import { Card } from "@/client/components/Card"
+import { Card } from "@/client/components/ui/Card"
 
 interface DeckImageUploaderProps {
   onImageUpload: (imageDataUrl: string) => void

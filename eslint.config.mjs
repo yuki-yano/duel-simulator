@@ -50,7 +50,7 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      eqeqeq: ["error", "always", { null: "ignore" }],
+      eqeqeq: ["error", "smart"],
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/display-name": "off",

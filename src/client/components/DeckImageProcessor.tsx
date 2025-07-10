@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { Card } from "@/client/components/Card"
+import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
-import type { Card as GameCard, DeckCardIdsMapping } from "@/shared/types/game"
+import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
 
 interface DeckImageProcessorProps {
   imageDataUrl: string
@@ -14,6 +14,7 @@ interface DeckImageProcessorProps {
 
 export interface DeckProcessMetadata {
   imageDataUrl: string
+  imageUrl?: string
   deckConfig: DeckConfiguration
   mainDeckCount: number
   extraDeckCount: number
@@ -23,22 +24,6 @@ export interface DeckProcessMetadata {
   deckCardIds: DeckCardIdsMapping
 }
 
-export interface DeckSection {
-  label: string
-  count: number
-  yPosition: number
-  rows: number
-}
-
-export interface DeckConfiguration {
-  mainDeck: DeckSection | null
-  extraDeck: DeckSection | null
-  sideDeck: DeckSection | null
-  cardWidth: number
-  cardHeight: number
-  cardGap: number
-  leftMargin: number
-}
 
 // Position ratios based on image width
 const LAYOUT_RATIOS = {
@@ -69,6 +54,7 @@ export function DeckImageProcessor({
   const [showDebug, _setShowDebug] = useState(false)
   const [ocrDebugCanvases, setOcrDebugCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const [ocrProcessedCanvases, setOcrProcessedCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const setExtractedCards = useSetAtom(extractedCardsAtom)
 
   useEffect(() => {
@@ -92,6 +78,9 @@ export function DeckImageProcessor({
           canvas.width = img.width * scale
           canvas.height = img.height * scale
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          
+          // Convert canvas to image URL for preview
+          setPreviewImageUrl(canvas.toDataURL("image/png"))
         }
       }
     }
@@ -361,6 +350,12 @@ export function DeckImageProcessor({
   }
 
   const processImage = async () => {
+    // In replay mode, skip actual processing and just trigger replay start
+    if (isReplayMode && onReplayStart) {
+      onReplayStart()
+      return
+    }
+
     if (!deckConfig) {
       alert("先にデッキ構造を解析してください。")
       return
@@ -581,10 +576,24 @@ export function DeckImageProcessor({
       <h3 className="text-lg font-semibold">デッキ読み込み</h3>
 
       <div className="space-y-4">
-        {/* Preview Canvas */}
-        <div className="border rounded-lg overflow-hidden">
-          <canvas ref={canvasRef} className="w-full" />
-        </div>
+        {/* Preview Canvas - hidden but kept for processing */}
+        <canvas ref={canvasRef} className="hidden" />
+        
+        {/* Preview Image */}
+        {previewImageUrl !== null && (
+          <div className="border rounded-lg overflow-hidden">
+            <img 
+              src={previewImageUrl} 
+              alt="デッキ画像プレビュー" 
+              className="w-full"
+              style={{ 
+                WebkitTouchCallout: "default",
+                WebkitUserSelect: "auto",
+                userSelect: "auto"
+              }}
+            />
+          </div>
+        )}
 
         {/* Debug Canvas - Hidden */}
         {showDebug && (
@@ -683,7 +692,7 @@ export function DeckImageProcessor({
             }
           `}
         >
-          {isProcessing ? "処理中..." : isReplayMode ? "カードを切り出して再生" : "カードを切り出す"}
+          {isProcessing ? "処理中..." : isReplayMode ? "再生を開始" : "カードを切り出す"}
         </button>
 
         {/* Processed Cards Count */}

@@ -18,6 +18,8 @@ export interface DeckImageResponse {
   imageUrl?: string
 }
 
+import { ErrorResponseSchema } from "@/shared/types/api"
+
 export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ success: boolean; hash: string }> {
   const response = await fetch("/api/deck-images", {
     method: "POST",
@@ -28,8 +30,9 @@ export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ succe
   })
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string }
-    throw new Error(error.error ?? "Failed to save deck image")
+    const errorData = await response.json()
+    const validatedError = ErrorResponseSchema.parse(errorData)
+    throw new Error(validatedError.error ?? "Failed to save deck image")
   }
 
   return response.json()
@@ -39,8 +42,9 @@ export async function getDeckImage(hash: string): Promise<DeckImageResponse> {
   const response = await fetch(`/api/deck-images/${hash}`)
 
   if (!response.ok) {
-    const error = (await response.json()) as { error?: string }
-    throw new Error(error.error ?? "Failed to get deck image")
+    const errorData = await response.json()
+    const validatedError = ErrorResponseSchema.parse(errorData)
+    throw new Error(validatedError.error ?? "Failed to get deck image")
   }
 
   return response.json()

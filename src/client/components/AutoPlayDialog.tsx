@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Card, CardContent } from "@/client/components/Card"
+import { Card, CardContent } from "@/client/components/ui/Card"
 
 interface AutoPlayDialogProps {
   onStart: () => void
