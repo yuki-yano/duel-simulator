@@ -427,8 +427,6 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMo
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
-                zone: { player: "self", type: "deck" },
-                index: cardIndex,
               }
               mainDeckCards.push(gameCard)
 
@@ -480,8 +478,6 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMo
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
-                zone: { player: "self", type: "extraDeck" },
-                index: cardIndex,
               }
               extraDeckCards.push(gameCard)
 
@@ -534,8 +530,6 @@ export function DeckImageProcessor({ imageDataUrl, onProcessComplete, isReplayMo
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
-                zone: { player: "self", type: "deck" }, // Temporarily use deck type
-                index: cardIndex,
               })
             }
           }

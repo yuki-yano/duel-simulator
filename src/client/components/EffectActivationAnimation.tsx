@@ -101,7 +101,7 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
       {/* Card zoom effect - カード自体の拡大 */}
       <style>
         {`
-          [data-card-id="${position.zone?.cardId ?? ""}"] {
+          [data-card-id="${position.zone?.cardId || position.cardId || ""}"] {
             transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
             transition: transform 0.3s ease-out !important;
             z-index: ${isVisible ? "9997" : "auto"} !important;
@@ -118,19 +118,21 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
           isVisible ? "opacity-100" : "opacity-0",
         )}
         style={{
-          left: `${effectPosition.x - 2}px`,
-          top: `${effectPosition.y - 2}px`,
-          width: `${effectPosition.width + 4}px`,
-          height: `${effectPosition.height + 4}px`,
+          // 守備表示の場合、カードの中心に合わせて位置調整
+          left: isRotated 
+            ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
+            : `${effectPosition.x - 2}px`,
+          top: isRotated
+            ? `${effectPosition.y - (effectPosition.width - effectPosition.height) / 2 - 2}px`
+            : `${effectPosition.y - 2}px`,
+          // 守備表示の場合、幅と高さを入れ替え
+          width: isRotated ? `${effectPosition.height + 4}px` : `${effectPosition.width + 4}px`,
+          height: isRotated ? `${effectPosition.width + 4}px` : `${effectPosition.height + 4}px`,
           zIndex: 9999,
         }}
       >
         <div
           className={cn("absolute inset-0 rounded-lg bg-white/50", isVisible && "animate-[whiteFlash_0.3s_ease-out]")}
-          style={{
-            transform: isRotated ? `rotate(${cardRotation}deg)` : undefined,
-            transformOrigin: "center",
-          }}
         />
       </div>
 
@@ -142,13 +144,17 @@ export function EffectActivationAnimation({ position, cardRect, cardRotation = 0
           isVisible ? "opacity-100" : "opacity-0",
         )}
         style={{
-          left: `${effectPosition.x - 2}px`,
-          top: `${effectPosition.y - 2}px`,
-          width: `${effectPosition.width + 4}px`,
-          height: `${effectPosition.height + 4}px`,
+          // 守備表示の場合、カードの中心に合わせて位置調整
+          left: isRotated 
+            ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
+            : `${effectPosition.x - 2}px`,
+          top: isRotated
+            ? `${effectPosition.y - (effectPosition.width - effectPosition.height) / 2 - 2}px`
+            : `${effectPosition.y - 2}px`,
+          // 守備表示の場合、幅と高さを入れ替え
+          width: isRotated ? `${effectPosition.height + 4}px` : `${effectPosition.width + 4}px`,
+          height: isRotated ? `${effectPosition.width + 4}px` : `${effectPosition.height + 4}px`,
           zIndex: 9998,
-          transform: isRotated ? `rotate(${cardRotation}deg)` : undefined,
-          transformOrigin: "center",
         }}
       >
         {/* Blue glowing mist */}

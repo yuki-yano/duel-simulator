@@ -83,7 +83,7 @@ export const gameHistoryIndexAtom = atom<number>(0)
 
 // UI state atoms
 export const selectedCardAtom = atom<Card | null>(null)
-export const draggedCardAtom = atom<Card | null>(null)
+export const draggedCardAtom = atom<(Card & { zone: ZoneId }) | null>(null)
 export const hoveredZoneAtom = atom<ZoneId | null>(null)
 
 // Deck loaded state
@@ -886,26 +886,46 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
         // Try to get card element position for replay
         let cardRect: { x: number; y: number; width: number; height: number } | undefined
-        if (operation.to?.zone?.cardId !== undefined) {
-          const cardElement = document.querySelector(`[data-card-id="${operation.to.zone.cardId}"]`)
-          if (cardElement) {
-            const rect = cardElement.getBoundingClientRect()
-            cardRect = {
-              x: rect.x,
-              y: rect.y,
-              width: rect.width,
-              height: rect.height,
-            }
+        const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+        if (cardElement) {
+          const rect = cardElement.getBoundingClientRect()
+          cardRect = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
           }
         }
+
+        // Get card rotation from current state
+        let cardRotation: number | undefined = 0
+        if (operation.to && operation.cardId) {
+          const player = currentState.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result) {
+            cardRotation = result.card.rotation
+          }
+        }
+
+        // Create Position object if operation.to exists
+        const position: Position | undefined = operation.to ? {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.zoneIndex,
+            cardId: operation.cardId,  // Add cardId to zone for zoom effect
+          },
+          cardId: operation.cardId,
+        } : undefined
 
         set(cardAnimationsAtom, [
           ...animations,
           {
             id: animationId,
             type: "activate",
-            position: operation.to,
+            position,
             cardRect,
+            cardRotation,
             startTime: Date.now(),
           },
         ])
@@ -1408,10 +1428,14 @@ function performCardMove(
   // Determine if this is a cross-zone move
   const isCrossZoneMove = actualFromZone.type !== to.zone.type
   
-  // For cross-zone moves, always add to the end (ignore specified index)
-  const targetZone = isCrossZoneMove 
-    ? { ...to.zone, index: undefined } // Clear index for cross-zone moves
-    : to.zone // Keep index for same-zone moves (e.g., reordering hand)
+  // For zone-specific moves, keep the index for certain zone types
+  const shouldKeepIndex = to.zone.type === "monsterZone" || 
+                         to.zone.type === "spellTrapZone" || 
+                         to.zone.type === "extraMonsterZone"
+  
+  const targetZone = isCrossZoneMove && !shouldKeepIndex
+    ? { ...to.zone, index: undefined } // Clear index for non-zone-specific cross-zone moves
+    : to.zone // Keep index for same-zone moves and zone-specific moves
 
   // Add card to new location
   const newToPlayer = addCardToZone(
@@ -1786,41 +1810,79 @@ function removeCardFromZone(player: PlayerBoard, zone: ZoneId): PlayerBoard {
 // Helper function: Add card to zone
 function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoard {
   switch (zone.type) {
-    case "monsterZone":
+    case "monsterZone": {
+      const newZones = [...player.monsterZones]
+      
       if (zone.index !== undefined) {
-        const newZones = [...player.monsterZones]
+        // Insert at specific zone
         const cards = [...newZones[zone.index]]
-        // If cardIndex is specified, insert at that position
         const insertIndex = zone.cardIndex ?? 0
         cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
-        return { ...player, monsterZones: newZones }
+      } else {
+        // Find first empty zone
+        const emptyZoneIndex = newZones.findIndex(cards => cards.length === 0)
+        if (emptyZoneIndex !== -1) {
+          newZones[emptyZoneIndex] = [card]
+        } else {
+          // No empty zones available
+          return player
+        }
       }
-      break
-    case "spellTrapZone":
+      
+      return { ...player, monsterZones: newZones }
+    }
+    case "spellTrapZone": {
+      const newZones = [...player.spellTrapZones]
+      
       if (zone.index !== undefined) {
-        const newZones = [...player.spellTrapZones]
+        // Insert at specific zone
         const cards = [...newZones[zone.index]]
-        // If cardIndex is specified, insert at that position
         const insertIndex = zone.cardIndex ?? 0
         cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
-        return { ...player, spellTrapZones: newZones }
+      } else {
+        // Find first empty zone
+        const emptyZoneIndex = newZones.findIndex(cards => cards.length === 0)
+        if (emptyZoneIndex !== -1) {
+          newZones[emptyZoneIndex] = [card]
+        } else {
+          // No empty zones available
+          return player
+        }
       }
-      break
+      
+      return { ...player, spellTrapZones: newZones }
+    }
     case "fieldZone":
-      return { ...player, fieldZone: card }
-    case "extraMonsterZone":
+      // Only allow placing if no card exists
+      if (player.fieldZone === null) {
+        return { ...player, fieldZone: card }
+      }
+      // Field zone already occupied
+      return player
+    case "extraMonsterZone": {
+      const newZones = [...player.extraMonsterZones]
+      
       if (zone.index !== undefined) {
-        const newZones = [...player.extraMonsterZones]
+        // Insert at specific zone
         const cards = [...newZones[zone.index]]
-        // If cardIndex is specified, insert at that position
         const insertIndex = zone.cardIndex ?? 0
         cards.splice(insertIndex, 0, card)
         newZones[zone.index] = cards
-        return { ...player, extraMonsterZones: newZones }
+      } else {
+        // Find first empty zone
+        const emptyZoneIndex = newZones.findIndex(cards => cards.length === 0)
+        if (emptyZoneIndex !== -1) {
+          newZones[emptyZoneIndex] = [card]
+        } else {
+          // No empty zones available
+          return player
+        }
       }
-      break
+      
+      return { ...player, extraMonsterZones: newZones }
+    }
     case "hand": {
       // If index is specified, insert at that position
       if (zone.index !== undefined && zone.index >= 0 && zone.index <= player.hand.length) {

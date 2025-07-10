@@ -19,12 +19,8 @@ export interface SaveGameStateResponse {
   shareUrl: string
 }
 
-export interface GameState {
-  // TODO: Define actual game state structure
-  cards: string[]
-  field: Record<string, unknown>
-  turn: number
-}
+// Re-export GameState from shared types
+export type { GameState } from "@/shared/types/game"
 
 export async function saveGameState(
   gameState: GameState,

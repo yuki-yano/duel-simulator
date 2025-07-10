@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react"
-import type { Card as GameCard } from "@/shared/types/game"
+import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
 interface CardContextMenuProps {
   card: GameCard
+  zone: ZoneId
   position: { x: number; y: number }
   onClose: () => void
   onAction: (action: string, card: GameCard) => void
 }
 
-export function CardContextMenu({ card, position, onClose, onAction }: CardContextMenuProps) {
+export function CardContextMenu({ card, zone, position, onClose, onAction }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -44,10 +45,9 @@ export function CardContextMenu({ card, position, onClose, onAction }: CardConte
   }
 
   const isMonsterSpellTrapZone =
-    card.zone &&
-    (card.zone.type === "monsterZone" || card.zone.type === "spellTrapZone" || card.zone.type === "extraMonsterZone")
+    zone.type === "monsterZone" || zone.type === "spellTrapZone" || zone.type === "extraMonsterZone"
 
-  const isMonsterZone = card.zone && (card.zone.type === "monsterZone" || card.zone.type === "extraMonsterZone")
+  const isMonsterZone = zone.type === "monsterZone" || zone.type === "extraMonsterZone"
 
   const menuItems = [
     {

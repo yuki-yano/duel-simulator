@@ -4,6 +4,9 @@ import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 
+// Constants
+const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu
+
 interface DraggableCardProps {
   card: GameCard
   zone: ZoneId // Zone information passed separately
@@ -11,7 +14,7 @@ interface DraggableCardProps {
   hoverDirection?: "up" | "left" | "right"
   style?: React.CSSProperties
   stackIndex?: number
-  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
 }
 
@@ -93,7 +96,7 @@ export function DraggableCard({
           dragOffsetRef.current = { x: 0, y: 0 }
         }
 
-        // Set up long press detection (600ms)
+        // Set up long press detection
         longPressTimerRef.current = setTimeout(() => {
           if (touchStartPosRef.current && onContextMenu) {
             // Hide drag image when showing context menu
@@ -110,9 +113,9 @@ export function DraggableCard({
               target: e.target,
             } as unknown as React.TouchEvent
             // Trigger custom context menu
-            onContextMenu(syntheticEvent, card)
+            onContextMenu(syntheticEvent, card, zone)
           }
-        }, 600)
+        }, LONG_PRESS_DURATION_MS)
 
         // Start dragging immediately
         setIsTouching(true)
@@ -334,7 +337,7 @@ export function DraggableCard({
         onContextMenu={(e) => {
           e.preventDefault()
           if (onContextMenu) {
-            onContextMenu(e, card)
+            onContextMenu(e, card, zone)
           }
         }}
         onTouchEnd={handleTouchEnd}

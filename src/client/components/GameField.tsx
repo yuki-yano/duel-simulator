@@ -72,14 +72,14 @@ interface ZoneProps {
   className?: string
   label?: string
   children?: React.ReactNode
-  type?: "monster" | "spell" | "field" | "extra" | "deck" | "emz" | "hand"
+  type: "monster" | "spell" | "field" | "extra" | "deck" | "emz" | "hand"
   isOpponent?: boolean
   cardCount?: number
-  zone?: ZoneId
+  zone: ZoneId
   card?: GameCard | null
   cards?: GameCard[]
   onDrop?: (fromZone: ZoneId, toZone: ZoneId, shiftKey?: boolean) => void
-  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
 }
 
@@ -90,10 +90,10 @@ interface GraveZoneProps {
   className?: string
   style?: React.CSSProperties
   cards?: GameCard[]
-  zone?: ZoneId
+  zone: ZoneId
   onDrop?: (fromZone: ZoneId, toZone: ZoneId, shiftKey?: boolean) => void
   isOpponent?: boolean
-  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
 }
 
@@ -101,7 +101,7 @@ function Zone({
   className,
   label,
   children,
-  type = "monster",
+  type,
   isOpponent = false,
   zone,
   card,
@@ -210,6 +210,7 @@ function Zone({
               >
                 <DraggableCard
                   card={c}
+                  zone={zone}
                   stackIndex={index}
                   className="w-full h-full"
                   hoverDirection={index === 0 ? "up" : "right"}
@@ -229,6 +230,7 @@ function Zone({
       ) : card ? (
         <DraggableCard
           card={card}
+          zone={zone}
           className="w-full h-full"
           onContextMenu={onContextMenu}
           onContextMenuClose={onContextMenuClose}
@@ -245,8 +247,9 @@ interface DeckZoneProps {
   cardCount?: number
   orientation?: "horizontal" | "vertical"
   cards?: GameCard[]
+  zone: ZoneId
   onDrop?: (fromZone: ZoneId, toZone: ZoneId, shiftKey?: boolean) => void
-  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard) => void
+  onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
 }
 
@@ -255,6 +258,7 @@ function DeckZone({
   cardCount = 40,
   orientation = "horizontal",
   cards = [],
+  zone,
   onDrop,
   isOpponent = false,
   onContextMenu,
@@ -561,6 +565,7 @@ function DeckZone({
                             >
                               <DraggableCard
                                 card={card}
+                                zone={zone}
                                 className="w-full h-full"
                                 onContextMenu={onContextMenu}
                                 onContextMenuClose={onContextMenuClose}
@@ -601,6 +606,7 @@ function DeckZone({
                     >
                       <DraggableCard
                         card={item as GameCard}
+                        zone={zone}
                         className="w-full h-full"
                         onContextMenu={onContextMenu}
                         onContextMenuClose={onContextMenuClose}
@@ -915,6 +921,7 @@ function GraveZone({
                     >
                       <DraggableCard
                         card={card}
+                        zone={zone}
                         className="w-full h-full"
                         hoverDirection="left"
                         onContextMenu={onContextMenu}
@@ -942,6 +949,7 @@ function GraveZone({
                   >
                     <DraggableCard
                       card={card}
+                      zone={zone}
                       className="w-full h-full"
                       hoverDirection="left"
                       onContextMenu={onContextMenu}
@@ -995,6 +1003,7 @@ export function GameFieldContent() {
   const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
   const [contextMenu, setContextMenu] = useState<{
     card: GameCard
+    zone: ZoneId
     position: { x: number; y: number }
     cardElement?: HTMLElement | null
   } | null>(null)
@@ -1050,9 +1059,9 @@ export function GameFieldContent() {
       faceDownMode: mobileFaceDownMode === true,
     }
 
-    if (draggedCard.zone && draggedCard.index !== undefined) {
+    if (draggedCard.zone && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
       // draggedCardのzone情報にindexを含める
-      const fromWithIndex = { ...from, index: draggedCard.index }
+      const fromWithIndex = { ...from, index: draggedCard.zone.cardIndex }
       // Include card ID for ID-based tracking
       moveCard({ zone: fromWithIndex, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
     } else {
@@ -1061,33 +1070,33 @@ export function GameFieldContent() {
     }
   }
 
-  const handleCardContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent, card: GameCard) => {
+  const handleCardContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => {
     e.preventDefault()
     const position =
       "touches" in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
 
     // Store the card element that was clicked
     const cardElement = (e.target as HTMLElement).closest('[draggable="true"]') as HTMLElement | null
-    setContextMenu({ card, position, cardElement })
+    setContextMenu({ card, zone, position, cardElement })
   }, [])
 
   const handleContextMenuAction = useCallback(
     (action: string, card: GameCard) => {
       try {
-        if (action === "rotate" && card.zone) {
+        if (action === "rotate" && contextMenu) {
           // Toggle between normal (0) and defense position (-90)
           const newRotation = card.rotation === -90 ? 0 : -90
           // Include card ID for ID-based tracking
-          rotateCard({ zone: card.zone, cardId: card.id }, newRotation)
-        } else if (action === "activate" && card.zone) {
+          rotateCard({ zone: contextMenu.zone, cardId: card.id }, newRotation)
+        } else if (action === "activate" && contextMenu) {
           // Include card ID in the zone for accurate card identification
-          activateEffect({ zone: card.zone, cardId: card.id }, contextMenu?.cardElement ?? undefined)
-        } else if (action === "flip" && card.zone) {
+          activateEffect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
+        } else if (action === "flip" && contextMenu) {
           // Include card ID for ID-based tracking
-          flipCard({ zone: card.zone, cardId: card.id })
-        } else if (action === "highlight" && card.zone) {
+          flipCard({ zone: contextMenu.zone, cardId: card.id })
+        } else if (action === "highlight" && contextMenu) {
           // Toggle highlight state
-          toggleCardHighlight({ zone: card.zone, cardId: card.id })
+          toggleCardHighlight({ zone: contextMenu.zone, cardId: card.id })
         }
       } catch (error) {
         // Show error on mobile for debugging
@@ -1511,6 +1520,7 @@ export function GameFieldContent() {
               {/* Opponent's Deck & Extra Deck (Top) - viewed from opponent's perspective */}
               <DeckZone
                 type="extra"
+                zone={{ player: "opponent", type: "extraDeck" }}
                 isOpponent={true}
                 cardCount={opponentBoard.extraDeck.length}
                 cards={opponentBoard.extraDeck}
@@ -1520,6 +1530,7 @@ export function GameFieldContent() {
               />
               <DeckZone
                 type="deck"
+                zone={{ player: "opponent", type: "deck" }}
                 isOpponent={true}
                 cardCount={opponentBoard.deck.length}
                 cards={opponentBoard.deck}
@@ -1531,6 +1542,7 @@ export function GameFieldContent() {
               {/* Opponent's Hand */}
               <DeckZone
                 type="hand"
+                zone={{ player: "opponent", type: "hand" }}
                 isOpponent={true}
                 cardCount={opponentBoard.hand.length}
                 cards={opponentBoard.hand}
@@ -1791,6 +1803,7 @@ export function GameFieldContent() {
         <div className="space-y-2">
           <DeckZone
             type="hand"
+            zone={{ player: "self", type: "hand" }}
             cardCount={playerBoard.hand.length}
             cards={playerBoard.hand}
             onDrop={handleCardDrop}
@@ -1799,6 +1812,7 @@ export function GameFieldContent() {
           />
           <DeckZone
             type="deck"
+            zone={{ player: "self", type: "deck" }}
             cardCount={playerBoard.deck.length}
             cards={playerBoard.deck}
             onDrop={handleCardDrop}
@@ -1807,6 +1821,7 @@ export function GameFieldContent() {
           />
           <DeckZone
             type="extra"
+            zone={{ player: "self", type: "extraDeck" }}
             cardCount={playerBoard.extraDeck.length}
             cards={playerBoard.extraDeck}
             onDrop={handleCardDrop}
@@ -1820,6 +1835,7 @@ export function GameFieldContent() {
       {contextMenu && (
         <CardContextMenu
           card={contextMenu.card}
+          zone={contextMenu.zone}
           position={contextMenu.position}
           onClose={() => setContextMenu(null)}
           onAction={handleContextMenuAction}
