@@ -13,6 +13,7 @@ interface ZoneExpandModalProps {
   cards: GameCard[]
   onDrop: (fromZone: ZoneId, toZone: ZoneId, shiftKey?: boolean) => void
   onContextMenu: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
+  onContextMenuClose?: () => void
   modalBounds: {
     top: number
     left: number
@@ -28,6 +29,7 @@ export function ZoneExpandModal({
   cards,
   onDrop,
   onContextMenu,
+  onContextMenuClose,
   modalBounds,
 }: ZoneExpandModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
@@ -50,7 +52,7 @@ export function ZoneExpandModal({
   const padding = window.innerWidth >= 640 ? 16 : 12
   const columnGap = window.innerWidth >= 640 ? 12 : 8
   const rowGap = 8
-  const headerHeight = 40 // Height for close button
+  const headerHeight = 28 // Height for close button (reduced)
 
   // Calculate available space
   const availableWidth = modalWidth - padding * 2
@@ -84,7 +86,7 @@ export function ZoneExpandModal({
       if (contentRef.current && cards.length > 0) {
         const rect = contentRef.current.getBoundingClientRect()
         const relativeX = e.clientX - rect.left
-        const relativeY = e.clientY - rect.top - headerHeight
+        const relativeY = e.clientY - rect.top
 
         // Determine which column
         const column = Math.floor(relativeX / (availableWidth / cardsPerRow))
@@ -126,48 +128,24 @@ export function ZoneExpandModal({
     setDropIndex(null)
   }
 
-  // Close on escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown)
-      return () => window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [isOpen, onClose])
-
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      // Delay to avoid immediate close from the click that opened the modal
-      setTimeout(() => {
-        window.addEventListener("click", handleClickOutside)
-      }, 100)
-
-      return () => window.removeEventListener("click", handleClickOutside)
-    }
-  }, [isOpen, onClose])
+  // Remove automatic close functionality - only close with X button
 
   if (!isOpen) return null
 
   const isHovered =
     hoveredZone != null && zone != null && hoveredZone.player === zone.player && hoveredZone.type === zone.type
 
+  // Get background color based on zone type (solid colors)
+  const bgColor = zone.type === "graveyard" ? "bg-background" : "bg-background"
+  const borderColor = zone.type === "graveyard" ? "border-red-500" : "border-slate-500"
+
   return (
     <div
       ref={modalRef}
       className={cn(
-        "fixed bg-background/95 border-2 border-border rounded-lg shadow-lg z-50 overflow-hidden",
+        "absolute border-2 rounded-lg shadow-lg z-50 overflow-hidden",
+        bgColor,
+        borderColor,
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
       )}
       style={{
@@ -181,16 +159,16 @@ export function ZoneExpandModal({
       onDrop={handleDrop}
     >
       {/* Header with close button */}
-      <div className="flex items-center justify-between h-10 px-3 border-b border-border">
-        <span className="text-sm font-medium">
+      <div className="flex items-center justify-between h-7 px-2 border-b border-border">
+        <span className="text-xs font-medium">
           {zone.type === "graveyard" ? "墓地" : "除外"} ({cards.length})
         </span>
         <button
           onClick={onClose}
-          className="p-1 rounded hover:bg-muted transition-colors"
+          className="p-0.5 rounded hover:bg-muted transition-colors"
           aria-label="閉じる"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3 h-3" />
         </button>
       </div>
 
@@ -231,6 +209,7 @@ export function ZoneExpandModal({
                   zone={zone}
                   className="w-full h-full"
                   onContextMenu={onContextMenu}
+                  onContextMenuClose={onContextMenuClose}
                 />
               </div>
             )

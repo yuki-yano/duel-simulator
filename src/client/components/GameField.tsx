@@ -978,7 +978,10 @@ function GraveZone({
           "absolute bottom-0 left-0 right-0 h-5 flex items-center justify-center",
           onLabelClick && !isDisabled && "cursor-pointer hover:bg-muted/50 transition-colors"
         )}
-        onClick={onLabelClick && !isDisabled ? onLabelClick : undefined}
+        onClick={onLabelClick && !isDisabled ? (e) => {
+          e.stopPropagation()
+          onLabelClick()
+        } : undefined}
       >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
           {type === "grave" ? "墓地" : "除外"} ({cardCount})
@@ -1133,12 +1136,7 @@ export function GameFieldContent() {
     [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
   )
 
-  // Close modal when dragging starts
-  useEffect(() => {
-    if (draggedCard && expandedZone) {
-      setExpandedZone(null)
-    }
-  }, [draggedCard, expandedZone])
+  // Remove auto-close on drag - keep modal open
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -1240,10 +1238,10 @@ export function GameFieldContent() {
       const banishRect = banishElement.getBoundingClientRect()
 
       return {
-        top: handRect.top,
-        left: graveRect.left,
-        right: banishRect.right,
-        bottom: extraDeckRect.bottom,
+        top: handRect.top + window.scrollY,
+        left: graveRect.left + window.scrollX,
+        right: banishRect.right + window.scrollX,
+        bottom: extraDeckRect.bottom + window.scrollY,
       }
     }
 
@@ -2075,6 +2073,7 @@ export function GameFieldContent() {
           cards={expandedZone.type === "graveyard" ? playerBoard.graveyard : playerBoard.banished}
           onDrop={handleCardDrop}
           onContextMenu={handleCardContextMenu}
+          onContextMenuClose={() => setContextMenu(null)}
           modalBounds={modalBounds}
         />
       )}
