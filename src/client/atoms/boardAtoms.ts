@@ -24,9 +24,9 @@ const ANIMATION_DURATIONS = {
   BASE_MOVE_DURATION: 750, // Base duration for move animations at 1x speed
 } as const
 
-// Get animation duration based on speed multiplier
-function getAnimationDuration(baseDuration: number, speedMultiplier: number): number {
-  // speedMultiplier: 0.5x, 1x, 2x, 3x
+// Get animation duration based on current speed multiplier
+function getAnimationDuration(baseDuration: number, get: Getter): number {
+  const speedMultiplier = get(replaySpeedAtom) // Get current speed: 0.5x, 1x, 2x, 3x
   return Math.round(baseDuration / speedMultiplier)
 }
 
@@ -331,7 +331,6 @@ export const redoAtom = atom(null, async (get, set) => {
   const replayData = get(replayDataAtom)
   const replayCurrentIndex = get(replayCurrentIndexAtom)
   const totalOperations = get(replayTotalOperationsAtom)
-  const speedMultiplier = get(replaySpeedAtom)
 
   // Handle redo for stopped replay - continue replay from where it stopped
   if (!isPlaying && replayCurrentIndex !== null && replayCurrentIndex < totalOperations && replayData) {
@@ -371,7 +370,8 @@ export const redoAtom = atom(null, async (get, set) => {
 
         // Create animations for moved cards BEFORE updating state
         const animations: CardAnimation[] = []
-        const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * speedMultiplier))
+        const currentSpeed = get(replaySpeedAtom)
+        const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * currentSpeed))
 
         // First, create animations with current positions
         for (const { card } of movedCards) {
@@ -404,7 +404,7 @@ export const redoAtom = atom(null, async (get, set) => {
 
         // Small delay to ensure DOM is updated
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
         )
 
         // Update animations with actual end positions
@@ -418,7 +418,7 @@ export const redoAtom = atom(null, async (get, set) => {
 
         // Wait for animation to complete
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
       } else {
         // Handle non-movement operations
@@ -429,7 +429,7 @@ export const redoAtom = atom(null, async (get, set) => {
           currentState = nextState
 
           await new Promise((resolve) =>
-            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, get)),
           )
         } else if (operation.type === "activate" && operation.to) {
           set(gameStateAtom, nextState)
@@ -438,7 +438,7 @@ export const redoAtom = atom(null, async (get, set) => {
           currentState = nextState
 
           await new Promise((resolve) =>
-            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
           )
 
           // Create activation animation
@@ -495,11 +495,11 @@ export const redoAtom = atom(null, async (get, set) => {
             () => {
               set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
             },
-            getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, speedMultiplier),
+            getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, get),
           )
 
           await new Promise((resolve) =>
-            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+            setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
           )
         } else {
           set(gameStateAtom, nextState)
@@ -508,7 +508,7 @@ export const redoAtom = atom(null, async (get, set) => {
           currentState = nextState
 
           await new Promise((resolve) =>
-            setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+            setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
           )
         }
       }
@@ -519,15 +519,15 @@ export const redoAtom = atom(null, async (get, set) => {
     if (finalOperation !== undefined) {
       if (finalOperation.type === "move" || finalOperation.type === "draw") {
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
       } else if (finalOperation.type === "rotate") {
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, get)),
         )
       } else if (finalOperation.type === "activate") {
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
         )
       }
     }
@@ -1089,7 +1089,6 @@ export const playReplayAtom = atom(null, async (get, set) => {
   }
 
   const replayData = get(replayDataAtom)
-  const speedMultiplier = get(replaySpeedAtom) // Direct speed multiplier: 0.5x, 1x, 2x, 3x
   const startDelay = get(replayStartDelayAtom) // Start delay in seconds
 
   if (!replayData || replayData.operations.length === 0) {
@@ -1211,7 +1210,8 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Create animations for moved cards BEFORE updating state
       const animations: CardAnimation[] = []
-      const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * speedMultiplier)) // 2/3 of base duration adjusted by speed
+      const currentSpeed = get(replaySpeedAtom)
+      const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * currentSpeed)) // 2/3 of base duration adjusted by speed
 
       // First, create animations with current positions
       for (const { card } of movedCards) {
@@ -1243,7 +1243,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Small delay to ensure DOM is updated
       await new Promise((resolve) =>
-        setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+        setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
       )
 
       // Update animations with actual end positions
@@ -1257,7 +1257,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
       // Wait for animation to complete
       await new Promise((resolve) =>
-        setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+        setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
       )
     } else {
       // No card movement, but check for rotation or activation
@@ -1268,7 +1268,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
         // Use shorter delay for rotation
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, get)),
         )
       } else if (operation.type === "activate" && operation.to) {
         // Update state (no change for activate) WITHOUT adding to history
@@ -1277,7 +1277,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
         // Small delay to ensure DOM is updated
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
         )
 
         // Create activation animation
@@ -1338,12 +1338,12 @@ export const playReplayAtom = atom(null, async (get, set) => {
           () => {
             set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
           },
-          getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, speedMultiplier),
+          getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION, get),
         )
 
         // Wait for activation animation
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
         )
       } else {
         // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
@@ -1352,7 +1352,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
         // Wait for next step
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
       }
     }
@@ -1368,17 +1368,17 @@ export const playReplayAtom = atom(null, async (get, set) => {
       if (finalOperation.type === "move" || finalOperation.type === "draw") {
         // Wait for move/draw animation
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / speedMultiplier)),
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
       } else if (finalOperation.type === "rotate") {
         // Wait for rotation animation
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.ROTATION_WAIT, get)),
         )
       } else if (finalOperation.type === "activate") {
         // Wait for activation animation
         await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, speedMultiplier)),
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
         )
       }
     }

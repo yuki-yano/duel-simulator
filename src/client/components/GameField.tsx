@@ -1236,8 +1236,8 @@ export function GameFieldContent() {
         return null
       }
 
-      const handRect = handElement.getBoundingClientRect()
-      const extraDeckRect = extraDeckElement.getBoundingClientRect()
+      const _handRect = handElement.getBoundingClientRect()
+      const _extraDeckRect = extraDeckElement.getBoundingClientRect()
       const graveRect = graveElement.getBoundingClientRect()
       const banishRect = banishElement.getBoundingClientRect()
       const deckRect = deckElement.getBoundingClientRect()
