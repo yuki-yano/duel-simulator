@@ -553,6 +553,7 @@ export const replayPlayingAtom = atom<boolean>(false)
 export const replayPausedAtom = atom<boolean>(false)
 export const replayCurrentIndexAtom = atom<number | null>(null)
 export const replaySpeedAtom = atom<number>(1) // Default 1x speed
+export const replayStartDelayAtom = atom<number>(0) // Default 0 seconds delay
 
 // Start replay recording
 export const startReplayRecordingAtom = atom(null, (get, set) => {
@@ -785,6 +786,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
   const replayData = get(replayDataAtom)
   const speedMultiplier = get(replaySpeedAtom) // Direct speed multiplier: 0.5x, 1x, 2x, 3x
+  const startDelay = get(replayStartDelayAtom) // Start delay in seconds
 
   if (!replayData || replayData.operations.length === 0) {
     console.warn("No replay data available")
@@ -809,6 +811,11 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
   // Wait for DOM to update after snapshot restore
   await new Promise((resolve) => setTimeout(resolve, 100))
+
+  // Apply start delay if set
+  if (startDelay > 0) {
+    await new Promise((resolve) => setTimeout(resolve, startDelay * 1000))
+  }
 
   // Play through each operation
   for (let i = 0; i < replayData.operations.length; i++) {

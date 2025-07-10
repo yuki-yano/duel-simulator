@@ -12,6 +12,7 @@ import {
   Shield,
   EyeOff,
   RotateCcw,
+  Share2,
 } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
@@ -42,6 +43,7 @@ import {
   replayPausedAtom,
   replayCurrentIndexAtom,
   replaySpeedAtom,
+  replayStartDelayAtom,
   startReplayRecordingAtom,
   stopReplayRecordingAtom,
   playReplayAtom,
@@ -1026,6 +1028,7 @@ export function GameFieldContent() {
   const [currentReplayIndex] = useAtom(replayCurrentIndexAtom)
   const [replayData] = useAtom(replayDataAtom)
   const [replaySpeed, setReplaySpeed] = useAtom(replaySpeedAtom)
+  const [replayStartDelay, setReplayStartDelay] = useAtom(replayStartDelayAtom)
   const operations = useAtomValue(operationsAtom)
   const [, startRecording] = useAtom(startReplayRecordingAtom)
   const [, stopRecording] = useAtom(stopReplayRecordingAtom)
@@ -1270,23 +1273,22 @@ export function GameFieldContent() {
                   aria-label="Start recording"
                 >
                   <Circle className="w-4 h-4" />
-                  <span>録画開始</span>
+                  <span>リプレイ保存開始</span>
                 </button>
               ) : (
                 <>
                   <button
                     onClick={() => {
                       stopRecording()
-                      setShowSaveReplayDialog(true)
                     }}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-red-600 text-white hover:bg-red-700 animate-pulse"
                     aria-label="Stop recording"
                   >
                     <Square className="w-4 h-4" />
-                    <span>録画停止</span>
+                    <span>保存停止</span>
                   </button>
                   <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
-                    録画中: {operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length}{" "}
+                    保存中: {operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length}{" "}
                     操作
                   </div>
                 </>
@@ -1304,27 +1306,105 @@ export function GameFieldContent() {
                     <span>リプレイ再生</span>
                   </button>
 
-                  {/* Replay speed control */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm text-muted-foreground">速度:</span>
-                    <div className="w-20 sm:w-24">
-                      <Slider
-                        value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
-                        onValueChange={(value) => {
-                          const speeds = [0.5, 1, 2, 3]
-                          setReplaySpeed(speeds[value[0]])
-                        }}
-                        min={0}
-                        max={3}
-                        step={1}
-                        className="cursor-pointer"
-                      />
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
-                  </div>
+                  {/* Share replay button */}
+                  <button
+                    onClick={() => setShowSaveReplayDialog(true)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+                    aria-label="Share replay"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>共有</span>
+                  </button>
+
                 </>
               )}
             </>
+          )}
+
+          {/* Replay controls on mobile - separate row */}
+          {replayData && replayData.operations.length > 0 && !isRecording && (
+            <div className="w-full sm:hidden mt-2">
+              <div className="flex flex-wrap gap-2">
+                {/* Replay speed control */}
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-xs text-muted-foreground">速度:</span>
+                  <div className="flex-1 max-w-[120px]">
+                    <Slider
+                      value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
+                      onValueChange={(value) => {
+                        const speeds = [0.5, 1, 2, 3]
+                        setReplaySpeed(speeds[value[0]])
+                      }}
+                      min={0}
+                      max={3}
+                      step={1}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground w-8">{replaySpeed}x</span>
+                </div>
+
+                {/* Start delay control */}
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-xs text-muted-foreground">待機:</span>
+                  <div className="flex-1 max-w-[120px]">
+                    <Slider
+                      value={[replayStartDelay]}
+                      onValueChange={(value) => {
+                        setReplayStartDelay(value[0])
+                      }}
+                      min={0}
+                      max={3}
+                      step={1}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground w-8">{replayStartDelay}秒</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Replay controls on desktop - same row */}
+          {replayData && replayData.operations.length > 0 && !isRecording && (
+            <div className="hidden sm:flex items-center gap-4">
+              {/* Replay speed control */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">速度:</span>
+                <div className="w-24">
+                  <Slider
+                    value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
+                    onValueChange={(value) => {
+                      const speeds = [0.5, 1, 2, 3]
+                      setReplaySpeed(speeds[value[0]])
+                    }}
+                    min={0}
+                    max={3}
+                    step={1}
+                    className="cursor-pointer"
+                  />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
+              </div>
+
+              {/* Start delay control */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">待機:</span>
+                <div className="w-24">
+                  <Slider
+                    value={[replayStartDelay]}
+                    onValueChange={(value) => {
+                      setReplayStartDelay(value[0])
+                    }}
+                    min={0}
+                    max={3}
+                    step={1}
+                    className="cursor-pointer"
+                  />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">{replayStartDelay}秒</span>
+              </div>
+            </div>
           )}
 
           {/* Replay playback controls */}
