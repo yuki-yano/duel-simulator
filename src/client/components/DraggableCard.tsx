@@ -39,7 +39,7 @@ export function DraggableCard({
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
   const [highlightAnimating, setHighlightAnimating] = useState(false)
-  const [_isDragEnabled, _setIsDragEnabled] = useState(false)
+  const [_isDragEnabled, setIsDragEnabled] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
