@@ -7,6 +7,7 @@ import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
 import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
 import { DeckImageProcessor } from "@client/components/DeckImageProcessor"
 import { AutoPlayDialog } from "@client/components/AutoPlayDialog"
+import { ErrorDialog } from "@client/components/ErrorDialog"
 import { useSetAtom } from "jotai"
 import {
   replayDataAtom,
@@ -22,6 +23,8 @@ export default function Replay() {
   const { id } = useParams<{ id: string }>()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetails, setErrorDetails] = useState<string | null>(null)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
   const [title, setTitle] = useState<string>("")
   const [description, setDescription] = useState<string>("")
   const [showDeckProcessor, setShowDeckProcessor] = useState(false)
@@ -64,14 +67,34 @@ export default function Replay() {
       const savedState = await loadGameState(id ?? "")
       const deckData = await getDeckImage(savedState.deckImageHash)
 
-      // Parse replay data
-      const replaySaveData = JSON.parse(savedState.stateJson) as ReplaySaveData
+      // Parse replay data with validation
+      let replaySaveData: ReplaySaveData
+      try {
+        replaySaveData = JSON.parse(savedState.stateJson) as ReplaySaveData
+        
+        // Validate replay data structure
+        if (!replaySaveData.data || !replaySaveData.data.initialState || !replaySaveData.data.operations) {
+          throw new Error("Invalid replay data structure")
+        }
+      } catch (e) {
+        throw new Error("リプレイデータの形式が不正です")
+      }
 
       // Parse deck config
-      const deckConfig = JSON.parse(savedState.deckConfig) as DeckConfiguration
+      let deckConfig: DeckConfiguration
+      try {
+        deckConfig = JSON.parse(savedState.deckConfig) as DeckConfiguration
+      } catch (e) {
+        throw new Error("デッキ設定の形式が不正です")
+      }
 
       // Parse deck card IDs
-      const deckCardIds = JSON.parse(savedState.deckCardIds) as DeckCardIdsMapping
+      let deckCardIds: DeckCardIdsMapping
+      try {
+        deckCardIds = JSON.parse(savedState.deckCardIds) as DeckCardIdsMapping
+      } catch (e) {
+        throw new Error("カードIDマッピングの形式が不正です")
+      }
 
       // Set title and description
       setTitle(savedState.title)
@@ -114,7 +137,27 @@ export default function Replay() {
       setIsLoading(false)
     } catch (error) {
       console.error("Failed to load replay:", error)
-      setError("リプレイの読み込みに失敗しました")
+      
+      // Check if it's a format compatibility issue
+      let errorMessage = "リプレイの読み込みに失敗しました"
+      let errorDetail = null
+      
+      if (error instanceof Error) {
+        errorDetail = error.message
+        
+        // Check for specific error patterns that indicate format issues
+        if (error.message.includes("Cannot read properties") || 
+            error.message.includes("undefined") ||
+            error.message.includes("JSON") ||
+            error.message.includes("parse")) {
+          errorMessage = "リプレイ形式に互換性がありません"
+          errorDetail = "このリプレイは古い形式で保存されており、現在のバージョンでは再生できません。"
+        }
+      }
+      
+      setError(errorMessage)
+      setErrorDetails(errorDetail)
+      setShowErrorDialog(true)
       setIsLoading(false)
     }
   }
@@ -210,6 +253,15 @@ export default function Replay() {
             countdown={3}
           />
         )}
+
+        {/* Error Dialog */}
+        <ErrorDialog
+          open={showErrorDialog}
+          onOpenChange={setShowErrorDialog}
+          title="エラー"
+          message={error ?? ""}
+          details={errorDetails ?? undefined}
+        />
       </div>
     </div>
   )
