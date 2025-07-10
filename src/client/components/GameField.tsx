@@ -65,6 +65,7 @@ import { CardContextMenu } from "@/client/components/CardContextMenu"
 import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
 import { SaveReplayDialog } from "@/client/components/SaveReplayDialog"
 import { ShareUrlDisplay } from "@/client/components/ShareUrlDisplay"
+import { ZoneExpandModal } from "@/client/components/ZoneExpandModal"
 import { saveReplayData } from "@/client/api/gameState"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 import type { ReplaySaveData } from "@/shared/types/game"
@@ -96,6 +97,8 @@ interface GraveZoneProps {
   isOpponent?: boolean
   onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
+  onLabelClick?: () => void
+  isDisabled?: boolean
 }
 
 function Zone({
@@ -252,6 +255,7 @@ interface DeckZoneProps {
   onDrop?: (fromZone: ZoneId, toZone: ZoneId, shiftKey?: boolean) => void
   onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
+  className?: string
 }
 
 function DeckZone({
@@ -264,6 +268,7 @@ function DeckZone({
   isOpponent = false,
   onContextMenu,
   onContextMenuClose,
+  className,
 }: DeckZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -487,6 +492,7 @@ function DeckZone({
           containerHeight,
           zoneStyles[type],
           isHovered && "border-4 border-blue-500 bg-blue-500/20",
+          className,
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -690,6 +696,8 @@ function GraveZone({
   isOpponent = false,
   onContextMenu,
   onContextMenuClose,
+  onLabelClick,
+  isDisabled = false,
 }: GraveZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -869,6 +877,7 @@ function GraveZone({
         "grave-zone relative rounded-md border-2 border-dashed h-full flex flex-col transition-colors overflow-visible",
         typeStyles[type],
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
+        isDisabled && "opacity-50 pointer-events-none",
         window.innerWidth >= 1024
           ? "px-2 pt-2 pb-6"
           : window.innerWidth >= 768
@@ -964,7 +973,13 @@ function GraveZone({
         </div>
       )}
       {/* Label at the bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-5 flex items-center justify-center">
+      <div 
+        className={cn(
+          "absolute bottom-0 left-0 right-0 h-5 flex items-center justify-center",
+          onLabelClick && !isDisabled && "cursor-pointer hover:bg-muted/50 transition-colors"
+        )}
+        onClick={onLabelClick && !isDisabled ? onLabelClick : undefined}
+      >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
           {type === "grave" ? "墓地" : "除外"} ({cardCount})
         </span>
@@ -1008,6 +1023,15 @@ export function GameFieldContent() {
     position: { x: number; y: number }
     cardElement?: HTMLElement | null
   } | null>(null)
+
+  // Zone expand modal state - only one modal can be open at a time
+  const [expandedZone, setExpandedZone] = useState<ZoneId | null>(null)
+  const [modalBounds, setModalBounds] = useState<{
+    top: number
+    left: number
+    right: number
+    bottom: number
+  }>({ top: 0, left: 0, right: 0, bottom: 0 })
 
   // Recording confirmation dialog state
   const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
@@ -1109,6 +1133,13 @@ export function GameFieldContent() {
     [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
   )
 
+  // Close modal when dragging starts
+  useEffect(() => {
+    if (draggedCard && expandedZone) {
+      setExpandedZone(null)
+    }
+  }, [draggedCard, expandedZone])
+
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1187,6 +1218,41 @@ export function GameFieldContent() {
     },
     [replayData, deckMetadata],
   )
+
+  // Function to open zone expand modal (only for self player)
+  const openZoneExpandModal = useCallback((zone: ZoneId) => {
+    // Calculate modal bounds based on current layout
+    const calculateModalBounds = () => {
+      // Get zone elements
+      const handElement = document.querySelector(".hand-zone-self")
+      const extraDeckElement = document.querySelector(".extra-zone-self")
+      const graveElement = document.querySelector(".grave-zone-self")
+      const banishElement = document.querySelector(".banish-zone-self")
+
+      if (!handElement || !extraDeckElement || !graveElement || !banishElement) {
+        console.error("Could not find required zone elements")
+        return null
+      }
+
+      const handRect = handElement.getBoundingClientRect()
+      const extraDeckRect = extraDeckElement.getBoundingClientRect()
+      const graveRect = graveElement.getBoundingClientRect()
+      const banishRect = banishElement.getBoundingClientRect()
+
+      return {
+        top: handRect.top,
+        left: graveRect.left,
+        right: banishRect.right,
+        bottom: extraDeckRect.bottom,
+      }
+    }
+
+    const bounds = calculateModalBounds()
+    if (bounds) {
+      setModalBounds(bounds)
+      setExpandedZone(zone)
+    }
+  }, [])
 
   // Calculate grave zone positions dynamically
   useEffect(() => {
@@ -1797,6 +1863,9 @@ export function GameFieldContent() {
                   onDrop={handleCardDrop}
                   onContextMenu={handleCardContextMenu}
                   onContextMenuClose={() => setContextMenu(null)}
+                  onLabelClick={() => openZoneExpandModal({ player: "self", type: "graveyard" })}
+                  isDisabled={expandedZone?.type === "graveyard"}
+                  className="grave-zone-self"
                   style={{
                     height:
                       playerGraveHeight != null
@@ -1824,6 +1893,9 @@ export function GameFieldContent() {
                   onDrop={handleCardDrop}
                   onContextMenu={handleCardContextMenu}
                   onContextMenuClose={() => setContextMenu(null)}
+                  onLabelClick={() => openZoneExpandModal({ player: "self", type: "banished" })}
+                  isDisabled={expandedZone?.type === "banished"}
+                  className="banish-zone-self"
                   style={{
                     height:
                       playerGraveHeight != null
@@ -1876,6 +1948,7 @@ export function GameFieldContent() {
             onDrop={handleCardDrop}
             onContextMenu={handleCardContextMenu}
             onContextMenuClose={() => setContextMenu(null)}
+            className="hand-zone-self"
           />
           <DeckZone
             type="deck"
@@ -1885,6 +1958,7 @@ export function GameFieldContent() {
             onDrop={handleCardDrop}
             onContextMenu={handleCardContextMenu}
             onContextMenuClose={() => setContextMenu(null)}
+            className="deck-zone-self"
           />
           <DeckZone
             type="extra"
@@ -1894,6 +1968,7 @@ export function GameFieldContent() {
             onDrop={handleCardDrop}
             onContextMenu={handleCardContextMenu}
             onContextMenuClose={() => setContextMenu(null)}
+            className="extra-zone-self"
           />
         </div>
       </div>
@@ -1990,6 +2065,19 @@ export function GameFieldContent() {
         shareUrl={shareUrl}
         onClose={() => setShowShareUrlDialog(false)}
       />
+
+      {/* Zone Expand Modal */}
+      {expandedZone && (
+        <ZoneExpandModal
+          isOpen={true}
+          onClose={() => setExpandedZone(null)}
+          zone={expandedZone}
+          cards={expandedZone.type === "graveyard" ? playerBoard.graveyard : playerBoard.banished}
+          onDrop={handleCardDrop}
+          onContextMenu={handleCardContextMenu}
+          modalBounds={modalBounds}
+        />
+      )}
 
       {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
       <div
