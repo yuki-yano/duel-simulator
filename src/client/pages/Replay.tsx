@@ -141,7 +141,7 @@ export default function Replay() {
       // This allows deck display even if deckCardIds is invalid
       if (deckData !== null && deckConfig !== null) {
         const imageUrl = getDeckImageUrl(savedState.deckImageHash)
-        
+
         // If deckCardIds is null, generate default mapping
         let finalDeckCardIds = deckCardIds
         if (finalDeckCardIds === null) {
@@ -159,7 +159,7 @@ export default function Replay() {
             finalDeckCardIds.extraDeck[`extra-${i}`] = `extra-${i}`
           }
         }
-        
+
         const metadata = {
           imageDataUrl: deckData.imageDataUrl,
           imageUrl,
@@ -364,11 +364,11 @@ export default function Replay() {
     try {
       // Zodバリデーションを実行（JSON.parseも含めて安全に実行）
       const validationResult = ReplaySaveDataSchema.safeParse(JSON.parse(savedStateData.stateJson))
-      
+
       if (!validationResult.success) {
         const errors = validationResult.error.format()
         console.error("Replay validation errors:", errors)
-        
+
         // Determine specific compatibility issue
         let validationError = "リプレイデータの形式が不正です"
         if (errors.data?.deckCardIds?._errors && errors.data.deckCardIds._errors.length > 0) {
@@ -378,57 +378,60 @@ export default function Replay() {
         } else if (errors.data?.operations?._errors && errors.data.operations._errors.length > 0) {
           validationError = "古い形式のリプレイです（操作履歴が不正）"
         }
-        
+
         // Show error dialog but still allow normal play
         setError(validationError)
         setErrorDetails("このリプレイは現在のバージョンで再生できません。通常の操作は可能です。")
         setShowErrorDialog(true)
-        
+
         // バリデーションエラーでも、デッキの初期状態を設定して通常操作可能にする
         try {
           console.log("Validation error - attempting to load deck anyway")
-          
+
           // deckMetadataから画像データを除外してログ出力
-          const metadataForLog = deckMetadata != null ? {
-            ...deckMetadata,
-            imageDataUrl: "[DATA URI OMITTED]",
-            imageUrl: deckMetadata.imageUrl ?? "",
-          } : null
+          const metadataForLog =
+            deckMetadata != null
+              ? {
+                  ...deckMetadata,
+                  imageDataUrl: "[DATA URI OMITTED]",
+                  imageUrl: deckMetadata.imageUrl ?? "",
+                }
+              : null
           console.log("deckMetadata (without image):", metadataForLog)
           console.log("deckMetadata?.deckCardIds:", deckMetadata?.deckCardIds)
-          
+
           // 既にデッキメタデータがある場合はそれを使用
           if (deckMetadata != null) {
             console.log("Regenerating deck from image due to validation error...")
-            
+
             // バリデーションエラー時は新しいカードIDマッピングを生成
             const regeneratedCardIds = {
               mainDeck: {} as Record<string, string>,
               extraDeck: {} as Record<string, string>,
             }
-            
+
             // 新しいカードIDを生成
             const timestamp = Date.now()
             for (let i = 0; i < deckMetadata.mainDeckCount; i++) {
               const newId = `regen-main-${i}-${timestamp}`
               regeneratedCardIds.mainDeck[i.toString()] = newId
             }
-            
+
             for (let i = 0; i < deckMetadata.extraDeckCount; i++) {
               const newId = `regen-extra-${i}-${timestamp}`
               regeneratedCardIds.extraDeck[i.toString()] = newId
             }
-            
+
             console.log("Generated new card IDs:", regeneratedCardIds)
-            
+
             // 新しいIDマッピングで画像を切り出し
             const cardImageMap = await extractCardsFromDeckImage(deckMetadata, regeneratedCardIds)
             console.log("Extracted cards count:", cardImageMap.size)
-            
+
             // カードオブジェクトを作成
             const mainDeckCards = []
             const extraDeckCards = []
-            
+
             for (const [id, imageUrl] of cardImageMap.entries()) {
               const card = {
                 id,
@@ -438,42 +441,54 @@ export default function Replay() {
                 rotation: 0,
                 faceDown: false,
               }
-              
+
               if (id.includes("main")) {
                 mainDeckCards.push(card)
               } else if (id.includes("extra")) {
                 extraDeckCards.push(card)
               }
             }
-              
+
             console.log("mainDeckCards count:", mainDeckCards.length)
             console.log("extraDeckCards count:", extraDeckCards.length)
-              
+
             // 初期状態を設定
             setGameState({
               players: {
                 self: {
-                  monsterZones: Array(5).fill(null).map(() => []),
-                  spellTrapZones: Array(5).fill(null).map(() => []),
+                  monsterZones: Array(5)
+                    .fill(null)
+                    .map(() => []),
+                  spellTrapZones: Array(5)
+                    .fill(null)
+                    .map(() => []),
                   fieldZone: null,
                   graveyard: [],
                   banished: [],
                   extraDeck: extraDeckCards,
                   deck: mainDeckCards,
                   hand: [],
-                  extraMonsterZones: Array(2).fill(null).map(() => []),
+                  extraMonsterZones: Array(2)
+                    .fill(null)
+                    .map(() => []),
                   lifePoints: 8000,
                 },
                 opponent: {
-                  monsterZones: Array(5).fill(null).map(() => []),
-                  spellTrapZones: Array(5).fill(null).map(() => []),
+                  monsterZones: Array(5)
+                    .fill(null)
+                    .map(() => []),
+                  spellTrapZones: Array(5)
+                    .fill(null)
+                    .map(() => []),
                   fieldZone: null,
                   graveyard: [],
                   banished: [],
                   extraDeck: [],
                   deck: [],
                   hand: [],
-                  extraMonsterZones: Array(2).fill(null).map(() => []),
+                  extraMonsterZones: Array(2)
+                    .fill(null)
+                    .map(() => []),
                   lifePoints: 8000,
                 },
               },
@@ -488,11 +503,11 @@ export default function Replay() {
         } catch (e) {
           console.error("Failed to setup initial state on validation error:", e)
         }
-        
+
         setShowDeckProcessor(false)
         return
       }
-      
+
       // バリデーション成功 - リプレイデータを使用
       const replaySaveData = validationResult.data
 
@@ -516,7 +531,7 @@ export default function Replay() {
       // If we reach here, replay data should be valid - proceed with auto play dialog
       setShowDeckProcessor(false)
       setShowAutoPlayDialog(true)
-      
+
       // Set total operations for redo functionality
       setReplayTotalOperations(replaySaveData.data.operations.length)
     } catch (e) {
@@ -564,9 +579,7 @@ export default function Replay() {
               <code
                 className={cn(
                   "px-2 py-1 rounded cursor-pointer transition-all duration-300",
-                  copyFeedback 
-                    ? "bg-green-100 text-green-800 border border-green-300" 
-                    : "bg-gray-100 hover:bg-gray-200"
+                  copyFeedback ? "bg-gray-200 text-gray-700" : "bg-gray-100 hover:bg-gray-200",
                 )}
                 onClick={() => {
                   void navigator.clipboard.writeText(id ?? "").then(() => {
@@ -581,7 +594,7 @@ export default function Replay() {
                 {id}
               </code>
               {copyFeedback && (
-                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-green-800 text-white text-xs rounded whitespace-nowrap animate-fade-in-out">
+                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-600 text-white text-xs rounded whitespace-nowrap animate-fade-in-out">
                   コピーしました！
                 </span>
               )}

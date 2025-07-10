@@ -7,7 +7,6 @@ export type SaveGameStateResponse = z.infer<typeof SaveStateSuccessResponseSchem
 // Re-export GameState from shared types
 export type { GameState } from "@/shared/types/game"
 
-
 export type LoadGameStateResponse = z.infer<typeof SavedStateResponseSchema>
 
 export async function loadGameState(id: string): Promise<LoadGameStateResponse> {

@@ -127,11 +127,11 @@ export function DraggableCard({
         }
         setDraggedCard(cardWithZone)
         setTouchPosition({ x: touch.clientX, y: touch.clientY })
-        
+
         // Disable body scrolling
         document.body.style.overflow = "hidden"
         document.body.style.touchAction = "none"
-        
+
         /* TODO: Implement drag delay for better scroll handling
         // Set up drag enable timer (100ms)
         dragEnableTimerRef.current = setTimeout(() => {
@@ -199,7 +199,7 @@ export function DraggableCard({
     }
     setDraggedCard(cardWithZone)
     e.dataTransfer.effectAllowed = "move"
-    
+
     // Set high z-index for the dragging element
     const element = e.currentTarget as HTMLElement
     if (element !== null) {
@@ -210,7 +210,7 @@ export function DraggableCard({
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedCard(null)
-    
+
     // Reset z-index
     const element = e.currentTarget as HTMLElement
     if (element !== null) {
@@ -234,7 +234,6 @@ export function DraggableCard({
     if (cardRef.current) {
       cardRef.current.style.touchAction = ""
     }
-
 
     if (isTouching && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0]
@@ -364,7 +363,7 @@ export function DraggableCard({
       if (touchStartPosRef.current != null) {
         const deltaX = Math.abs(touch.clientX - touchStartPosRef.current.x)
         const deltaY = Math.abs(touch.clientY - touchStartPosRef.current.y)
-        
+
         // Cancel long press if moved more than threshold
         if (deltaX > TOUCH_MOVE_THRESHOLD || deltaY > TOUCH_MOVE_THRESHOLD) {
           if (longPressTimerRef.current != null) {
@@ -433,10 +432,9 @@ export function DraggableCard({
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           position: "relative",
-          transform:
-            highlightAnimating
-              ? "scale(1.1)"
-              : (isHovered || isTouching) && !isReplayPlaying
+          transform: highlightAnimating
+            ? "scale(1.1)"
+            : (isHovered || isTouching) && !isReplayPlaying
               ? hoverDirection === "left"
                 ? "translateX(-8px)"
                 : hoverDirection === "right"
@@ -545,12 +543,14 @@ export function DraggableCard({
                     onContextMenu={(e) => e.preventDefault()}
                   />
                   {/* Face down overlay for drag image */}
-                  {card.faceDown === true && <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />}
+                  {card.faceDown === true && (
+                    <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />
+                  )}
                 </div>
               </div>
             )
           })(),
-          document.body
+          document.body,
         )}
     </>
   )

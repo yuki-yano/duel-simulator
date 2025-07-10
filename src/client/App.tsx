@@ -182,10 +182,7 @@ export default function App() {
         {/* )}                                                                                                      */}
 
         {/* Go to Replay Dialog */}
-        <GoToReplayDialog
-          isOpen={showGoToReplayDialog}
-          onOpenChange={setShowGoToReplayDialog}
-        />
+        <GoToReplayDialog isOpen={showGoToReplayDialog} onOpenChange={setShowGoToReplayDialog} />
       </div>
     </div>
   )

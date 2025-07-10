@@ -1,5 +1,5 @@
 // Re-export types from Zod schemas
-export type { 
+export type {
   Card,
   PlayerBoard,
   GameState,
@@ -8,7 +8,7 @@ export type {
   DeckSection,
   DeckConfiguration,
   ReplaySaveData,
-  SavedState
+  SavedState,
 } from "@/client/schemas/replay"
 
 export type ZoneType =
@@ -47,4 +47,3 @@ export interface MoveTarget {
 }
 
 export type GamePhase = "draw" | "standby" | "main1" | "battle" | "main2" | "end"
-

@@ -54,7 +54,7 @@ export const OperationZoneSchema = z.object({
     "extraDeck",
     "deck",
     "hand",
-    "extraMonsterZone"
+    "extraMonsterZone",
   ]),
   zoneIndex: z.number().optional(),
   insertPosition: z.union([z.number(), z.literal("last")]).optional(),
@@ -74,17 +74,19 @@ export const GameOperationSchema = z.object({
     "shuffle",
     "rotate",
     "changePosition",
-    "toggleHighlight"
+    "toggleHighlight",
   ]),
   cardId: z.string(),
   from: OperationZoneSchema.optional(),
   to: OperationZoneSchema.optional(),
   player: z.enum(["self", "opponent"]),
-  metadata: z.union([
-    z.object({ angle: z.number() }), // rotate操作時
-    z.object({ flip: z.boolean() }), // changePosition操作時  
-    z.record(z.string(), z.unknown()), // その他の任意のメタデータ
-  ]).optional(),
+  metadata: z
+    .union([
+      z.object({ angle: z.number() }), // rotate操作時
+      z.object({ flip: z.boolean() }), // changePosition操作時
+      z.record(z.string(), z.unknown()), // その他の任意のメタデータ
+    ])
+    .optional(),
 })
 
 // DeckCardIdsMapping schema - only supports old format (index -> cardId mapping)

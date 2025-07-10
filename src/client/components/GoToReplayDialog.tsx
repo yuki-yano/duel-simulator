@@ -26,7 +26,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
     try {
       // Check if replay exists
       await loadGameState(replayId.trim())
-      
+
       // If successful, navigate to replay page
       void navigate(`/replay/${replayId.trim()}`)
       onOpenChange(false)
@@ -70,9 +70,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
               autoFocus
               disabled={isChecking}
             />
-            {error !== null && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
+            {error !== null && <p className="text-sm text-red-600">{error}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2">

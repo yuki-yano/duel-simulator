@@ -73,9 +73,8 @@ export function ZoneExpandModal({
   const needsVerticalOverlap = totalHeightNeeded > availableHeight
 
   // Calculate actual row height with overlap if needed
-  const actualRowHeight = needsVerticalOverlap && totalRows > 1 
-    ? (availableHeight - cardHeightPx) / (totalRows - 1)
-    : rowHeight
+  const actualRowHeight =
+    needsVerticalOverlap && totalRows > 1 ? (availableHeight - cardHeightPx) / (totalRows - 1) : rowHeight
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -170,11 +169,7 @@ export function ZoneExpandModal({
         <span className="text-xs font-medium">
           {zone.type === "graveyard" ? "墓地" : "除外"} ({cards.length})
         </span>
-        <button
-          onClick={onClose}
-          className="p-0.5 rounded hover:bg-muted transition-colors"
-          aria-label="閉じる"
-        >
+        <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label="閉じる">
           <X className="w-3 h-3" />
         </button>
       </div>
@@ -189,8 +184,8 @@ export function ZoneExpandModal({
         onDrop={handleDrop}
         data-droppable="true"
       >
-        <div 
-          className="relative" 
+        <div
+          className="relative"
           style={{ minHeight: `${availableHeight}px` }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -203,9 +198,7 @@ export function ZoneExpandModal({
 
             // Calculate position
             const left = col * (columnWidth + (needsHorizontalOverlap ? -cardWidthPx + columnWidth : 0))
-            const top = needsVerticalOverlap && totalRows > 1
-              ? row * actualRowHeight
-              : row * rowHeight
+            const top = needsVerticalOverlap && totalRows > 1 ? row * actualRowHeight : row * rowHeight
 
             return (
               <div

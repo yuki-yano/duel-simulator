@@ -25,7 +25,6 @@ export interface DeckProcessMetadata {
   deckCardIds: DeckCardIdsMapping
 }
 
-
 // Position ratios based on image width
 const LAYOUT_RATIOS = {
   mainDeckTextY: 0.071, // Main deck text is below the deck name (7% of width from top)
@@ -79,7 +78,7 @@ export function DeckImageProcessor({
           canvas.width = img.width * scale
           canvas.height = img.height * scale
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-          
+
           // Convert canvas to image URL for preview
           setPreviewImageUrl(canvas.toDataURL("image/png"))
         }
@@ -162,9 +161,11 @@ export function DeckImageProcessor({
 
     // Save processed canvas for debug display if debugKey provided
     if (debugKey && showDebug) {
-      setOcrProcessedCanvases((prev) => produce(prev, (draft) => {
-        draft[debugKey] = processedDataUrl
-      }))
+      setOcrProcessedCanvases((prev) =>
+        produce(prev, (draft) => {
+          draft[debugKey] = processedDataUrl
+        }),
+      )
     }
 
     // Perform OCR on this region
@@ -222,9 +223,11 @@ export function DeckImageProcessor({
           const debugCtx = debugCanvas.getContext("2d")
           if (debugCtx) {
             debugCtx.drawImage(img, textX, mainDeckY, textWidth, textHeight, 0, 0, textWidth, textHeight)
-            setOcrDebugCanvases((prev) => produce(prev, (draft) => {
-              draft.main = debugCanvas.toDataURL()
-            }))
+            setOcrDebugCanvases((prev) =>
+              produce(prev, (draft) => {
+                draft.main = debugCanvas.toDataURL()
+              }),
+            )
           }
         }
 
@@ -583,18 +586,18 @@ export function DeckImageProcessor({
       <div className="space-y-4">
         {/* Preview Canvas - hidden but kept for processing */}
         <canvas ref={canvasRef} className="hidden" />
-        
+
         {/* Preview Image */}
         {previewImageUrl !== null && (
           <div className="border rounded-lg overflow-hidden">
-            <img 
-              src={previewImageUrl} 
-              alt="デッキ画像プレビュー" 
+            <img
+              src={previewImageUrl}
+              alt="デッキ画像プレビュー"
               className="w-full"
-              style={{ 
+              style={{
                 WebkitTouchCallout: "default",
                 WebkitUserSelect: "auto",
-                userSelect: "auto"
+                userSelect: "auto",
               }}
             />
           </div>

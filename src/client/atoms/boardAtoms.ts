@@ -302,7 +302,7 @@ export const undoAtom = atom(null, (get, set) => {
 
     // Restore operations from history
     set(operationsAtom, [...previousEntry.operations])
-    
+
     // Update replay current index if we're paused
     if (isPlaying && isPaused) {
       const replayCurrentIndex = get(replayCurrentIndexAtom)
@@ -318,7 +318,7 @@ export const undoAtom = atom(null, (get, set) => {
       const operationsToRemove = currentEntry.operationCount - previousEntry.operationCount
 
       const replayOps = get(replayOperationsAtom)
-      
+
       // Remove the last N operations from replay operations
       const trimmedReplayOps = replayOps.slice(0, replayOps.length - operationsToRemove)
       set(replayOperationsAtom, trimmedReplayOps)
@@ -342,10 +342,10 @@ export const redoAtom = atom(null, async (get, set) => {
     // Resume replay from current position
     set(replayPlayingAtom, true)
     set(replayPausedAtom, false)
-    
+
     // Keep track of current state
     let currentState = get(gameStateAtom)
-    
+
     // Play remaining operations
     for (let i = replayCurrentIndex; i < replayData.operations.length; i++) {
       // Check if paused or stopped
@@ -557,7 +557,7 @@ export const redoAtom = atom(null, async (get, set) => {
 
     // Restore operations from history
     set(operationsAtom, [...nextEntry.operations])
-    
+
     // Update replay current index if we're paused
     if (isPlaying && isPaused) {
       const replayCurrentIndex = get(replayCurrentIndexAtom)
@@ -573,13 +573,13 @@ export const redoAtom = atom(null, async (get, set) => {
     if (get(replayRecordingAtom)) {
       const replayStartOperationCount = get(replayStartIndexAtom) ?? 0
       const replayOps = get(replayOperationsAtom)
-      
+
       // Only add operations that occurred after replay recording started
       const newOperations = operationsToAdd.filter((_, index) => {
         const operationIndex = currentEntry.operationCount + index
         return operationIndex >= replayStartOperationCount
       })
-      
+
       if (newOperations.length > 0) {
         set(replayOperationsAtom, [...replayOps, ...newOperations])
       }
@@ -592,17 +592,17 @@ export const canUndoAtom = atom((get) => {
   const currentIndex = get(gameHistoryIndexAtom)
   const isPlaying = get(replayPlayingAtom)
   const isPaused = get(replayPausedAtom)
-  
+
   // Enable undo during replay pause
   if (isPlaying && isPaused) {
     return currentIndex > 0
   }
-  
+
   // Normal undo logic when not replaying
   if (!isPlaying) {
     return currentIndex > 0
   }
-  
+
   // Disable during active replay
   return false
 })
@@ -614,22 +614,22 @@ export const canRedoAtom = atom((get) => {
   const isPaused = get(replayPausedAtom)
   const replayCurrentIndex = get(replayCurrentIndexAtom)
   const totalOperations = get(replayTotalOperationsAtom)
-  
+
   // Enable redo during replay pause
   if (isPlaying && isPaused) {
     return currentIndex < history.length - 1
   }
-  
+
   // After replay is stopped, enable redo if there are more operations
   if (!isPlaying && replayCurrentIndex !== null && replayCurrentIndex < totalOperations) {
     return currentIndex < history.length - 1
   }
-  
+
   // Normal redo logic when not replaying
   if (!isPlaying && replayCurrentIndex === null) {
     return currentIndex < history.length - 1
   }
-  
+
   // Disable during active replay
   return false
 })
@@ -960,7 +960,6 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
     // Use replay-specific operations list instead of global operations
     const replayOperations = get(replayOperationsAtom)
 
-
     // Update replay data with operations and end time
     set(replayDataAtom, {
       ...replayData,
@@ -973,7 +972,6 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
   set(replayEndIndexAtom, _currentIndex)
   set(replayOperationsAtom, []) // Clear replay operations
 })
-
 
 // Helper to apply operation to state
 function applyOperation(state: GameState, operation: GameOperation): GameState {
@@ -1008,7 +1006,13 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       }
       break
     case "rotate":
-      if (operation.to && operation.metadata && 'angle' in operation.metadata && typeof operation.metadata.angle === "number" && operation.cardId) {
+      if (
+        operation.to &&
+        operation.metadata &&
+        "angle" in operation.metadata &&
+        typeof operation.metadata.angle === "number" &&
+        operation.cardId
+      ) {
         // Reconstruct Position object
         const position: Position = {
           zone: {
@@ -1079,18 +1083,20 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
     // Build full history for redo functionality
     const initialState = produce(replayData.startSnapshot, () => {})
-    
+
     // Reset history with initial state
     set(resetHistoryAtom, initialState)
-    
+
     // Build complete history by applying all operations
     let tempState = initialState
-    const fullHistory: HistoryEntry[] = [{
-      gameState: initialState,
-      operationCount: 0,
-      operations: [],
-    }]
-    
+    const fullHistory: HistoryEntry[] = [
+      {
+        gameState: initialState,
+        operationCount: 0,
+        operations: [],
+      },
+    ]
+
     // Apply all operations to build history
     for (let i = 0; i < replayData.operations.length; i++) {
       const operation = replayData.operations[i]
@@ -1101,7 +1107,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         operations: replayData.operations.slice(0, i + 1),
       })
     }
-    
+
     // Set the complete history
     set(gameHistoryAtom, fullHistory)
     set(gameHistoryIndexAtom, 0) // Start at the beginning
@@ -1356,7 +1362,7 @@ export const stopReplayAtom = atom(null, (get, set) => {
 
   set(replayPlayingAtom, false)
   set(replayPausedAtom, false)
-  
+
   // Keep the currentIndex if replay was stopped midway for redo functionality
   // Only clear it if replay finished naturally (currentIndex === total operations)
   const totalOperations = get(replayTotalOperationsAtom)
@@ -1364,7 +1370,7 @@ export const stopReplayAtom = atom(null, (get, set) => {
     set(replayCurrentIndexAtom, null)
   }
   // Otherwise keep replayCurrentIndexAtom to allow redo to continue from this point
-  
+
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 
@@ -1706,107 +1712,107 @@ function performCardMove(
   to: Position,
   options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean },
 ): GameState {
-  return produce(state, draft => {
+  return produce(state, (draft) => {
     const fromPlayer = state.players[from.zone.player]
     const toPlayer = state.players[to.zone.player]
 
-  // Get card by ID (cardId is now required)
-  let card: Card | null = null
-  let actualFromZone: ZoneId = from.zone
+    // Get card by ID (cardId is now required)
+    let card: Card | null = null
+    let actualFromZone: ZoneId = from.zone
 
-  // ID-based approach
-  const result = getCardById(fromPlayer, from.cardId)
-  if (result) {
-    card = result.card
-    actualFromZone = { ...result.zone, player: from.zone.player }
-  }
+    // ID-based approach
+    const result = getCardById(fromPlayer, from.cardId)
+    if (result) {
+      card = result.card
+      actualFromZone = { ...result.zone, player: from.zone.player }
+    }
 
-  if (!card) {
-    return state
-  }
+    if (!card) {
+      return state
+    }
 
-  // Update card's zone information
-  // Reset rotation if moving to a zone that doesn't support rotation
-  const supportsRotation =
-    to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
+    // Update card's zone information
+    // Reset rotation if moving to a zone that doesn't support rotation
+    const supportsRotation =
+      to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
 
-  // Apply rotation and face down state based on options
-  let rotation = card.rotation
-  let faceDown = card.faceDown
+    // Apply rotation and face down state based on options
+    let rotation = card.rotation
+    let faceDown = card.faceDown
 
-  if (supportsRotation) {
-    // Handle PC shift key (both defense and face down)
-    if (options?.shiftKey === true) {
-      // Monster zones: Face up defense position (表側守備表示)
-      if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
-        rotation = -90
+    if (supportsRotation) {
+      // Handle PC shift key (both defense and face down)
+      if (options?.shiftKey === true) {
+        // Monster zones: Face up defense position (表側守備表示)
+        if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
+          rotation = -90
+          faceDown = false
+        }
+        // Spell/Trap zones: Face down (裏側表示)
+        else if (to.zone.type === "spellTrapZone") {
+          rotation = 0
+          faceDown = true
+        }
+      }
+      // Handle mobile toggle buttons separately
+      else if (options?.defenseMode === true || options?.faceDownMode === true) {
+        // Monster zones
+        if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
+          if (options.defenseMode === true) {
+            rotation = -90 // Defense position
+            faceDown = false // Face up
+          }
+          if (options.faceDownMode === true) {
+            faceDown = true // Face down (keep current rotation)
+          }
+        }
+        // Spell/Trap zones
+        else if (to.zone.type === "spellTrapZone") {
+          rotation = 0 // Always upright
+          if (options.faceDownMode === true) {
+            faceDown = true // Face down
+          } else {
+            faceDown = false // Face up
+          }
+        }
+      } else if (to.zone.type === "spellTrapZone") {
+        // When moving to spell/trap zone without any options, set to face up
+        rotation = 0
         faceDown = false
       }
-      // Spell/Trap zones: Face down (裏側表示)
-      else if (to.zone.type === "spellTrapZone") {
-        rotation = 0
-        faceDown = true
-      }
-    }
-    // Handle mobile toggle buttons separately
-    else if (options?.defenseMode === true || options?.faceDownMode === true) {
-      // Monster zones
-      if (to.zone.type === "monsterZone" || to.zone.type === "extraMonsterZone") {
-        if (options.defenseMode === true) {
-          rotation = -90 // Defense position
-          faceDown = false // Face up
-        }
-        if (options.faceDownMode === true) {
-          faceDown = true // Face down (keep current rotation)
-        }
-      }
-      // Spell/Trap zones
-      else if (to.zone.type === "spellTrapZone") {
-        rotation = 0 // Always upright
-        if (options.faceDownMode === true) {
-          faceDown = true // Face down
-        } else {
-          faceDown = false // Face up
-        }
-      }
-    } else if (to.zone.type === "spellTrapZone") {
-      // When moving to spell/trap zone without any options, set to face up
+    } else {
       rotation = 0
       faceDown = false
     }
-  } else {
-    rotation = 0
-    faceDown = false
-  }
 
-  const updatedCard = produce(card, draft => {
-    draft.rotation = rotation
-    draft.faceDown = faceDown
-  })
+    const updatedCard = produce(card, (draft) => {
+      draft.rotation = rotation
+      draft.faceDown = faceDown
+    })
 
-  // Remove card from source location using card ID
-  const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id)
+    // Remove card from source location using card ID
+    const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id)
 
-  // Determine if this is a cross-zone move
-  const isCrossZoneMove = actualFromZone.type !== to.zone.type
+    // Determine if this is a cross-zone move
+    const isCrossZoneMove = actualFromZone.type !== to.zone.type
 
-  // For zone-specific moves, keep the index for certain zone types
-  const shouldKeepIndex =
-    to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
+    // For zone-specific moves, keep the index for certain zone types
+    const shouldKeepIndex =
+      to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
 
-  const targetZone =
-    isCrossZoneMove && !shouldKeepIndex
-      ? { ...to.zone, index: undefined } // Clear index for non-zone-specific cross-zone moves
-      : to.zone // Keep index for same-zone moves and zone-specific moves
+    const targetZone =
+      isCrossZoneMove && !shouldKeepIndex
+        ? { ...to.zone, index: undefined } // Clear index for non-zone-specific cross-zone moves
+        : to.zone // Keep index for same-zone moves and zone-specific moves
 
-  // Add card to new location
-  const newToPlayer = addCardToZone(
-    from.zone.player === to.zone.player ? newFromPlayer : toPlayer,
-    targetZone,
-    updatedCard,
-  )
+    // Add card to new location
+    const newToPlayer = addCardToZone(
+      from.zone.player === to.zone.player ? newFromPlayer : toPlayer,
+      targetZone,
+      updatedCard,
+    )
 
-  // Update the draft state
+    // Update the draft state
     draft.players[from.zone.player] = newFromPlayer
     draft.players[to.zone.player] = newToPlayer
   })
@@ -1829,7 +1835,7 @@ function performCardRotation(state: GameState, position: Position, angle: number
 
   if (!card) return state
 
-  const rotatedCard = produce(card, draft => {
+  const rotatedCard = produce(card, (draft) => {
     draft.rotation = angle
   })
   const newPlayer = updateCardInZone(player, actualZone, rotatedCard)
@@ -1860,7 +1866,7 @@ function performCardFlip(state: GameState, position: Position): GameState {
 
   if (!card) return state
 
-  const flippedCard = produce(card, draft => {
+  const flippedCard = produce(card, (draft) => {
     draft.faceDown = !(draft.faceDown === true)
   })
   const newPlayer = updateCardInZone(player, actualZone, flippedCard)
@@ -1890,7 +1896,7 @@ function performCardHighlightToggle(state: GameState, position: Position): GameS
 
   if (!card) return state
 
-  const highlightedCard = produce(card, draft => {
+  const highlightedCard = produce(card, (draft) => {
     draft.highlighted = !(draft.highlighted === true)
   })
   const newPlayer = updateCardInZone(player, actualZone, highlightedCard)
@@ -1990,7 +1996,7 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
 
 // Helper function: Remove card from zone by ID
 function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string): PlayerBoard {
-  return produce(player, draft => {
+  return produce(player, (draft) => {
     switch (zone.type) {
       case "monsterZone":
         if (zone.index !== undefined) {
@@ -2065,7 +2071,7 @@ function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: strin
 
 // Helper function: Add card to zone
 function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoard {
-  return produce(player, draft => {
+  return produce(player, (draft) => {
     switch (zone.type) {
       case "monsterZone": {
         if (zone.index !== undefined) {
@@ -2189,7 +2195,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
 
 // Helper function: Update card in zone
 function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoard {
-  return produce(player, draft => {
+  return produce(player, (draft) => {
     switch (zone.type) {
       case "monsterZone":
         if (zone.index !== undefined) {

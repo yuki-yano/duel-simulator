@@ -973,15 +973,19 @@ function GraveZone({
         </div>
       )}
       {/* Label at the bottom */}
-      <div 
+      <div
         className={cn(
           "absolute bottom-0 left-0 right-0 h-5 flex items-center justify-center",
-          onLabelClick && !isDisabled && "cursor-pointer hover:bg-muted/50 transition-colors"
+          onLabelClick && !isDisabled && "cursor-pointer hover:bg-muted/50 transition-colors",
         )}
-        onClick={onLabelClick && !isDisabled ? (e) => {
-          e.stopPropagation()
-          onLabelClick()
-        } : undefined}
+        onClick={
+          onLabelClick && !isDisabled
+            ? (e) => {
+                e.stopPropagation()
+                onLabelClick()
+              }
+            : undefined
+        }
       >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
           {type === "grave" ? "墓地" : "除外"} ({cardCount})
@@ -1380,7 +1384,6 @@ export function GameFieldContent() {
                     <Share2 className="w-4 h-4" />
                     <span>共有</span>
                   </button>
-
                 </>
               )}
             </>
@@ -1510,7 +1513,13 @@ export function GameFieldContent() {
         <div className="mb-2 flex flex-col gap-2">
           <div className="flex flex-row justify-start gap-2">
             <Tooltip
-              open={undoDescription !== null && canUndo && (!isPlaying || isPaused) && hoveredButton === "undo" && !isTouchDevice}
+              open={
+                undoDescription !== null &&
+                canUndo &&
+                (!isPlaying || isPaused) &&
+                hoveredButton === "undo" &&
+                !isTouchDevice
+              }
             >
               <TooltipTrigger asChild>
                 <button
@@ -1537,7 +1546,13 @@ export function GameFieldContent() {
               )}
             </Tooltip>
             <Tooltip
-              open={redoDescription !== null && canRedo && (!isPlaying || isPaused || currentReplayIndex !== null) && hoveredButton === "redo" && !isTouchDevice}
+              open={
+                redoDescription !== null &&
+                canRedo &&
+                (!isPlaying || isPaused || currentReplayIndex !== null) &&
+                hoveredButton === "redo" &&
+                !isTouchDevice
+              }
             >
               <TooltipTrigger asChild>
                 <button

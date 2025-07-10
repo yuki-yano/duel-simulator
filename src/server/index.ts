@@ -79,7 +79,7 @@ app.post("/api/deck-images", async (c) => {
     return c.json({ success: true, hash })
   } catch (error) {
     console.error("Failed to save deck image:", error)
-    
+
     // Zodバリデーションエラーの場合は400を返す
     if (error instanceof z.ZodError) {
       return c.json(
@@ -90,7 +90,7 @@ app.post("/api/deck-images", async (c) => {
         400,
       )
     }
-    
+
     return c.json(
       {
         error: "Failed to save deck image",
@@ -107,17 +107,8 @@ app.post("/api/save-states", async (c) => {
     // リクエストボディのバリデーション
     const body = await c.req.json()
     const validated = SaveGameStateRequestSchema.parse(body)
-    const {
-      sessionId,
-      stateJson,
-      deckImageHash,
-      title,
-      description,
-      type,
-      version,
-      deckConfig,
-      deckCardIds,
-    } = validated
+    const { sessionId, stateJson, deckImageHash, title, description, type, version, deckConfig, deckCardIds } =
+      validated
     const db = createDb(c.env.DB)
     const id = generateReplayId() // Use 8-character ID for replays
     // Auto-generate sessionId if not provided
@@ -187,7 +178,7 @@ app.post("/api/save-states", async (c) => {
     })
   } catch (error) {
     console.error("Failed to save state:", error)
-    
+
     // Zodバリデーションエラーの場合は400を返す
     if (error instanceof z.ZodError) {
       return c.json(
@@ -198,7 +189,7 @@ app.post("/api/save-states", async (c) => {
         400,
       )
     }
-    
+
     return c.json(
       {
         error: "Failed to save state",
