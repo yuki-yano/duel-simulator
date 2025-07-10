@@ -8,7 +8,7 @@ import type { ReplaySaveData, DeckCardIdsMapping } from "@/shared/types/game"
 import { DeckImageProcessor } from "@client/components/DeckImageProcessor"
 import { AutoPlayDialog } from "@client/components/AutoPlayDialog"
 import { ErrorDialog } from "@client/components/ErrorDialog"
-import { useSetAtom } from "jotai"
+import { useSetAtom, useAtomValue } from "jotai"
 import {
   replayDataAtom,
   gameStateAtom,
@@ -32,12 +32,15 @@ export default function Replay() {
   const [showDeckProcessor, setShowDeckProcessor] = useState(false)
   const [deckImage, setDeckImage] = useState<string | null>(null)
   const [showAutoPlayDialog, setShowAutoPlayDialog] = useState(false)
+  const [replayDataError, setReplayDataError] = useState<string | null>(null)
+  const [savedStateData, setSavedStateData] = useState<any>(null)
 
   const setReplayData = useSetAtom(replayDataAtom)
   const setGameState = useSetAtom(gameStateAtom)
   const setDeckMetadata = useSetAtom(deckMetadataAtom)
   const playReplay = useSetAtom(playReplayAtom)
   const stopReplay = useSetAtom(stopReplayAtom)
+  const deckMetadata = useAtomValue(deckMetadataAtom)
 
   useEffect(() => {
     if (id == null || id === "") {
@@ -74,44 +77,13 @@ export default function Replay() {
         throw new Error("リプレイが見つかりません")
       }
       
+      // Store saved state for later use
+      setSavedStateData(savedState)
+      
       const deckData = await getDeckImage(savedState.deckImageHash)
 
-      // Parse and validate replay data with Zod
-      let replaySaveData: ReplaySaveData
-      try {
-        const parsedData = JSON.parse(savedState.stateJson)
-        
-        // Check version before full validation
-        if (parsedData.version && parsedData.version !== "1.0") {
-          console.warn(`Unknown replay version: ${parsedData.version}`)
-        }
-        
-        const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
-        
-        if (!validationResult.success) {
-          const errors = validationResult.error.format()
-          console.error("Replay validation errors:", errors)
-          
-          // Check for specific missing fields to provide better error messages
-          if (errors.data?.deckCardIds) {
-            throw new Error("古い形式のリプレイです（カードIDマッピングが不足）")
-          }
-          if (errors.data?.initialState) {
-            throw new Error("古い形式のリプレイです（初期状態データが不正）")
-          }
-          if (errors.data?.operations) {
-            throw new Error("古い形式のリプレイです（操作履歴が不正）")
-          }
-          throw new Error("リプレイデータの形式が不正です")
-        }
-        
-        replaySaveData = validationResult.data as ReplaySaveData
-      } catch (e) {
-        if (e instanceof Error && e.message.includes("古い形式")) {
-          throw e
-        }
-        throw new Error("リプレイデータの解析に失敗しました")
-      }
+      // Don't parse replay data here - we'll do it when starting replay
+      // This allows deck to be displayed even if replay data is invalid
 
       // Parse and validate deck config
       let deckConfig: DeckConfiguration
@@ -169,22 +141,100 @@ export default function Replay() {
       }
       setDeckMetadata(metadata)
 
-      // Extract card images from deck
-      const cardImageMap = await extractCardsFromDeckImage(metadata, deckCardIds)
-
-      // Restore card images to initial state
-      restoreCardImages(replaySaveData.data.initialState, cardImageMap)
-
-      // Set initial game state with restored images
-      setGameState(replaySaveData.data.initialState)
-
-      // Set replay data
-      setReplayData({
-        startSnapshot: replaySaveData.data.initialState,
-        operations: replaySaveData.data.operations,
-        startTime: Date.now(),
-        endTime: Date.now() + replaySaveData.metadata.duration,
-      })
+      // Try to extract cards from deck for initial setup
+      try {
+        const cardImageMap = await extractCardsFromDeckImage(metadata, deckCardIds)
+        
+        // Create initial state with deck cards
+        const mainDeckCards = Object.entries(cardImageMap)
+          .filter(([id]) => id.startsWith('main-'))
+          .map(([id, imageUrl]) => ({
+            id,
+            name: `Card ${id}`,
+            imageUrl,
+            position: "facedown" as const,
+            rotation: 0,
+            faceDown: true,
+          }))
+        
+        const extraDeckCards = Object.entries(cardImageMap)
+          .filter(([id]) => id.startsWith('extra-'))
+          .map(([id, imageUrl]) => ({
+            id,
+            name: `Card ${id}`,
+            imageUrl,
+            position: "facedown" as const,
+            rotation: 0,
+            faceDown: true,
+          }))
+        
+        // Set initial game state with cards in deck
+        setGameState({
+          players: {
+            self: {
+              monsterZones: Array(5).fill(null).map(() => []),
+              spellTrapZones: Array(5).fill(null).map(() => []),
+              fieldZone: null,
+              graveyard: [],
+              banished: [],
+              extraDeck: extraDeckCards,
+              deck: mainDeckCards,
+              hand: [],
+              extraMonsterZones: Array(2).fill(null).map(() => []),
+              lifePoints: 8000,
+            },
+            opponent: {
+              monsterZones: Array(5).fill(null).map(() => []),
+              spellTrapZones: Array(5).fill(null).map(() => []),
+              fieldZone: null,
+              graveyard: [],
+              banished: [],
+              extraDeck: [],
+              deck: [],
+              hand: [],
+              extraMonsterZones: Array(2).fill(null).map(() => []),
+              lifePoints: 8000,
+            },
+          },
+          turn: 1,
+          phase: "main1",
+          currentPlayer: "self",
+        })
+      } catch (e) {
+        console.error("Failed to setup initial state:", e)
+        // Set empty state as fallback
+        setGameState({
+          players: {
+            self: {
+              monsterZones: Array(5).fill(null).map(() => []),
+              spellTrapZones: Array(5).fill(null).map(() => []),
+              fieldZone: null,
+              graveyard: [],
+              banished: [],
+              extraDeck: [],
+              deck: [],
+              hand: [],
+              extraMonsterZones: Array(2).fill(null).map(() => []),
+              lifePoints: 8000,
+            },
+            opponent: {
+              monsterZones: Array(5).fill(null).map(() => []),
+              spellTrapZones: Array(5).fill(null).map(() => []),
+              fieldZone: null,
+              graveyard: [],
+              banished: [],
+              extraDeck: [],
+              deck: [],
+              hand: [],
+              extraMonsterZones: Array(2).fill(null).map(() => []),
+              lifePoints: 8000,
+            },
+          },
+          turn: 1,
+          phase: "main1",
+          currentPlayer: "self",
+        })
+      }
 
       // Set deck image for display
       setDeckImage(deckData.imageDataUrl)
@@ -247,17 +297,136 @@ export default function Replay() {
   }
 
   // Handle replay start
-  const handleReplayStart = () => {
-    // First show the game field
-    setShowDeckProcessor(false)
-    // Show auto play dialog
-    setShowAutoPlayDialog(true)
+  const handleReplayStart = async () => {
+    // First validate replay data
+    if (!savedStateData) {
+      setError("リプレイデータが利用できません")
+      setShowErrorDialog(true)
+      return
+    }
+    
+    try {
+      const parsedData = JSON.parse(savedStateData.stateJson)
+      const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.format()
+        console.error("Replay validation errors:", errors)
+        
+        let errorMessage = "リプレイデータの形式が不正です"
+        if (errors.data?.deckCardIds) {
+          errorMessage = "古い形式のリプレイです（カードIDマッピングが不足）"
+        } else if (errors.data?.initialState) {
+          errorMessage = "古い形式のリプレイです（初期状態データが不正）"
+        } else if (errors.data?.operations) {
+          errorMessage = "古い形式のリプレイです（操作履歴が不正）"
+        }
+        
+        // Show error but still allow normal gameplay
+        setError(errorMessage)
+        setErrorDetails("このリプレイは現在のバージョンで再生できません。通常のデュエルは可能です。")
+        setShowErrorDialog(true)
+        
+        // Still show the game field for normal play
+        setShowDeckProcessor(false)
+        return
+      }
+      
+      // Valid replay data - proceed with auto play dialog
+      setShowDeckProcessor(false)
+      setShowAutoPlayDialog(true)
+    } catch (e) {
+      console.error("Failed to validate replay:", e)
+      setError("リプレイデータの検証に失敗しました")
+      setErrorDetails("通常のデュエルは可能です。")
+      setShowErrorDialog(true)
+      
+      // Still show the game field
+      setShowDeckProcessor(false)
+    }
   }
 
   // Handle auto play start
-  const handleAutoPlayStart = () => {
+  const handleAutoPlayStart = async () => {
     setShowAutoPlayDialog(false)
-    void playReplay()
+    
+    if (!savedStateData) {
+      setError("リプレイデータが利用できません")
+      setShowErrorDialog(true)
+      return
+    }
+    
+    // Now try to parse and validate replay data
+    try {
+      let replaySaveData: ReplaySaveData
+      const parsedData = JSON.parse(savedStateData.stateJson)
+      
+      // Check version before full validation
+      if (parsedData.version && parsedData.version !== "1.0") {
+        console.warn(`Unknown replay version: ${parsedData.version}`)
+      }
+      
+      const validationResult = ReplaySaveDataSchema.safeParse(parsedData)
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.format()
+        console.error("Replay validation errors:", errors)
+        
+        // Check for specific missing fields to provide better error messages
+        if (errors.data?.deckCardIds) {
+          throw new Error("古い形式のリプレイです（カードIDマッピングが不足）")
+        }
+        if (errors.data?.initialState) {
+          throw new Error("古い形式のリプレイです（初期状態データが不正）")
+        }
+        if (errors.data?.operations) {
+          throw new Error("古い形式のリプレイです（操作履歴が不正）")
+        }
+        throw new Error("リプレイデータの形式が不正です")
+      }
+      
+      replaySaveData = validationResult.data as ReplaySaveData
+      
+      // Extract card images from deck metadata
+      if (!deckMetadata) {
+        throw new Error("デッキメタデータが利用できません")
+      }
+      
+      const cardImageMap = await extractCardsFromDeckImage(deckMetadata, deckMetadata.deckCardIds)
+      
+      // Restore card images to initial state
+      restoreCardImages(replaySaveData.data.initialState, cardImageMap)
+      
+      // Set initial game state with restored images
+      setGameState(replaySaveData.data.initialState)
+      
+      // Set replay data
+      setReplayData({
+        startSnapshot: replaySaveData.data.initialState,
+        operations: replaySaveData.data.operations,
+        startTime: Date.now(),
+        endTime: Date.now() + replaySaveData.metadata.duration,
+      })
+      
+      // Start replay
+      void playReplay()
+    } catch (e) {
+      console.error("Failed to start replay:", e)
+      
+      let errorMessage = "リプレイの開始に失敗しました"
+      let errorDetail = null
+      
+      if (e instanceof Error) {
+        errorMessage = e.message
+        if (e.message.includes("古い形式")) {
+          errorDetail = "このリプレイは現在のバージョンで再生できません。通常のデュエルは可能です。"
+        }
+      }
+      
+      setError(errorMessage)
+      setErrorDetails(errorDetail)
+      setShowErrorDialog(true)
+    }
   }
 
   // Handle auto play cancel
