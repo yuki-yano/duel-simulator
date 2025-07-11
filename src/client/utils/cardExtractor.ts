@@ -176,6 +176,8 @@ export function restoreCardImages(
           "deck",
           "hand",
           "extraMonsterZones",
+          "freeZone",
+          "sideFreeZone",
         ]
 
         for (const zoneName of zones) {
