@@ -614,7 +614,7 @@ export default function Replay() {
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full py-4 sm:py-8">
-        <div className="max-w-2xl mx-auto mb-2">
+        <div className="max-w-2xl mx-auto mb-2 px-4 sm:px-0">
           <div className="flex items-center">
             <Button asChild variant="outline" size="sm">
               <a href="/">
