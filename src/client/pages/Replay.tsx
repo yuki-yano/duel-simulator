@@ -10,7 +10,7 @@ import type { DeckCardIdsMapping, DeckConfiguration } from "@/shared/types/game"
 import { DeckImageProcessor } from "@client/components/DeckImageProcessor"
 import { AutoPlayDialog } from "@client/components/AutoPlayDialog"
 import { ErrorDialog } from "@client/components/ErrorDialog"
-import { useSetAtom, useAtomValue } from "jotai"
+import { useSetAtom, useAtomValue, useAtom } from "jotai"
 import {
   replayDataAtom,
   gameStateAtom,
@@ -19,6 +19,7 @@ import {
   stopReplayAtom,
   replayTotalOperationsAtom,
   hasEverPlayedInReplayModeAtom,
+  initialStateAfterDeckLoadAtom,
 } from "@/client/atoms/boardAtoms"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
 import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema } from "@/client/schemas/replay"
@@ -48,6 +49,7 @@ export default function Replay() {
   const setReplayData = useSetAtom(replayDataAtom)
   const setGameState = useSetAtom(gameStateAtom)
   const setDeckMetadata = useSetAtom(deckMetadataAtom)
+  const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
   const playReplay = useSetAtom(playReplayAtom)
   const stopReplay = useSetAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
@@ -561,6 +563,9 @@ export default function Replay() {
 
       // Set initial game state with restored images
       setGameState(replaySaveData.data.initialState)
+      
+      // Set initial state for reset functionality
+      setInitialStateAfterDeckLoad(replaySaveData.data.initialState)
 
       // Set replay data
       setReplayData({
