@@ -65,7 +65,7 @@ export function Zone({
   return (
     <div
       className={cn(
-        "zone relative h-14 sm:h-20 md:h-24 aspect-[59/86] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
+        "zone relative h-14 sm:h-20 md:h-24 w-[38px] sm:w-[55px] md:w-[66px] rounded-md border-2 border-dashed flex items-center justify-center transition-colors overflow-visible",
         typeStyles[type],
         isHovered && "border-4 border-blue-500 bg-blue-500/20",
         className,

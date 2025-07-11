@@ -649,8 +649,8 @@ export function GameFieldContent() {
             className={cn(
               "grid gap-1 sm:gap-2 p-1 sm:p-2 mx-auto relative overflow-visible",
               isLargeScreen
-                ? "grid-cols-[max-content_max-content_repeat(5,max-content)_max-content]"
-                : "grid-cols-[max-content_repeat(5,max-content)_max-content]",
+                ? "grid-cols-[93px_38px_repeat(5,38px)_auto] sm:grid-cols-[93px_55px_repeat(5,55px)_auto] md:grid-cols-[93px_66px_repeat(5,66px)_auto]"
+                : "grid-cols-[38px_repeat(5,38px)_auto] sm:grid-cols-[55px_repeat(5,55px)_auto] md:grid-cols-[66px_repeat(5,66px)_auto]",
             )}
           >
             {/* Side Free Zone (1024px and above) */}
