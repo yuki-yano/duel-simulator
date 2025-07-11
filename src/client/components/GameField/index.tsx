@@ -981,12 +981,12 @@ export function GameFieldContent() {
             <div>
               • <span className="text-yellow-400">Shift + ドラッグ</span>:
             </div>
-            <div className="ml-4 text-xs">- モンスター: 表側守備表示</div>
-            <div className="ml-4 text-xs">- 魔法・罠: セット</div>
+            <div className="ml-4 text-xs">- 空きゾーン: 守備表示/セット</div>
+            <div className="ml-4 text-xs">- カードがあるゾーン: 下に重ねる</div>
             <div>
-              • <span className="text-blue-400">カードの上にドロップ</span>: 重ねて配置
+              • <span className="text-blue-400">通常ドロップ</span>: 上に重ねる
             </div>
-            <div className="ml-4 text-xs">- モンスター/魔法罠/EMZゾーン</div>
+            <div className="ml-4 text-xs">- モンスター/魔法罠/EMZ/フリーゾーン</div>
             <div>
               • <span className="text-gray-400">右クリック</span>: カードメニュー
             </div>
