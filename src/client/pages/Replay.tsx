@@ -219,6 +219,8 @@ export default function Replay() {
                 extraMonsterZones: Array(2)
                   .fill(null)
                   .map(() => []),
+                freeZone: [],
+                sideFreeZone: [],
                 lifePoints: 8000,
               },
               opponent: {
@@ -237,6 +239,8 @@ export default function Replay() {
                 extraMonsterZones: Array(2)
                   .fill(null)
                   .map(() => []),
+                freeZone: [],
+                sideFreeZone: [],
                 lifePoints: 8000,
               },
             },
@@ -293,6 +297,8 @@ export default function Replay() {
           extraMonsterZones: Array(2)
             .fill(null)
             .map(() => []),
+          freeZone: [],
+          sideFreeZone: [],
           lifePoints: 8000,
         },
         opponent: {
@@ -311,6 +317,8 @@ export default function Replay() {
           extraMonsterZones: Array(2)
             .fill(null)
             .map(() => []),
+          freeZone: [],
+          sideFreeZone: [],
           lifePoints: 8000,
         },
       },
@@ -471,6 +479,8 @@ export default function Replay() {
                   extraMonsterZones: Array(2)
                     .fill(null)
                     .map(() => []),
+                  freeZone: [],
+                  sideFreeZone: [],
                   lifePoints: 8000,
                 },
                 opponent: {
@@ -489,6 +499,8 @@ export default function Replay() {
                   extraMonsterZones: Array(2)
                     .fill(null)
                     .map(() => []),
+                  freeZone: [],
+                  sideFreeZone: [],
                   lifePoints: 8000,
                 },
               },

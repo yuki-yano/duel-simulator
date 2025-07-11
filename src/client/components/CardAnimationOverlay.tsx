@@ -46,21 +46,17 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
         top: `${position.y}px`,
         transition: `all ${animation.duration ?? 300}ms ease-in-out`,
         width:
-          window.innerWidth >= 1024
-            ? "77px"
-            : window.innerWidth >= 768
-              ? "66px"
-              : window.innerWidth >= 640
-                ? "55px"
-                : "40px",
+          window.innerWidth >= 768
+            ? "66px"
+            : window.innerWidth >= 640
+              ? "55px"
+              : "40px",
         height:
-          window.innerWidth >= 1024
-            ? "112px"
-            : window.innerWidth >= 768
-              ? "96px"
-              : window.innerWidth >= 640
-                ? "80px"
-                : "56px",
+          window.innerWidth >= 768
+            ? "96px"
+            : window.innerWidth >= 640
+              ? "80px"
+              : "56px",
       }}
     >
       <img

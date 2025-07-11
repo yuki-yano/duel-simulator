@@ -4,7 +4,7 @@ export interface ZoneProps {
   className?: string
   label?: string
   children?: React.ReactNode
-  type: "monster" | "spell" | "field" | "extra" | "deck" | "emz" | "hand"
+  type: "monster" | "spell" | "field" | "extra" | "deck" | "emz" | "hand" | "free"
   isOpponent?: boolean
   cardCount?: number
   zone: ZoneId
@@ -16,7 +16,7 @@ export interface ZoneProps {
 }
 
 export interface GraveZoneProps {
-  type: "grave" | "banish"
+  type: "grave" | "banish" | "sideFree"
   cardCount: number
   label?: string
   className?: string

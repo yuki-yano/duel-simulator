@@ -28,6 +28,7 @@ export function Zone({
     deck: "bg-gray-500/5 border-gray-500/30 hover:border-gray-500/50",
     emz: "bg-indigo-500/5 border-indigo-500/30 hover:border-indigo-500/50",
     hand: isOpponent ? "bg-gray-700/10 border-gray-700/30" : "bg-blue-500/5 border-blue-500/30",
+    free: "bg-gray-600/5 border-gray-600/30 hover:border-gray-600/50",
   }
 
   const handleDragOver = (e: React.DragEvent) => {

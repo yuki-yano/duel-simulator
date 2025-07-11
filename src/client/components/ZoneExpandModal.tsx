@@ -45,7 +45,7 @@ export function ZoneExpandModal({
 
   // Card dimensions (same as graveyard)
   const cardHeightPx =
-    window.innerWidth >= 1024 ? 112 : window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+    window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
 
   // Calculate layout for 2 columns

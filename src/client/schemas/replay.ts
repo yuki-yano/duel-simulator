@@ -28,6 +28,8 @@ export const PlayerBoardSchema = z.object({
   deck: z.array(CardSchema),
   hand: z.array(CardSchema),
   extraMonsterZones: z.array(z.array(CardSchema)),
+  freeZone: z.array(CardSchema), // フィールド下のフリーゾーン
+  sideFreeZone: z.array(CardSchema), // 左側のフリーゾーン（1024px以上）
   lifePoints: z.number(),
 })
 
@@ -55,6 +57,8 @@ export const OperationZoneSchema = z.object({
     "deck",
     "hand",
     "extraMonsterZone",
+    "freeZone",
+    "sideFreeZone",
   ]),
   zoneIndex: z.number().optional(),
   insertPosition: z.union([z.number(), z.literal("last")]).optional(),

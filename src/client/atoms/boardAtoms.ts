@@ -80,6 +80,12 @@ function findMovedCards(
       // Extra deck
       const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
       if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck" } }
+      // Free zone
+      const freeZoneCard = board.freeZone.find((c) => c.id === cardId)
+      if (freeZoneCard) return { card: freeZoneCard, zone: { player, type: "freeZone" } }
+      // Side free zone
+      const sideFreeZoneCard = board.sideFreeZone.find((c) => c.id === cardId)
+      if (sideFreeZoneCard) return { card: sideFreeZoneCard, zone: { player, type: "sideFreeZone" } }
     }
     return null
   }
@@ -96,6 +102,8 @@ function findMovedCards(
     board.graveyard.forEach((c) => allCardIds.add(c.id))
     board.banished.forEach((c) => allCardIds.add(c.id))
     board.extraDeck.forEach((c) => allCardIds.add(c.id))
+    board.freeZone.forEach((c) => allCardIds.add(c.id))
+    board.sideFreeZone.forEach((c) => allCardIds.add(c.id))
   }
 
   // Check each card for position changes
@@ -150,6 +158,8 @@ const createInitialPlayerBoard = (): PlayerBoard => ({
   extraMonsterZones: Array(2)
     .fill(null)
     .map(() => []),
+  freeZone: [], // フィールド下のフリーゾーン
+  sideFreeZone: [], // 左側のフリーゾーン（1024px以上）
   lifePoints: 8000,
 })
 
@@ -676,6 +686,10 @@ function getZoneDisplayName(zone: ZoneId): string {
       return `${playerPrefix}フィールドゾーン`
     case "extraMonsterZone":
       return `${playerPrefix}エクストラモンスターゾーン${zone.index !== undefined ? zone.index + 1 : ""}`
+    case "freeZone":
+      return `${playerPrefix}フリーゾーン`
+    case "sideFreeZone":
+      return `${playerPrefix}サイドフリーゾーン`
     default:
       return zone.type
   }
@@ -694,6 +708,8 @@ function getOperationDescription(prevState: GameState, currentState: GameState):
     allZones.push({ player, zone: "banished" })
     allZones.push({ player, zone: "extraDeck" })
     allZones.push({ player, zone: "fieldZone" })
+    allZones.push({ player, zone: "freeZone" })
+    allZones.push({ player, zone: "sideFreeZone" })
     for (let i = 0; i < 5; i++) {
       allZones.push({ player, zone: "monsterZone", index: i })
       allZones.push({ player, zone: "spellTrapZone", index: i })
@@ -794,6 +810,10 @@ function getCardsInZone(state: GameState, player: "self" | "opponent", zone: Zon
       return playerBoard.banished
     case "extraDeck":
       return playerBoard.extraDeck
+    case "freeZone":
+      return playerBoard.freeZone
+    case "sideFreeZone":
+      return playerBoard.sideFreeZone
     default:
       return []
   }
@@ -838,6 +858,12 @@ function findCardInState(
     }
     if (board.extraDeck.find((c) => c.id === cardId)) {
       return { player, zone: "extraDeck" }
+    }
+    if (board.freeZone.find((c) => c.id === cardId)) {
+      return { player, zone: "freeZone" }
+    }
+    if (board.sideFreeZone.find((c) => c.id === cardId)) {
+      return { player, zone: "sideFreeZone" }
     }
   }
   return null
@@ -1799,7 +1825,11 @@ function performCardMove(
     let rotation = card.rotation
     let faceDown = card.faceDown
 
-    if (supportsRotation) {
+    // フリーゾーンへの移動時は守備表示・裏側表示を無効化
+    if (to.zone.type === "freeZone" || to.zone.type === "sideFreeZone") {
+      rotation = 0
+      faceDown = false
+    } else if (supportsRotation) {
       // Handle PC shift key (both defense and face down)
       if (options?.shiftKey === true) {
         // Monster zones: Face up defense position (表側守備表示)
@@ -2050,6 +2080,20 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
     }
   }
 
+  // Search free zone
+  for (let i = 0; i < player.freeZone.length; i++) {
+    if (player.freeZone[i].id === cardId) {
+      return { card: player.freeZone[i], zone: { player: "self", type: "freeZone", index: i } }
+    }
+  }
+
+  // Search side free zone
+  for (let i = 0; i < player.sideFreeZone.length; i++) {
+    if (player.sideFreeZone[i].id === cardId) {
+      return { card: player.sideFreeZone[i], zone: { player: "self", type: "sideFreeZone", index: i } }
+    }
+  }
+
   return null
 }
 
@@ -2121,6 +2165,20 @@ function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: strin
         const index = draft.extraDeck.findIndex((c) => c.id === cardId)
         if (index !== -1) {
           draft.extraDeck.splice(index, 1)
+        }
+        break
+      }
+      case "freeZone": {
+        const index = draft.freeZone.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.freeZone.splice(index, 1)
+        }
+        break
+      }
+      case "sideFreeZone": {
+        const index = draft.sideFreeZone.findIndex((c) => c.id === cardId)
+        if (index !== -1) {
+          draft.sideFreeZone.splice(index, 1)
         }
         break
       }
@@ -2248,6 +2306,28 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         }
         break
       }
+      case "freeZone": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.freeZone.length) {
+          // Insert card at specified position
+          draft.freeZone.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.freeZone.push(card)
+        }
+        break
+      }
+      case "sideFreeZone": {
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.sideFreeZone.length) {
+          // Insert card at specified position
+          draft.sideFreeZone.splice(zone.index, 0, card)
+        } else {
+          // Otherwise append to end
+          draft.sideFreeZone.push(card)
+        }
+        break
+      }
     }
   })
 }
@@ -2307,6 +2387,16 @@ function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): Player
       case "banished":
         if (zone.index !== undefined && zone.index < draft.banished.length) {
           draft.banished[zone.index] = card
+        }
+        break
+      case "freeZone":
+        if (zone.index !== undefined && zone.index < draft.freeZone.length) {
+          draft.freeZone[zone.index] = card
+        }
+        break
+      case "sideFreeZone":
+        if (zone.index !== undefined && zone.index < draft.sideFreeZone.length) {
+          draft.sideFreeZone[zone.index] = card
         }
         break
     }

@@ -21,6 +21,8 @@ export type ZoneType =
   | "deck"
   | "hand"
   | "extraMonsterZone"
+  | "freeZone"
+  | "sideFreeZone"
 
 // Zone identification (read-only location info)
 export interface ZoneId {

@@ -72,6 +72,7 @@ export function GameFieldContent() {
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
+  const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, undo] = useAtom(undoAtom)
@@ -322,6 +323,15 @@ export function GameFieldContent() {
     }
   }, [])
 
+  // Update isLargeScreen on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024)
+    }
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
   // Calculate grave zone positions dynamically
   useEffect(() => {
     const calculatePositions = () => {
@@ -476,7 +486,7 @@ export function GameFieldContent() {
                   onDrop={handleCardDrop}
                   onContextMenu={handleCardContextMenu}
                   onContextMenuClose={() => setContextMenu(null)}
-                  style={{ flex: "0 0 35%" }}
+                  style={{ width: "35%" }}
                 />
                 <DeckZone
                   type="extra"
@@ -487,7 +497,7 @@ export function GameFieldContent() {
                   onDrop={handleCardDrop}
                   onContextMenu={handleCardContextMenu}
                   onContextMenuClose={() => setContextMenu(null)}
-                  style={{ flex: "0 0 65%" }}
+                  style={{ width: "65%" }}
                 />
               </div>
             </div>
@@ -498,13 +508,60 @@ export function GameFieldContent() {
         <div className="mb-2 flex justify-center">
           <div
             ref={gridRef}
-            className="grid grid-cols-[max-content_repeat(5,max-content)_max-content] gap-1 sm:gap-2 p-1 sm:p-2 mx-auto relative overflow-visible"
+            className={cn(
+              "grid gap-1 sm:gap-2 p-1 sm:p-2 mx-auto relative overflow-visible",
+              isLargeScreen
+                ? "grid-cols-[max-content_max-content_repeat(5,max-content)_max-content]"
+                : "grid-cols-[max-content_repeat(5,max-content)_max-content]"
+            )}
           >
+            {/* Side Free Zone (1024px and above) */}
+            {isLargeScreen && (
+              <div
+                className={cn(
+                  "side-free-zone-self col-start-1 row-span-2",
+                  isOpponentFieldOpen ? "row-start-4" : "row-start-2"
+                )}
+                style={{
+                  marginTop:
+                    playerGraveMarginTop != null
+                      ? `${playerGraveMarginTop}px`
+                      : window.innerWidth >= 768
+                        ? "-116px"
+                        : window.innerWidth >= 640
+                          ? "-84px"
+                          : "-58px",
+                  zIndex: 10,
+                  position: "relative",
+                }}
+              >
+                <GraveZone
+                  type="sideFree"
+                  cardCount={playerBoard.sideFreeZone.length}
+                  cards={playerBoard.sideFreeZone}
+                  zone={{ player: "self", type: "sideFreeZone" }}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  style={{
+                    height:
+                      playerGraveHeight != null
+                        ? `${playerGraveHeight}px`
+                        : window.innerWidth >= 768
+                          ? "348px"
+                          : window.innerWidth >= 640
+                            ? "252px"
+                            : "174px",
+                    width: "93px",
+                  }}
+                />
+              </div>
+            )}
             {/* Opponent's Field (when open) */}
             {isOpponentFieldOpen && (
               <>
                 {/* Row 1: Opponent's Spell/Trap Zones + Grave/Banish */}
-                <div /> {/* Empty space above field zone */}
+                <div className={isLargeScreen ? "col-start-2" : ""} /> {/* Empty space above field zone */}
                 {[0, 1, 2, 3, 4].map((index) => (
                   <Zone
                     key={`opponent-spell-${index}`}
@@ -573,7 +630,7 @@ export function GameFieldContent() {
                 </div>
                 {/* Row 2: Opponent's Field + Monster Zones */}
                 <Zone
-                  className="row-start-2"
+                  className={cn("row-start-2", isLargeScreen ? "col-start-2" : "")}
                   type="field"
                   zone={{ player: "opponent", type: "fieldZone" }}
                   card={opponentBoard.fieldZone}
@@ -597,7 +654,11 @@ export function GameFieldContent() {
             )}
             {/* Row 3: EMZs (shared row between both players) */}
             <Zone
-              className={cn("col-start-3 emz-zone-self", isOpponentFieldOpen ? "row-start-3" : "row-start-1")}
+              className={cn(
+                "emz-zone-self",
+                isOpponentFieldOpen ? "row-start-3" : "row-start-1",
+                isLargeScreen ? "col-start-4" : "col-start-3"
+              )}
               type="emz"
               zone={{ player: "self", type: "extraMonsterZone", index: 0 }}
               cards={playerBoard.extraMonsterZones[0]}
@@ -606,7 +667,10 @@ export function GameFieldContent() {
               onContextMenuClose={() => setContextMenu(null)}
             />
             <Zone
-              className={cn("col-start-5", isOpponentFieldOpen ? "row-start-3" : "row-start-1")}
+              className={cn(
+                isOpponentFieldOpen ? "row-start-3" : "row-start-1",
+                isLargeScreen ? "col-start-6" : "col-start-5"
+              )}
               type="emz"
               zone={{ player: "self", type: "extraMonsterZone", index: 1 }}
               cards={playerBoard.extraMonsterZones[1]}
@@ -616,7 +680,10 @@ export function GameFieldContent() {
             />
             {/* Player's Field + Monster Zones */}
             <Zone
-              className={cn("", isOpponentFieldOpen ? "row-start-4" : "row-start-2")}
+              className={cn(
+                isOpponentFieldOpen ? "row-start-4" : "row-start-2",
+                isLargeScreen ? "col-start-2" : ""
+              )}
               type="field"
               zone={{ player: "self", type: "fieldZone" }}
               card={playerBoard.fieldZone}
@@ -721,8 +788,19 @@ export function GameFieldContent() {
               </div>
             </div>
             {/* Player's Spell/Trap Zones */}
-            <div className={cn("", isOpponentFieldOpen ? "row-start-5" : "row-start-3")} />{" "}
-            {/* Empty space below field zone */}
+            {/* Free Zone (below field zone) */}
+            <Zone
+              className={cn(
+                isOpponentFieldOpen ? "row-start-5" : "row-start-3",
+                isLargeScreen ? "col-start-2" : ""
+              )}
+              type="free"
+              zone={{ player: "self", type: "freeZone" }}
+              cards={playerBoard.freeZone}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+            />
             {[0, 1, 2, 3, 4].map((index) => (
               <Zone
                 key={`self-spell-${index}`}
@@ -753,7 +831,7 @@ export function GameFieldContent() {
               onContextMenu={handleCardContextMenu}
               onContextMenuClose={() => setContextMenu(null)}
               className="hand-zone-self"
-              style={{ flex: "0 0 35%" }}
+              style={{ width: "35%" }}
             />
             <DeckZone
               type="extra"
@@ -764,7 +842,7 @@ export function GameFieldContent() {
               onContextMenu={handleCardContextMenu}
               onContextMenuClose={() => setContextMenu(null)}
               className="extra-zone-self"
-              style={{ flex: "0 0 65%" }}
+              style={{ width: "65%" }}
             />
           </div>
           <DeckZone

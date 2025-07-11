@@ -185,6 +185,7 @@ export function GraveZone({
   const typeStyles = {
     grave: "bg-red-500/5 border-red-500/30 hover:border-red-500/50",
     banish: "bg-slate-500/5 border-slate-500/30 hover:border-slate-500/50",
+    sideFree: "bg-slate-600/5 border-slate-600/30 hover:border-slate-600/50",
   }
 
   const isHovered =
@@ -237,7 +238,7 @@ export function GraveZone({
                     <div
                       key={card.id}
                       data-card-id={card.id}
-                      className="absolute h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
+                      className="absolute h-14 sm:h-20 md:h-24 aspect-[59/86] rounded shadow-sm"
                       style={{
                         top: `${Math.round(cardPosition)}px`,
                         // Newer cards (lower index) should appear on top
@@ -267,7 +268,7 @@ export function GraveZone({
                   <div
                     key={card.id}
                     data-card-id={card.id}
-                    className="h-14 sm:h-20 md:h-24 lg:h-28 aspect-[59/86] rounded shadow-sm"
+                    className="h-14 sm:h-20 md:h-24 aspect-[59/86] rounded shadow-sm"
                     style={{
                       // Newer cards (lower index) should appear on top
                       zIndex: hoveredCardIndex === index ? 100 : orderedDisplayCards.length - index,
@@ -306,7 +307,7 @@ export function GraveZone({
         }
       >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-          {type === "grave" ? "墓地" : "除外"} ({cardCount})
+          {type === "grave" ? "墓地" : type === "banish" ? "除外" : "フリー"} ({cardCount})
         </span>
       </div>
     </div>
