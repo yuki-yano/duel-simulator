@@ -1082,7 +1082,12 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
       }
       break
     case "shuffle":
-      if (operation.from && operation.metadata && "newOrder" in operation.metadata && Array.isArray(operation.metadata.newOrder)) {
+      if (
+        operation.from &&
+        operation.metadata &&
+        "newOrder" in operation.metadata &&
+        Array.isArray(operation.metadata.newOrder)
+      ) {
         // Shuffle deck with the recorded order
         newState = produce(state, (draft) => {
           const player = draft.players[operation.from!.player]
@@ -1286,7 +1291,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
             id: uuidv4(),
             type: "move",
             cardId: card.id,
-            cardImageUrl: card.name === "トークン" ? TOKEN_IMAGE_DATA_URL : card.imageUrl,
+            cardImageUrl: card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl,
             fromPosition: prevPos,
             toPosition: prevPos, // Will be updated after state change
             startTime: Date.now(),
@@ -1404,6 +1409,18 @@ export const playReplayAtom = atom(null, async (get, set) => {
         await new Promise((resolve) =>
           setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
         )
+      } else if (operation.type === "summon") {
+        // Update state for summon (token generation)
+        updateReplayState(set, nextState, i + 1)
+        currentState = nextState
+
+        // Small delay to ensure DOM is updated and new card is rendered
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)))
+
+        // Wait for token to appear
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
+        )
       } else {
         // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
         updateReplayState(set, nextState, i + 1)
@@ -1438,6 +1455,11 @@ export const playReplayAtom = atom(null, async (get, set) => {
         // Wait for activation animation
         await new Promise((resolve) =>
           setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.EFFECT_ACTIVATION_WAIT, get)),
+        )
+      } else if (finalOperation.type === "summon") {
+        // Wait for summon animation (token generation)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
       }
     }
@@ -2511,104 +2533,108 @@ function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): Player
 }
 
 // Generate token card atom
-export const generateTokenAtom = atom(
-  null,
-  (get, set, targetPlayer: "self" | "opponent" = "self") => {
-    const state = get(gameStateAtom)
-    const tokenCard: Card = {
-      id: nanoid(),
-      name: "token",
-      imageUrl: TOKEN_IMAGE_DATA_URL,
-      position: "attack",
-      rotation: 0,
-      faceDown: false,
-      highlighted: false,
-      type: "monster",
+export const generateTokenAtom = atom(null, (get, set, targetPlayer: "self" | "opponent" = "self") => {
+  const state = get(gameStateAtom)
+  const tokenCard: Card = {
+    id: nanoid(),
+    name: "token",
+    imageUrl: TOKEN_IMAGE_DATA_URL,
+    position: "attack",
+    rotation: 0,
+    faceDown: false,
+    highlighted: false,
+    type: "monster",
+  }
+
+  // Create new state with token added to free zone
+  const newState = produce(state, (draft) => {
+    if (!draft.players[targetPlayer].freeZone) {
+      draft.players[targetPlayer].freeZone = []
     }
+    draft.players[targetPlayer].freeZone.push(tokenCard)
+  })
 
-    // Create new state with token added to free zone
-    const newState = produce(state, (draft) => {
-      if (!draft.players[targetPlayer].freeZone) {
-        draft.players[targetPlayer].freeZone = []
-      }
-      draft.players[targetPlayer].freeZone.push(tokenCard)
-    })
-
-    // Create operation for history (including token card data for replay)
-    const operation: GameOperation = {
-      id: nanoid(),
-      timestamp: Date.now(),
-      type: "summon",
-      cardId: tokenCard.id,
-      to: {
-        player: targetPlayer,
-        zoneType: "freeZone",
-        insertPosition: "last",
-      },
+  // Create operation for history (including token card data for replay)
+  const operation: GameOperation = {
+    id: nanoid(),
+    timestamp: Date.now(),
+    type: "summon",
+    cardId: tokenCard.id,
+    to: {
       player: targetPlayer,
-      metadata: { 
-        isToken: true,
-        tokenCard: tokenCard  // Include full card data for replay
-      },
-    }
+      zoneType: "freeZone",
+      insertPosition: "last",
+    },
+    player: targetPlayer,
+    metadata: {
+      isToken: true,
+      tokenCard: tokenCard, // Include full card data for replay
+    },
+  }
 
-    // Update state and history
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
-    set(operationsAtom, (prev) => [...prev, operation])
+  // Update state and history
+  set(gameStateAtom, newState)
+  addToHistory(get, set, newState)
+  set(operationsAtom, (prev) => [...prev, operation])
 
-    return tokenCard
-  },
-)
+  // Also record to replay operations if recording
+  if (get(replayRecordingAtom)) {
+    set(replayOperationsAtom, (prev) => [...prev, operation])
+  }
+
+  return tokenCard
+})
 
 // Shuffle deck atom
-export const shuffleDeckAtom = atom(
-  null,
-  (get, set, targetPlayer: "self" | "opponent" = "self") => {
-    const state = get(gameStateAtom)
-    const deck = state.players[targetPlayer].deck
-    
-    // Create a shuffled copy of card IDs
-    const cardIds = deck.map(card => card.id)
-    const shuffledIds = [...cardIds]
-    
-    // Fisher-Yates shuffle
-    for (let i = shuffledIds.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledIds[i], shuffledIds[j]] = [shuffledIds[j], shuffledIds[i]]
-    }
-    
-    // Create new state with shuffled deck
-    const newState = produce(state, (draft) => {
-      draft.players[targetPlayer].deck = shuffledIds.map((cardId) => {
-        const card = deck.find((c) => c.id === cardId)
-        if (!card) throw new Error(`Card ${cardId} not found in deck`)
-        return card
-      })
+export const shuffleDeckAtom = atom(null, (get, set, targetPlayer: "self" | "opponent" = "self") => {
+  const state = get(gameStateAtom)
+  const deck = state.players[targetPlayer].deck
+
+  // Create a shuffled copy of card IDs
+  const cardIds = deck.map((card) => card.id)
+  const shuffledIds = [...cardIds]
+
+  // Fisher-Yates shuffle
+  for (let i = shuffledIds.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffledIds[i], shuffledIds[j]] = [shuffledIds[j], shuffledIds[i]]
+  }
+
+  // Create new state with shuffled deck
+  const newState = produce(state, (draft) => {
+    draft.players[targetPlayer].deck = shuffledIds.map((cardId) => {
+      const card = deck.find((c) => c.id === cardId)
+      if (!card) throw new Error(`Card ${cardId} not found in deck`)
+      return card
     })
-    
-    // Create operation for history
-    const operation: GameOperation = {
-      id: nanoid(),
-      timestamp: Date.now(),
-      type: "shuffle",
-      cardId: "", // Not specific to a single card
-      from: {
-        player: targetPlayer,
-        zoneType: "deck",
-      },
+  })
+
+  // Create operation for history
+  const operation: GameOperation = {
+    id: nanoid(),
+    timestamp: Date.now(),
+    type: "shuffle",
+    cardId: "", // Not specific to a single card
+    from: {
       player: targetPlayer,
-      metadata: {
-        newOrder: shuffledIds, // Record the new order for replay
-      },
-    }
-    
-    // Update state and history
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
-    set(operationsAtom, (prev) => [...prev, operation])
-  },
-)
+      zoneType: "deck",
+    },
+    player: targetPlayer,
+    metadata: {
+      newOrder: shuffledIds, // Record the new order for replay
+    },
+  }
+
+  // Update state and history
+  set(gameStateAtom, newState)
+  addToHistory(get, set, newState)
+  set(operationsAtom, (prev) => [...prev, operation])
+
+  // Also record to replay operations if recording
+  if (get(replayRecordingAtom)) {
+    set(replayOperationsAtom, (prev) => [...prev, operation])
+  }
+})
 
 // Draw multiple cards atom
 // Force draw flag for 5-card draw confirmation
@@ -2623,54 +2649,54 @@ export const drawMultipleCardsAtom = atom(
       const player = state.players[targetPlayer]
       const forceDrawFlag = get(forceDraw5CardsAtom)
       const initialState = get(initialStateAfterDeckLoadAtom)
-      
+
       // Check if cards exist in zones other than hand, deck, and extra deck
-      const hasCardsInOtherZones = 
-        player.monsterZones.some(zone => zone.length > 0) ||
-        player.spellTrapZones.some(zone => zone.length > 0) ||
-        player.extraMonsterZones.some(zone => zone.length > 0) ||
+      const hasCardsInOtherZones =
+        player.monsterZones.some((zone) => zone.length > 0) ||
+        player.spellTrapZones.some((zone) => zone.length > 0) ||
+        player.extraMonsterZones.some((zone) => zone.length > 0) ||
         player.fieldZone !== null ||
         player.graveyard.length > 0 ||
         player.banished.length > 0 ||
         (player.freeZone?.length ?? 0) > 0 ||
         (player.sideFreeZone?.length ?? 0) > 0
-      
+
       if (hasCardsInOtherZones && !forceDrawFlag) {
         // Return warning flag instead of performing the action
         return { needsWarning: true }
       }
-      
+
       // Reset force draw flag
       if (forceDrawFlag) {
         set(forceDraw5CardsAtom, false)
       }
-      
+
       // Restore original deck contents from initial state (excluding tokens)
       if (!initialState) {
         console.error("No initial state available for 5-card draw")
         return { success: false }
       }
-      
+
       const initialDeck = initialState.players[targetPlayer].deck
       const initialHand = initialState.players[targetPlayer].hand
       const initialExtraDeck = initialState.players[targetPlayer].extraDeck
-      
+
       // Combine initial deck and hand cards (they were all originally in the deck)
       const allMainCards = [...initialDeck, ...initialHand]
       const extraCards = [...initialExtraDeck]
-      
+
       // Shuffle main deck cards
       const shuffledMainCards = [...allMainCards]
       for (let i = shuffledMainCards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledMainCards[i], shuffledMainCards[j]] = [shuffledMainCards[j], shuffledMainCards[i]]
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[shuffledMainCards[i], shuffledMainCards[j]] = [shuffledMainCards[j], shuffledMainCards[i]]
       }
-      
+
       // Create new state based on initial state
       const newState = produce(initialState, (draft) => {
         // Clear all zones first (reset to initial state)
         const targetPlayerBoard = draft.players[targetPlayer]
-        
+
         // Clear all zones
         targetPlayerBoard.monsterZones = [[], [], [], [], []]
         targetPlayerBoard.spellTrapZones = [[], [], [], [], []]
@@ -2680,50 +2706,50 @@ export const drawMultipleCardsAtom = atom(
         targetPlayerBoard.banished = []
         targetPlayerBoard.freeZone = []
         targetPlayerBoard.sideFreeZone = []
-        
+
         // Set up shuffled deck and draw 5
         targetPlayerBoard.hand = shuffledMainCards.slice(0, 5)
         targetPlayerBoard.deck = shuffledMainCards.slice(5)
         targetPlayerBoard.extraDeck = extraCards
       })
-      
+
       // Reset history to make this operation non-undoable
       // This is essentially a reset operation with shuffle and draw
       set(resetHistoryAtom, newState)
-      
+
       // Clear any active animations or UI state (same as resetToInitialStateAtom)
       set(selectedCardAtom, null)
       set(draggedCardAtom, null)
       set(hoveredZoneAtom, null)
       set(highlightedZonesAtom, [])
       set(cardAnimationsAtom, [])
-      
+
       // Stop any active replay
       if (get(replayPlayingAtom)) {
         set(stopReplayAtom)
       }
-      
+
       // Stop recording if active
       if (get(replayRecordingAtom)) {
         set(stopReplayRecordingAtom)
       }
-      
+
       return { success: true }
     }
-    
+
     // Standard draw logic for other counts
     for (let i = 0; i < count; i++) {
       const state = get(gameStateAtom)
       const deck = state.players[targetPlayer].deck
-      
+
       if (deck.length === 0) {
         // No more cards to draw
         break
       }
-      
+
       // Draw from top of deck (index 0)
       const cardToDraw = deck[0]
-      
+
       // Move card from deck to hand
       const fromPosition: Position = {
         zone: {
@@ -2733,7 +2759,7 @@ export const drawMultipleCardsAtom = atom(
         },
         cardId: cardToDraw.id,
       }
-      
+
       const toPosition: Position = {
         zone: {
           player: targetPlayer,
@@ -2741,11 +2767,11 @@ export const drawMultipleCardsAtom = atom(
         },
         cardId: cardToDraw.id,
       }
-      
+
       // Use moveCard atom to handle the move
       set(moveCardAtom, fromPosition, toPosition)
     }
-    
+
     return { success: true }
   },
 )
