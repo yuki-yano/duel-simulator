@@ -583,17 +583,17 @@ export default function Replay() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 sm:py-8">
-        <div className="max-w-2xl mx-auto mb-2 px-4">
-          <div className="flex items-center gap-4">
-            <Button asChild variant="outline" size="sm" className="shrink-0">
+      <div className="w-full py-4 sm:py-8">
+        <div className="max-w-2xl mx-auto mb-2">
+          <div className="flex items-center">
+            <Button asChild variant="outline" size="sm">
               <a href="/">
                 <span className="sm:hidden">←</span>
                 <span className="hidden sm:inline">← ホームに戻る</span>
               </a>
             </Button>
             <h1 className="text-2xl md:text-3xl font-bold flex-1 text-center">Duel Simulator - リプレイ</h1>
-            <div className="w-8 sm:w-[116px] shrink-0"></div>
+            <div className="w-[32px] sm:w-[116px]"></div>
           </div>
         </div>
 
