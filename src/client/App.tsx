@@ -137,7 +137,11 @@ export default function App() {
         {/* Image Processing Section */}
         {uploadedImage !== null && processedCards.length === 0 && (
           <div className="max-w-2xl mx-auto mb-4">
-            <DeckImageProcessor imageDataUrl={uploadedImage} onProcessComplete={handleProcessComplete} />
+            <DeckImageProcessor
+              imageDataUrl={uploadedImage}
+              onProcessComplete={handleProcessComplete}
+              onError={() => setUploadedImage(null)}
+            />
           </div>
         )}
 

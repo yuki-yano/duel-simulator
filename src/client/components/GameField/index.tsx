@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
+import { useLocation } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -68,6 +69,10 @@ export function GameField() {
 }
 
 export function GameFieldContent() {
+  const location = useLocation()
+  const isReplayMode = location.pathname.startsWith("/replay/")
+  const [hasEverPlayedInReplayMode, setHasEverPlayedInReplayMode] = useState(false)
+
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
@@ -113,6 +118,7 @@ export function GameFieldContent() {
 
   // Save replay dialog state
   const [showSaveReplayDialog, setShowSaveReplayDialog] = useState(false)
+  const [_isSavingReplay, setIsSavingReplay] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>("")
   const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
 
@@ -132,6 +138,13 @@ export function GameFieldContent() {
   const [, togglePause] = useAtom(toggleReplayPauseAtom)
   const [, stopReplay] = useAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
+
+  // Track if replay has ever been played in replay mode
+  useEffect(() => {
+    if (isReplayMode && isPlaying) {
+      setHasEverPlayedInReplayMode(true)
+    }
+  }, [isReplayMode, isPlaying])
 
   const playerBoard = gameState.players.self
   const opponentBoard = gameState.players.opponent
@@ -297,6 +310,8 @@ export function GameFieldContent() {
       } catch (error) {
         console.error("Failed to save replay:", error)
         alert("リプレイの保存に失敗しました")
+      } finally {
+        setIsSavingReplay(false)
       }
     },
     [replayData, deckMetadata],
@@ -408,28 +423,32 @@ export function GameFieldContent() {
   return (
     <>
       <div className="w-full max-w-6xl mx-auto p-2 sm:p-4">
-        {/* Replay recording controls */}
-        <ReplayControls
-          isRecording={isRecording}
-          isDeckLoaded={isDeckLoaded}
-          replayData={replayData}
-          replayStartIndex={replayStartIndex}
-          operations={operations}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onConfirmRecording={() => setShowRecordingConfirmDialog(true)}
-          isPlaying={isPlaying}
-          isPaused={isPaused}
-          currentReplayIndex={currentReplayIndex}
-          onPlayReplay={playReplay}
-          onTogglePause={togglePause}
-          onStopReplay={stopReplay}
-          replaySpeed={replaySpeed}
-          replayStartDelay={replayStartDelay}
-          onReplaySpeedChange={setReplaySpeed}
-          onReplayStartDelayChange={setReplayStartDelay}
-          onShareReplay={() => setShowSaveReplayDialog(true)}
-        />
+        {/* Replay recording controls - Show in normal mode or in replay mode after first play */}
+        {(!isReplayMode || hasEverPlayedInReplayMode) && (
+          <ReplayControls
+            isRecording={isRecording}
+            isDeckLoaded={isDeckLoaded}
+            replayData={replayData}
+            replayStartIndex={replayStartIndex}
+            operations={operations}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onConfirmRecording={() => setShowRecordingConfirmDialog(true)}
+            isPlaying={isPlaying}
+            isPaused={isPaused}
+            currentReplayIndex={currentReplayIndex}
+            onPlayReplay={() => {
+              void playReplay()
+            }}
+            onTogglePause={togglePause}
+            onStopReplay={stopReplay}
+            replaySpeed={replaySpeed}
+            replayStartDelay={replayStartDelay}
+            onReplaySpeedChange={setReplaySpeed}
+            onReplayStartDelayChange={setReplayStartDelay}
+            onShareReplay={() => setShowSaveReplayDialog(true)}
+          />
+        )}
 
         {/* Action buttons (Undo/Redo/Reset and mobile toggles) */}
         <ActionButtons

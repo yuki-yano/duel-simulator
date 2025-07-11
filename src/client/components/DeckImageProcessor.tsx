@@ -4,6 +4,7 @@ import { createWorker, PSM } from "tesseract.js"
 import { produce } from "immer"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
+import { ErrorDialog } from "@/client/components/ErrorDialog"
 import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
 
 interface DeckImageProcessorProps {
@@ -11,6 +12,7 @@ interface DeckImageProcessorProps {
   onProcessComplete: (cards: string[], metadata: DeckProcessMetadata) => void
   isReplayMode?: boolean
   onReplayStart?: () => void
+  onError?: () => void
 }
 
 export interface DeckProcessMetadata {
@@ -44,6 +46,7 @@ export function DeckImageProcessor({
   onProcessComplete,
   isReplayMode = false,
   onReplayStart,
+  onError,
 }: DeckImageProcessorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const debugCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -56,6 +59,7 @@ export function DeckImageProcessor({
   const [ocrProcessedCanvases, setOcrProcessedCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const setExtractedCards = useSetAtom(extractedCardsAtom)
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
 
   useEffect(() => {
     if (imageDataUrl) {
@@ -290,7 +294,7 @@ export function DeckImageProcessor({
         if (deckSections.length === 0) {
           console.warn("No deck sections found in OCR.")
           setIsAnalyzing(false)
-          alert("デッキ構造の検出に失敗しました。画像の品質を確認してください。")
+          setErrorDialog({ open: true, message: "デッキ構造の検出に失敗しました。画像の品質を確認してください。" })
           return
         }
 
@@ -348,7 +352,7 @@ export function DeckImageProcessor({
         }
       } catch (error) {
         console.error("Failed to analyze deck structure:", error)
-        alert("デッキ構造の解析に失敗しました。画像の品質を確認してください。")
+        setErrorDialog({ open: true, message: "デッキ構造の解析に失敗しました。画像の品質を確認してください。" })
       }
 
       setIsAnalyzing(false)
@@ -365,7 +369,7 @@ export function DeckImageProcessor({
     }
 
     if (!deckConfig) {
-      alert("先にデッキ構造を解析してください。")
+      setErrorDialog({ open: true, message: "先にデッキ構造を解析してください。" })
       return
     }
 
@@ -573,7 +577,7 @@ export function DeckImageProcessor({
       }
     } catch (error) {
       console.error("カードの切り出し処理でエラーが発生しました:", error)
-      alert("カードの切り出しに失敗しました。")
+      setErrorDialog({ open: true, message: "カードの切り出しに失敗しました。" })
     } finally {
       setIsProcessing(false)
     }
@@ -708,6 +712,21 @@ export function DeckImageProcessor({
           <p className="text-sm text-green-600">{processedCards.length}枚のカードを切り出しました</p>
         )}
       </div>
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={errorDialog.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setErrorDialog({ open: false, message: "" })
+            onError?.()
+          }
+        }}
+        title="エラー"
+        message={errorDialog.message}
+        actionLabel="OK"
+        actionHref="#"
+      />
     </Card>
   )
 }

@@ -1,5 +1,7 @@
 import { useState, useRef, ChangeEvent, DragEvent } from "react"
 import { Card } from "@/client/components/ui/Card"
+import { ErrorDialog } from "@/client/components/ErrorDialog"
+import { Upload } from "lucide-react"
 
 interface DeckImageUploaderProps {
   onImageUpload: (imageDataUrl: string) => void
@@ -8,10 +10,11 @@ interface DeckImageUploaderProps {
 export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showError, setShowError] = useState(false)
 
   const handleFileSelect = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      alert("画像ファイルを選択してください")
+      setShowError(true)
       return
     }
 
@@ -72,7 +75,9 @@ export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
 
         <div className="space-y-4">
-          <div className="text-4xl">📤</div>
+          <div className="flex justify-center">
+            <Upload className="w-12 h-12 text-gray-400" />
+          </div>
           <div>
             <p className="text-lg font-medium">デッキ画像をアップロード</p>
             <p className="text-sm text-gray-500 mt-1">クリックまたはドラッグ&ドロップ</p>
@@ -80,6 +85,16 @@ export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
           <p className="text-xs text-gray-400">遊戯王ニューロンからエクスポートした画像に対応</p>
         </div>
       </div>
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={showError}
+        onOpenChange={setShowError}
+        title="エラー"
+        message="画像ファイルを選択してください"
+        actionLabel="OK"
+        actionHref="#"
+      />
     </Card>
   )
 }

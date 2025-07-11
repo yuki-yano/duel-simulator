@@ -643,14 +643,12 @@ export default function Replay() {
           </div>
         )}
 
-        {/* Game Field */}
-        {!showDeckProcessor && (
-          <Card className="max-w-5xl mx-auto">
-            <CardContent>
-              <GameField />
-            </CardContent>
-          </Card>
-        )}
+        {/* Game Field - Always show */}
+        <Card className="max-w-5xl mx-auto">
+          <CardContent>
+            <GameField />
+          </CardContent>
+        </Card>
 
         {/* Auto Play Dialog */}
         {showAutoPlayDialog && (

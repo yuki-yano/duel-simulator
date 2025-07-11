@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
+import { Loader2 } from "lucide-react"
 import type { ReplayData } from "@client/atoms/boardAtoms"
 
 interface SaveReplayDialogProps {
@@ -8,9 +9,10 @@ interface SaveReplayDialogProps {
   replayData: ReplayData
   onSave: (title: string, description?: string) => void
   onCancel: () => void
+  isLoading?: boolean
 }
 
-export function SaveReplayDialog({ isOpen, onOpenChange, replayData, onSave, onCancel }: SaveReplayDialogProps) {
+export function SaveReplayDialog({ isOpen, onOpenChange, replayData, onSave, onCancel, isLoading = false }: SaveReplayDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
 
@@ -18,7 +20,7 @@ export function SaveReplayDialog({ isOpen, onOpenChange, replayData, onSave, onC
   const operationCount = replayData.operations.length
 
   const handleSave = () => {
-    if (title.trim()) {
+    if (title.trim() && !isLoading) {
       onSave(title.trim(), description.trim() || undefined)
     }
   }
@@ -66,16 +68,24 @@ export function SaveReplayDialog({ isOpen, onOpenChange, replayData, onSave, onC
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
+            disabled={isLoading}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-300 bg-white hover:bg-gray-100 h-10 px-4 py-2"
           >
             キャンセル
           </button>
           <button
             onClick={handleSave}
-            disabled={!title.trim()}
+            disabled={!title.trim() || isLoading}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 disabled:bg-gray-300"
           >
-            保存
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                保存中...
+              </>
+            ) : (
+              "保存"
+            )}
           </button>
         </div>
       </DialogContent>
