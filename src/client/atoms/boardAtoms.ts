@@ -2611,9 +2611,107 @@ export const shuffleDeckAtom = atom(
 )
 
 // Draw multiple cards atom
+// Force draw flag for 5-card draw confirmation
+export const forceDraw5CardsAtom = atom(false)
+
 export const drawMultipleCardsAtom = atom(
   null,
   (get, set, count: number = 5, targetPlayer: "self" | "opponent" = "self") => {
+    // Special handling for 5-card draw (reset + shuffle + draw)
+    if (count === 5) {
+      const state = get(gameStateAtom)
+      const player = state.players[targetPlayer]
+      const forceDrawFlag = get(forceDraw5CardsAtom)
+      const initialState = get(initialStateAfterDeckLoadAtom)
+      
+      // Check if cards exist in zones other than hand, deck, and extra deck
+      const hasCardsInOtherZones = 
+        player.monsterZones.some(zone => zone.length > 0) ||
+        player.spellTrapZones.some(zone => zone.length > 0) ||
+        player.extraMonsterZones.some(zone => zone.length > 0) ||
+        player.fieldZone !== null ||
+        player.graveyard.length > 0 ||
+        player.banished.length > 0 ||
+        (player.freeZone?.length ?? 0) > 0 ||
+        (player.sideFreeZone?.length ?? 0) > 0
+      
+      if (hasCardsInOtherZones && !forceDrawFlag) {
+        // Return warning flag instead of performing the action
+        return { needsWarning: true }
+      }
+      
+      // Reset force draw flag
+      if (forceDrawFlag) {
+        set(forceDraw5CardsAtom, false)
+      }
+      
+      // Restore original deck contents from initial state (excluding tokens)
+      if (!initialState) {
+        console.error("No initial state available for 5-card draw")
+        return { success: false }
+      }
+      
+      const initialDeck = initialState.players[targetPlayer].deck
+      const initialHand = initialState.players[targetPlayer].hand
+      const initialExtraDeck = initialState.players[targetPlayer].extraDeck
+      
+      // Combine initial deck and hand cards (they were all originally in the deck)
+      const allMainCards = [...initialDeck, ...initialHand]
+      const extraCards = [...initialExtraDeck]
+      
+      // Shuffle main deck cards
+      const shuffledMainCards = [...allMainCards]
+      for (let i = shuffledMainCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledMainCards[i], shuffledMainCards[j]] = [shuffledMainCards[j], shuffledMainCards[i]]
+      }
+      
+      // Create new state based on initial state
+      const newState = produce(initialState, (draft) => {
+        // Clear all zones first (reset to initial state)
+        const targetPlayerBoard = draft.players[targetPlayer]
+        
+        // Clear all zones
+        targetPlayerBoard.monsterZones = [[], [], [], [], []]
+        targetPlayerBoard.spellTrapZones = [[], [], [], [], []]
+        targetPlayerBoard.extraMonsterZones = [[], []]
+        targetPlayerBoard.fieldZone = null
+        targetPlayerBoard.graveyard = []
+        targetPlayerBoard.banished = []
+        targetPlayerBoard.freeZone = []
+        targetPlayerBoard.sideFreeZone = []
+        
+        // Set up shuffled deck and draw 5
+        targetPlayerBoard.hand = shuffledMainCards.slice(0, 5)
+        targetPlayerBoard.deck = shuffledMainCards.slice(5)
+        targetPlayerBoard.extraDeck = extraCards
+      })
+      
+      // Reset history to make this operation non-undoable
+      // This is essentially a reset operation with shuffle and draw
+      set(resetHistoryAtom, newState)
+      
+      // Clear any active animations or UI state (same as resetToInitialStateAtom)
+      set(selectedCardAtom, null)
+      set(draggedCardAtom, null)
+      set(hoveredZoneAtom, null)
+      set(highlightedZonesAtom, [])
+      set(cardAnimationsAtom, [])
+      
+      // Stop any active replay
+      if (get(replayPlayingAtom)) {
+        set(stopReplayAtom)
+      }
+      
+      // Stop recording if active
+      if (get(replayRecordingAtom)) {
+        set(stopReplayRecordingAtom)
+      }
+      
+      return { success: true }
+    }
+    
+    // Standard draw logic for other counts
     for (let i = 0; i < count; i++) {
       const state = get(gameStateAtom)
       const deck = state.players[targetPlayer].deck
@@ -2647,5 +2745,7 @@ export const drawMultipleCardsAtom = atom(
       // Use moveCard atom to handle the move
       set(moveCardAtom, fromPosition, toPosition)
     }
+    
+    return { success: true }
   },
 )

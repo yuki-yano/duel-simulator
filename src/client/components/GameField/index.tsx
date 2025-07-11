@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2 } from "lucide-react"
-import { useAtom, useAtomValue, useSetAtom } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
   Dialog,
@@ -48,6 +48,7 @@ import {
   shuffleDeckAtom,
   drawMultipleCardsAtom,
   hasEverPlayedInReplayModeAtom,
+  forceDraw5CardsAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
@@ -96,9 +97,10 @@ export function GameFieldContent() {
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
-  const generateToken = useSetAtom(generateTokenAtom)
-  const shuffleDeck = useSetAtom(shuffleDeckAtom)
-  const drawMultipleCards = useSetAtom(drawMultipleCardsAtom)
+  const [, generateToken] = useAtom(generateTokenAtom)
+  const [, shuffleDeck] = useAtom(shuffleDeckAtom)
+  const [, drawMultipleCards] = useAtom(drawMultipleCardsAtom)
+  const [, setForceDraw5Cards] = useAtom(forceDraw5CardsAtom)
   const [, undo] = useAtom(undoAtom)
   const [, redo] = useAtom(redoAtom)
   const canUndo = useAtomValue(canUndoAtom)
@@ -106,10 +108,10 @@ export function GameFieldContent() {
   const undoDescription = useAtomValue(undoOperationDescriptionAtom)
   const redoDescription = useAtomValue(redoOperationDescriptionAtom)
   const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
-  const rotateCard = useSetAtom(rotateCardAtom)
-  const activateEffect = useSetAtom(activateEffectAtom)
-  const flipCard = useSetAtom(flipCardAtom)
-  const toggleCardHighlight = useSetAtom(toggleCardHighlightAtom)
+  const [, rotateCard] = useAtom(rotateCardAtom)
+  const [, activateEffect] = useAtom(activateEffectAtom)
+  const [, flipCard] = useAtom(flipCardAtom)
+  const [, toggleCardHighlight] = useAtom(toggleCardHighlightAtom)
   const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
   const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
   const [contextMenu, setContextMenu] = useState<{
@@ -142,6 +144,9 @@ export function GameFieldContent() {
 
   // Token generation error dialog state
   const [showTokenLimitDialog, setShowTokenLimitDialog] = useState(false)
+
+  // 5-card draw warning dialog state
+  const [showDrawWarningDialog, setShowDrawWarningDialog] = useState(false)
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -274,8 +279,21 @@ export function GameFieldContent() {
 
   // Handle draw 5 cards
   const handleDraw5Cards = useCallback(() => {
-    drawMultipleCards(5, "self")
+    const result = drawMultipleCards(5, "self") as { needsWarning?: boolean; success?: boolean } | undefined
+    // Check if warning is needed
+    if (result?.needsWarning === true) {
+      setShowDrawWarningDialog(true)
+    }
   }, [drawMultipleCards])
+
+  // Handle confirmed 5-card draw after warning
+  const handleConfirmedDraw5Cards = useCallback(() => {
+    // Set force draw flag to bypass warning check
+    setForceDraw5Cards(true)
+    setShowDrawWarningDialog(false)
+    // Now perform the draw with the flag set
+    drawMultipleCards(5, "self")
+  }, [setForceDraw5Cards, drawMultipleCards])
 
   // Remove auto-close on drag - keep modal open
 
@@ -578,10 +596,10 @@ export function GameFieldContent() {
                     ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
                     : "bg-muted text-muted-foreground cursor-not-allowed",
                 )}
-                aria-label="Draw 5 cards"
+                aria-label="Random 5 draw"
               >
                 <Layers2 className="w-4 h-4" />
-                <span>5枚ドロー</span>
+                <span>ランダム5ドロー</span>
               </button>
               <button
                 onClick={handleGenerateToken}
@@ -1109,6 +1127,35 @@ export function GameFieldContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 5-card Draw Warning Dialog */}
+      <Dialog open={showDrawWarningDialog} onOpenChange={setShowDrawWarningDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>5枚ドロー確認</DialogTitle>
+            <DialogDescription>
+              手札・デッキ・エクストラデッキ以外のゾーンにカードが存在します。
+              5枚ドローを実行すると、全てのカードがデッキに戻され、シャッフル後に5枚を引き直します。
+              この操作は元に戻すことができません。
+              続行しますか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setShowDrawWarningDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={handleConfirmedDraw5Cards}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors"
+            >
+              5枚ドロー実行
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
       <div
