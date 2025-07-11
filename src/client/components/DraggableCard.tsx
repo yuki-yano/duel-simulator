@@ -4,6 +4,7 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
+import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 // Constants
 const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu (600ms)
@@ -448,7 +449,7 @@ export function DraggableCard({
       >
         <div className="relative w-full h-full">
           <img
-            src={card.imageUrl}
+            src={card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl}
             alt="Card"
             className={cn(
               "w-full h-full object-cover rounded transition-shadow duration-200",
@@ -537,7 +538,7 @@ export function DraggableCard({
                   }}
                 >
                   <img
-                    src={card.imageUrl}
+                    src={card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl}
                     alt="Dragging card"
                     draggable={false}
                     className="w-full h-full object-cover rounded shadow-xl"

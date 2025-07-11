@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
@@ -44,6 +44,7 @@ import {
   resetToInitialStateAtom,
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
+  generateTokenAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
@@ -59,6 +60,16 @@ import { DeckZone } from "./DeckZone"
 import { GraveZone } from "./GraveZone"
 import { ReplayControls } from "./ReplayControls"
 import { ActionButtons } from "./ActionButtons"
+import { isTokenLimitReached } from "@/client/utils/tokenCard"
+import { Button } from "@/client/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/client/components/ui/alert-dialog"
 
 export function GameField() {
   return (
@@ -81,6 +92,7 @@ export function GameFieldContent() {
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
+  const generateToken = useSetAtom(generateTokenAtom)
   const [, undo] = useAtom(undoAtom)
   const [, redo] = useAtom(redoAtom)
   const canUndo = useAtomValue(canUndoAtom)
@@ -121,6 +133,9 @@ export function GameFieldContent() {
   const [_isSavingReplay, setIsSavingReplay] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>("")
   const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
+
+  // Token generation error dialog state
+  const [showTokenLimitDialog, setShowTokenLimitDialog] = useState(false)
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -233,6 +248,18 @@ export function GameFieldContent() {
     },
     [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
   )
+
+  // Handle token generation
+  const handleGenerateToken = useCallback(() => {
+    // Check if free zone already has 5 or more cards
+    if (isTokenLimitReached(playerBoard.freeZone.length)) {
+      setShowTokenLimitDialog(true)
+      return
+    }
+
+    // Generate token using the atom
+    generateToken("self")
+  }, [playerBoard.freeZone.length, generateToken])
 
   // Remove auto-close on drag - keep modal open
 
@@ -475,7 +502,7 @@ export function GameFieldContent() {
 
         {/* Opponent's Area */}
         <div className="mb-2">
-          <div className="flex items-center justify-start mb-1">
+          <div className="flex items-center justify-start gap-2 mb-1">
             <button
               onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
               className={cn(
@@ -495,6 +522,20 @@ export function GameFieldContent() {
                   <span>相手フィールドの表示</span>
                 </>
               )}
+            </button>
+            <button
+              onClick={handleGenerateToken}
+              disabled={!isDeckLoaded || isPlaying}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                isDeckLoaded && !isPlaying
+                  ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed",
+              )}
+              aria-label="Generate token"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>トークン生成</span>
             </button>
           </div>
 
@@ -986,6 +1027,27 @@ export function GameFieldContent() {
           modalBounds={modalBounds}
         />
       )}
+
+      {/* Token Limit Error Dialog */}
+      <AlertDialog open={showTokenLimitDialog} onOpenChange={setShowTokenLimitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>トークン生成エラー</AlertDialogTitle>
+            <AlertDialogDescription>
+              フリーゾーンには既に5枚以上のカードが存在します。
+              これ以上トークンを生成することはできません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              onClick={() => setShowTokenLimitDialog(false)}
+              variant="default"
+            >
+              OK
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
       <div

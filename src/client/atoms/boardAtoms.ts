@@ -1,7 +1,9 @@
 import { atom } from "jotai"
 import type { Atom, WritableAtom } from "jotai"
 import { v4 as uuidv4 } from "uuid"
+import { nanoid } from "nanoid"
 import { produce } from "immer"
+import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import type {
   Card,
   GameState,
@@ -392,7 +394,7 @@ export const redoAtom = atom(null, async (get, set) => {
               id: uuidv4(),
               type: "move",
               cardId: card.id,
-              cardImageUrl: card.imageUrl,
+              cardImageUrl: card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl,
               fromPosition: prevPos,
               toPosition: prevPos, // Will be updated after state change
               startTime: Date.now(),
@@ -1039,6 +1041,22 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
         return newState
       }
       break
+    case "summon":
+      // Handle token summon operations
+      if (operation.to && operation.cardId && operation.metadata && "isToken" in operation.metadata) {
+        const metadata = operation.metadata as { isToken: boolean; tokenCard?: Card }
+        if (metadata.isToken && metadata.tokenCard) {
+          const tokenCard = metadata.tokenCard
+          newState = produce(state, (draft) => {
+            const targetPlayer = draft.players[operation.to!.player]
+            if (operation.to!.zoneType === "freeZone") {
+              targetPlayer.freeZone.push(tokenCard)
+            }
+          })
+          return newState
+        }
+      }
+      break
     case "draw":
       // Draw operations are handled by move operations
       break
@@ -1247,7 +1265,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
             id: uuidv4(),
             type: "move",
             cardId: card.id,
-            cardImageUrl: card.imageUrl,
+            cardImageUrl: card.name === "トークン" ? TOKEN_IMAGE_DATA_URL : card.imageUrl,
             fromPosition: prevPos,
             toPosition: prevPos, // Will be updated after state change
             startTime: Date.now(),
@@ -2460,3 +2478,50 @@ function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): Player
     }
   })
 }
+
+// Generate token card atom
+export const generateTokenAtom = atom(
+  null,
+  (get, set, targetPlayer: "self" | "opponent" = "self") => {
+    const state = get(gameStateAtom)
+    const tokenCard: Card = {
+      id: nanoid(),
+      name: "token",
+      imageUrl: TOKEN_IMAGE_DATA_URL,
+      position: "attack",
+      rotation: 0,
+      faceDown: false,
+      highlighted: false,
+      type: "monster",
+    }
+
+    // Create new state with token added to free zone
+    const newState = produce(state, (draft) => {
+      draft.players[targetPlayer].freeZone.push(tokenCard)
+    })
+
+    // Create operation for history (including token card data for replay)
+    const operation: GameOperation = {
+      id: nanoid(),
+      timestamp: Date.now(),
+      type: "summon",
+      cardId: tokenCard.id,
+      to: {
+        player: targetPlayer,
+        zoneType: "freeZone",
+        insertPosition: "last",
+      },
+      player: targetPlayer,
+      metadata: { 
+        isToken: true,
+        tokenCard: tokenCard  // Include full card data for replay
+      },
+    }
+
+    // Update state and operations
+    set(gameStateAtom, newState)
+    set(operationsAtom, (prev) => [...prev, operation])
+
+    return tokenCard
+  },
+)
