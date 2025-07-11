@@ -123,6 +123,37 @@ export function ReplayControls({
         </>
       )}
 
+      {/* Replay playback controls for mobile when playing - moved up */}
+      {isPlaying && (
+        <div className="flex sm:hidden items-center gap-2 w-full">
+          <button
+            onClick={() => {
+              if (isPaused) {
+                onPlayReplay()
+              } else {
+                onTogglePause()
+              }
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-blue-500 text-white hover:bg-blue-600"
+            aria-label={isPaused ? "Resume" : "Pause"}
+          >
+            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+            <span>{isPaused ? "再開" : "一時停止"}</span>
+          </button>
+          <button
+            onClick={() => onStopReplay()}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-gray-500 text-white hover:bg-gray-600"
+            aria-label="Stop replay"
+          >
+            <Square className="w-4 h-4" />
+            <span>停止</span>
+          </button>
+          <div className="flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+          </div>
+        </div>
+      )}
+
       {/* Replay controls on mobile - separate row */}
       {replayData && replayData.operations.length > 0 && !isRecording && (
         <div className="w-full sm:hidden mt-2">
@@ -240,36 +271,6 @@ export function ReplayControls({
         </div>
       )}
 
-      {/* Replay playback controls for mobile */}
-      {isPlaying && (
-        <div className="flex sm:hidden items-center gap-2">
-          <button
-            onClick={() => {
-              if (isPaused) {
-                onPlayReplay()
-              } else {
-                onTogglePause()
-              }
-            }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-blue-500 text-white hover:bg-blue-600"
-            aria-label={isPaused ? "Resume" : "Pause"}
-          >
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-            <span>{isPaused ? "再開" : "一時停止"}</span>
-          </button>
-          <button
-            onClick={() => onStopReplay()}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium bg-gray-500 text-white hover:bg-gray-600"
-            aria-label="Stop replay"
-          >
-            <Square className="w-4 h-4" />
-            <span>停止</span>
-          </button>
-          <div className="flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
-          </div>
-        </div>
-      )}
 
       {/* Recording status */}
       {isRecording && (
