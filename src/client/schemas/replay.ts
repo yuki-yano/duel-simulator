@@ -28,8 +28,10 @@ export const PlayerBoardSchema = z.object({
   deck: z.array(CardSchema),
   hand: z.array(CardSchema),
   extraMonsterZones: z.array(z.array(CardSchema)),
-  freeZone: z.array(CardSchema), // フィールド下のフリーゾーン
-  sideFreeZone: z.array(CardSchema), // 左側のフリーゾーン（1024px以上）
+  // フリーゾーン機能（2025年7月追加）
+  // 古いリプレイデータとの互換性のためオプショナル
+  freeZone: z.array(CardSchema).optional(), // フィールド下のフリーゾーン
+  sideFreeZone: z.array(CardSchema).optional(), // 左側のフリーゾーン（1024px以上）
   lifePoints: z.number(),
 })
 

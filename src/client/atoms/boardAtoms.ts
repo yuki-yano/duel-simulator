@@ -83,10 +83,10 @@ function findMovedCards(
       const extraDeckCard = board.extraDeck.find((c) => c.id === cardId)
       if (extraDeckCard) return { card: extraDeckCard, zone: { player, type: "extraDeck" } }
       // Free zone
-      const freeZoneCard = board.freeZone.find((c) => c.id === cardId)
+      const freeZoneCard = board.freeZone?.find((c) => c.id === cardId)
       if (freeZoneCard) return { card: freeZoneCard, zone: { player, type: "freeZone" } }
       // Side free zone
-      const sideFreeZoneCard = board.sideFreeZone.find((c) => c.id === cardId)
+      const sideFreeZoneCard = board.sideFreeZone?.find((c) => c.id === cardId)
       if (sideFreeZoneCard) return { card: sideFreeZoneCard, zone: { player, type: "sideFreeZone" } }
     }
     return null
@@ -104,8 +104,8 @@ function findMovedCards(
     board.graveyard.forEach((c) => allCardIds.add(c.id))
     board.banished.forEach((c) => allCardIds.add(c.id))
     board.extraDeck.forEach((c) => allCardIds.add(c.id))
-    board.freeZone.forEach((c) => allCardIds.add(c.id))
-    board.sideFreeZone.forEach((c) => allCardIds.add(c.id))
+    board.freeZone?.forEach((c) => allCardIds.add(c.id))
+    board.sideFreeZone?.forEach((c) => allCardIds.add(c.id))
   }
 
   // Check each card for position changes
@@ -811,9 +811,9 @@ function getCardsInZone(state: GameState, player: "self" | "opponent", zone: Zon
     case "extraDeck":
       return playerBoard.extraDeck
     case "freeZone":
-      return playerBoard.freeZone
+      return playerBoard.freeZone ?? []
     case "sideFreeZone":
-      return playerBoard.sideFreeZone
+      return playerBoard.sideFreeZone ?? []
     default:
       return []
   }
@@ -859,10 +859,10 @@ function findCardInState(
     if (board.extraDeck.find((c) => c.id === cardId)) {
       return { player, zone: "extraDeck" }
     }
-    if (board.freeZone.find((c) => c.id === cardId)) {
+    if (board.freeZone?.find((c) => c.id === cardId)) {
       return { player, zone: "freeZone" }
     }
-    if (board.sideFreeZone.find((c) => c.id === cardId)) {
+    if (board.sideFreeZone?.find((c) => c.id === cardId)) {
       return { player, zone: "sideFreeZone" }
     }
   }
@@ -1050,6 +1050,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
           newState = produce(state, (draft) => {
             const targetPlayer = draft.players[operation.to!.player]
             if (operation.to!.zoneType === "freeZone") {
+              if (!targetPlayer.freeZone) targetPlayer.freeZone = []
               targetPlayer.freeZone.push(tokenCard)
             }
           })
@@ -1949,7 +1950,7 @@ function performCardMove(
     } else if (to.zone.type === "freeZone") {
       // Also handle stackPosition for free zones
       const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
-      const existingCards = targetPlayer.freeZone
+      const existingCards = targetPlayer.freeZone ?? []
 
       if (options?.stackPosition === "bottom") {
         targetZone = { ...targetZone, cardIndex: existingCards.length }
@@ -2155,16 +2156,20 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
   }
 
   // Search free zone
-  for (let i = 0; i < player.freeZone.length; i++) {
-    if (player.freeZone[i].id === cardId) {
-      return { card: player.freeZone[i], zone: { player: "self", type: "freeZone", index: i } }
+  if (player.freeZone) {
+    for (let i = 0; i < player.freeZone.length; i++) {
+      if (player.freeZone[i].id === cardId) {
+        return { card: player.freeZone[i], zone: { player: "self", type: "freeZone", index: i } }
+      }
     }
   }
 
   // Search side free zone
-  for (let i = 0; i < player.sideFreeZone.length; i++) {
-    if (player.sideFreeZone[i].id === cardId) {
-      return { card: player.sideFreeZone[i], zone: { player: "self", type: "sideFreeZone", index: i } }
+  if (player.sideFreeZone) {
+    for (let i = 0; i < player.sideFreeZone.length; i++) {
+      if (player.sideFreeZone[i].id === cardId) {
+        return { card: player.sideFreeZone[i], zone: { player: "self", type: "sideFreeZone", index: i } }
+      }
     }
   }
 
@@ -2261,16 +2266,20 @@ function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: strin
         break
       }
       case "freeZone": {
-        const index = draft.freeZone.findIndex((c) => c.id === cardId)
-        if (index !== -1) {
-          draft.freeZone.splice(index, 1)
+        if (draft.freeZone) {
+          const index = draft.freeZone.findIndex((c) => c.id === cardId)
+          if (index !== -1) {
+            draft.freeZone.splice(index, 1)
+          }
         }
         break
       }
       case "sideFreeZone": {
-        const index = draft.sideFreeZone.findIndex((c) => c.id === cardId)
-        if (index !== -1) {
-          draft.sideFreeZone.splice(index, 1)
+        if (draft.sideFreeZone) {
+          const index = draft.sideFreeZone.findIndex((c) => c.id === cardId)
+          if (index !== -1) {
+            draft.sideFreeZone.splice(index, 1)
+          }
         }
         break
       }
@@ -2399,6 +2408,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         break
       }
       case "freeZone": {
+        if (!draft.freeZone) draft.freeZone = []
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.freeZone.length) {
@@ -2411,6 +2421,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         break
       }
       case "sideFreeZone": {
+        if (!draft.sideFreeZone) draft.sideFreeZone = []
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.sideFreeZone.length) {
@@ -2484,12 +2495,12 @@ function updateCardInZone(player: PlayerBoard, zone: ZoneId, card: Card): Player
         }
         break
       case "freeZone":
-        if (zone.index !== undefined && zone.index < draft.freeZone.length) {
+        if (draft.freeZone && zone.index !== undefined && zone.index < draft.freeZone.length) {
           draft.freeZone[zone.index] = card
         }
         break
       case "sideFreeZone":
-        if (zone.index !== undefined && zone.index < draft.sideFreeZone.length) {
+        if (draft.sideFreeZone && zone.index !== undefined && zone.index < draft.sideFreeZone.length) {
           draft.sideFreeZone[zone.index] = card
         }
         break
@@ -2515,6 +2526,9 @@ export const generateTokenAtom = atom(
 
     // Create new state with token added to free zone
     const newState = produce(state, (draft) => {
+      if (!draft.players[targetPlayer].freeZone) {
+        draft.players[targetPlayer].freeZone = []
+      }
       draft.players[targetPlayer].freeZone.push(tokenCard)
     })
 

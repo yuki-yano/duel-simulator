@@ -195,7 +195,7 @@ export function GameFieldContent() {
     } else if (to.type === "extraMonsterZone" && to.index !== undefined) {
       hasExistingCards = targetBoard.extraMonsterZones[to.index].length > 0
     } else if (to.type === "freeZone") {
-      hasExistingCards = targetBoard.freeZone.length > 0
+      hasExistingCards = (targetBoard.freeZone ?? []).length > 0
     }
 
     // Prepare options with separate mobile toggle states
@@ -257,14 +257,14 @@ export function GameFieldContent() {
   // Handle token generation
   const handleGenerateToken = useCallback(() => {
     // Check if free zone already has 5 or more cards
-    if (isTokenLimitReached(playerBoard.freeZone.length)) {
+    if (isTokenLimitReached((playerBoard.freeZone ?? []).length)) {
       setShowTokenLimitDialog(true)
       return
     }
 
     // Generate token using the atom
     generateToken("self")
-  }, [playerBoard.freeZone.length, generateToken])
+  }, [playerBoard.freeZone, generateToken])
 
   // Handle deck shuffle
   const handleShuffleDeck = useCallback(() => {
@@ -675,8 +675,8 @@ export function GameFieldContent() {
               >
                 <GraveZone
                   type="sideFree"
-                  cardCount={playerBoard.sideFreeZone.length}
-                  cards={playerBoard.sideFreeZone}
+                  cardCount={(playerBoard.sideFreeZone ?? []).length}
+                  cards={playerBoard.sideFreeZone ?? []}
                   zone={{ player: "self", type: "sideFreeZone" }}
                   onDrop={handleCardDrop}
                   onContextMenu={handleCardContextMenu}

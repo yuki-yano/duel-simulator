@@ -413,6 +413,17 @@ export default function Replay() {
           // 既にデッキメタデータがある場合はそれを使用
           if (deckMetadata != null) {
             console.log("Regenerating deck from image due to validation error...")
+            console.log("Validation error details:", {
+              error: validationError,
+              zodErrors: errors,
+              parsedData: (() => {
+                try {
+                  return JSON.parse(savedStateData.stateJson)
+                } catch {
+                  return "Failed to parse JSON"
+                }
+              })(),
+            })
 
             // バリデーションエラー時は新しいカードIDマッピングを生成
             const regeneratedCardIds = {
@@ -524,6 +535,21 @@ export default function Replay() {
 
       // バリデーション成功 - リプレイデータを使用
       const replaySaveData = validationResult.data
+
+      // 古いリプレイデータとの互換性対応
+      // freeZone, sideFreeZone が存在しない場合は空配列を設定
+      if (!replaySaveData.data.initialState.players.self.freeZone) {
+        replaySaveData.data.initialState.players.self.freeZone = []
+      }
+      if (!replaySaveData.data.initialState.players.self.sideFreeZone) {
+        replaySaveData.data.initialState.players.self.sideFreeZone = []
+      }
+      if (!replaySaveData.data.initialState.players.opponent.freeZone) {
+        replaySaveData.data.initialState.players.opponent.freeZone = []
+      }
+      if (!replaySaveData.data.initialState.players.opponent.sideFreeZone) {
+        replaySaveData.data.initialState.players.opponent.sideFreeZone = []
+      }
 
       // Extract card images from deck metadata
       const cardImageMap = await extractCardsFromDeckImage(deckMetadata, deckMetadata.deckCardIds)
