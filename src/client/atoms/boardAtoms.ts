@@ -1078,6 +1078,24 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
         return newState
       }
       break
+    case "shuffle":
+      if (operation.from && operation.metadata && "newOrder" in operation.metadata && Array.isArray(operation.metadata.newOrder)) {
+        // Shuffle deck with the recorded order
+        newState = produce(state, (draft) => {
+          const player = draft.players[operation.from!.player]
+          if (operation.from!.zoneType === "deck") {
+            const newOrder = (operation.metadata as { newOrder: string[] }).newOrder
+            // Reorder deck based on recorded card IDs
+            player.deck = newOrder.map((cardId) => {
+              const card = player.deck.find((c) => c.id === cardId)
+              if (!card) throw new Error(`Card ${cardId} not found in deck`)
+              return card
+            })
+          }
+        })
+        return newState
+      }
+      break
   }
 
   return newState
@@ -2518,10 +2536,100 @@ export const generateTokenAtom = atom(
       },
     }
 
-    // Update state and operations
+    // Update state and history
     set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
     set(operationsAtom, (prev) => [...prev, operation])
 
     return tokenCard
+  },
+)
+
+// Shuffle deck atom
+export const shuffleDeckAtom = atom(
+  null,
+  (get, set, targetPlayer: "self" | "opponent" = "self") => {
+    const state = get(gameStateAtom)
+    const deck = state.players[targetPlayer].deck
+    
+    // Create a shuffled copy of card IDs
+    const cardIds = deck.map(card => card.id)
+    const shuffledIds = [...cardIds]
+    
+    // Fisher-Yates shuffle
+    for (let i = shuffledIds.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledIds[i], shuffledIds[j]] = [shuffledIds[j], shuffledIds[i]]
+    }
+    
+    // Create new state with shuffled deck
+    const newState = produce(state, (draft) => {
+      draft.players[targetPlayer].deck = shuffledIds.map((cardId) => {
+        const card = deck.find((c) => c.id === cardId)
+        if (!card) throw new Error(`Card ${cardId} not found in deck`)
+        return card
+      })
+    })
+    
+    // Create operation for history
+    const operation: GameOperation = {
+      id: nanoid(),
+      timestamp: Date.now(),
+      type: "shuffle",
+      cardId: "", // Not specific to a single card
+      from: {
+        player: targetPlayer,
+        zoneType: "deck",
+      },
+      player: targetPlayer,
+      metadata: {
+        newOrder: shuffledIds, // Record the new order for replay
+      },
+    }
+    
+    // Update state and history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
+    set(operationsAtom, (prev) => [...prev, operation])
+  },
+)
+
+// Draw multiple cards atom
+export const drawMultipleCardsAtom = atom(
+  null,
+  (get, set, count: number = 5, targetPlayer: "self" | "opponent" = "self") => {
+    for (let i = 0; i < count; i++) {
+      const state = get(gameStateAtom)
+      const deck = state.players[targetPlayer].deck
+      
+      if (deck.length === 0) {
+        // No more cards to draw
+        break
+      }
+      
+      // Draw from top of deck (index 0)
+      const cardToDraw = deck[0]
+      
+      // Move card from deck to hand
+      const fromPosition: Position = {
+        zone: {
+          player: targetPlayer,
+          type: "deck",
+          index: 0,
+        },
+        cardId: cardToDraw.id,
+      }
+      
+      const toPosition: Position = {
+        zone: {
+          player: targetPlayer,
+          type: "hand",
+        },
+        cardId: cardToDraw.id,
+      }
+      
+      // Use moveCard atom to handle the move
+      set(moveCardAtom, fromPosition, toPosition)
+    }
   },
 )

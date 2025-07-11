@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, PlusCircle } from "lucide-react"
+import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2 } from "lucide-react"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
@@ -45,6 +45,8 @@ import {
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
   generateTokenAtom,
+  shuffleDeckAtom,
+  drawMultipleCardsAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
@@ -85,6 +87,7 @@ export function GameFieldContent() {
   const [hasEverPlayedInReplayMode, setHasEverPlayedInReplayMode] = useState(false)
 
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
+  const [isExtraActionsOpen, setIsExtraActionsOpen] = useState(false)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [mobileStackBottom, setMobileStackBottom] = useState(false)
@@ -93,6 +96,8 @@ export function GameFieldContent() {
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const generateToken = useSetAtom(generateTokenAtom)
+  const shuffleDeck = useSetAtom(shuffleDeckAtom)
+  const drawMultipleCards = useSetAtom(drawMultipleCardsAtom)
   const [, undo] = useAtom(undoAtom)
   const [, redo] = useAtom(redoAtom)
   const canUndo = useAtomValue(canUndoAtom)
@@ -260,6 +265,16 @@ export function GameFieldContent() {
     // Generate token using the atom
     generateToken("self")
   }, [playerBoard.freeZone.length, generateToken])
+
+  // Handle deck shuffle
+  const handleShuffleDeck = useCallback(() => {
+    shuffleDeck("self")
+  }, [shuffleDeck])
+
+  // Handle draw 5 cards
+  const handleDraw5Cards = useCallback(() => {
+    drawMultipleCards(5, "self")
+  }, [drawMultipleCards])
 
   // Remove auto-close on drag - keep modal open
 
@@ -504,6 +519,19 @@ export function GameFieldContent() {
         <div className="mb-2">
           <div className="flex items-center justify-start gap-2 mb-1">
             <button
+              onClick={() => setIsExtraActionsOpen(!isExtraActionsOpen)}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                isExtraActionsOpen
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/90",
+              )}
+              aria-label={isExtraActionsOpen ? "Hide extra actions" : "Show extra actions"}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+              <span>その他操作</span>
+            </button>
+            <button
               onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
               className={cn(
                 "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
@@ -523,21 +551,53 @@ export function GameFieldContent() {
                 </>
               )}
             </button>
-            <button
-              onClick={handleGenerateToken}
-              disabled={!isDeckLoaded || isPlaying}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
-                isDeckLoaded && !isPlaying
-                  ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                  : "bg-muted text-muted-foreground cursor-not-allowed",
-              )}
-              aria-label="Generate token"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>トークン生成</span>
-            </button>
           </div>
+          {isExtraActionsOpen && (
+            <div className="flex items-center justify-start gap-2 mb-1">
+              <button
+                onClick={handleShuffleDeck}
+                disabled={!isDeckLoaded || isPlaying}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  isDeckLoaded && !isPlaying
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Shuffle deck"
+              >
+                <Shuffle className="w-4 h-4" />
+                <span>シャッフル</span>
+              </button>
+              <button
+                onClick={handleDraw5Cards}
+                disabled={!isDeckLoaded || isPlaying}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  isDeckLoaded && !isPlaying
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Draw 5 cards"
+              >
+                <Layers2 className="w-4 h-4" />
+                <span>5枚ドロー</span>
+              </button>
+              <button
+                onClick={handleGenerateToken}
+                disabled={!isDeckLoaded || isPlaying}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  isDeckLoaded && !isPlaying
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Generate token"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>トークン生成</span>
+              </button>
+            </div>
+          )}
 
           {isOpponentFieldOpen && (
             <div className="space-y-2 mb-2">
