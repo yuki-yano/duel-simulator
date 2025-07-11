@@ -1872,8 +1872,10 @@ function performCardMove(
       draft.faceDown = faceDown
     })
 
-    // Remove card from source location using card ID
-    const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id)
+    // Remove card from source location using card ID and index
+    // Use cardIndex from 'from' parameter if available (for stacked cards), otherwise use the one from getCardById
+    const cardIndex = from.zone.cardIndex ?? actualFromZone.cardIndex
+    const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id, cardIndex)
 
     // Determine if this is a cross-zone move
     const isCrossZoneMove = actualFromZone.type !== to.zone.type
@@ -1918,6 +1920,15 @@ function performCardMove(
       } else {
         // Default to top (index 0)
         targetZone = { ...targetZone, cardIndex: 0 }
+      }
+    }
+
+    // Check if field zone is already occupied
+    if (to.zone.type === "fieldZone") {
+      const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
+      if (targetPlayer.fieldZone !== null) {
+        // Field zone already occupied - cancel the move
+        return state
       }
     }
 
@@ -2125,24 +2136,36 @@ function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: Z
 }
 
 // Helper function: Remove card from zone by ID
-function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string): PlayerBoard {
+function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string, cardIndex?: number): PlayerBoard {
   return produce(player, (draft) => {
     switch (zone.type) {
       case "monsterZone":
         if (zone.index !== undefined) {
           const cards = draft.monsterZones[zone.index]
-          const cardIndex = cards.findIndex((c) => c.id === cardId)
-          if (cardIndex !== -1) {
+          // If cardIndex is provided, use it directly (for stacked cards)
+          if (cardIndex !== undefined && cardIndex < cards.length && cards[cardIndex].id === cardId) {
             cards.splice(cardIndex, 1)
+          } else {
+            // Otherwise, search by ID
+            const foundIndex = cards.findIndex((c) => c.id === cardId)
+            if (foundIndex !== -1) {
+              cards.splice(foundIndex, 1)
+            }
           }
         }
         break
       case "spellTrapZone":
         if (zone.index !== undefined) {
           const cards = draft.spellTrapZones[zone.index]
-          const cardIndex = cards.findIndex((c) => c.id === cardId)
-          if (cardIndex !== -1) {
+          // If cardIndex is provided, use it directly (for stacked cards)
+          if (cardIndex !== undefined && cardIndex < cards.length && cards[cardIndex].id === cardId) {
             cards.splice(cardIndex, 1)
+          } else {
+            // Otherwise, search by ID
+            const foundIndex = cards.findIndex((c) => c.id === cardId)
+            if (foundIndex !== -1) {
+              cards.splice(foundIndex, 1)
+            }
           }
         }
         break
@@ -2154,9 +2177,15 @@ function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: strin
       case "extraMonsterZone":
         if (zone.index !== undefined) {
           const cards = draft.extraMonsterZones[zone.index]
-          const cardIndex = cards.findIndex((c) => c.id === cardId)
-          if (cardIndex !== -1) {
+          // If cardIndex is provided, use it directly (for stacked cards)
+          if (cardIndex !== undefined && cardIndex < cards.length && cards[cardIndex].id === cardId) {
             cards.splice(cardIndex, 1)
+          } else {
+            // Otherwise, search by ID
+            const foundIndex = cards.findIndex((c) => c.id === cardId)
+            if (foundIndex !== -1) {
+              cards.splice(foundIndex, 1)
+            }
           }
         }
         break

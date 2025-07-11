@@ -34,6 +34,10 @@ export function Zone({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     if (zone != null && draggedCard != null) {
+      // Don't highlight field zone if it already has a card
+      if (type === "field" && card != null) {
+        return
+      }
       setHoveredZone(zone)
     }
   }
