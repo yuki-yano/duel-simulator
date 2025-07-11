@@ -196,7 +196,7 @@ export function ActionButtons({
           aria-label="Toggle stack position"
         >
           <Layers className="w-4 h-4" />
-          <span>下に重ねる{mobileStackBottom ? " ON" : ""}</span>
+          <span>{mobileStackBottom ? "下に重ねる" : "上に重ねる"}</span>
         </button>
       </div>
     </div>
