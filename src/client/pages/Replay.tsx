@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { Card, CardContent } from "@client/components/ui/Card"
+import { Button } from "@client/components/ui/button"
+import { Copy } from "lucide-react"
 import { GameField } from "@client/components/GameField"
 import { loadGameState } from "@client/api/gameState"
 import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
@@ -345,9 +347,9 @@ export default function Replay() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 font-semibold">{error}</p>
-          <a href="/" className="mt-4 inline-block text-blue-600 hover:underline">
-            ホームに戻る
-          </a>
+          <Button asChild variant="link" className="mt-4">
+            <a href="/">ホームに戻る</a>
+          </Button>
         </div>
       </div>
     )
@@ -582,18 +584,29 @@ export default function Replay() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-center mb-4 sm:mb-8">Duel Simulator - リプレイ</h1>
+        <div className="max-w-2xl mx-auto mb-2 px-4">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="outline" size="sm" className="shrink-0">
+              <a href="/">
+                <span className="sm:hidden">←</span>
+                <span className="hidden sm:inline">← ホームに戻る</span>
+              </a>
+            </Button>
+            <h1 className="text-2xl md:text-3xl font-bold flex-1 text-center">Duel Simulator - リプレイ</h1>
+            <div className="w-8 sm:w-[116px] shrink-0"></div>
+          </div>
+        </div>
 
         {/* Replay Info */}
-        <div className="max-w-5xl mx-auto mb-4 text-center">
-          {title !== "" && <h2 className="text-xl font-semibold mb-2">{title}</h2>}
-          {description !== "" && <p className="text-gray-600 mb-2">{description}</p>}
-          <p className="text-sm text-gray-500">
+        <div className="max-w-2xl mx-auto mb-4 text-center">
+          {title !== "" && <h2 className="text-base md:text-lg mb-2">{title}</h2>}
+          {description !== "" && <p className="text-xs md:text-sm text-gray-600 mb-2">{description}</p>}
+          <p className="text-xs md:text-sm text-gray-500">
             リプレイID:{" "}
-            <span className="relative inline-block">
+            <span className="relative inline-flex items-center">
               <code
                 className={cn(
-                  "px-2 py-1 rounded cursor-pointer transition-all duration-300",
+                  "px-2 py-1 rounded cursor-pointer transition-all duration-300 inline-flex items-center gap-2",
                   copyFeedback ? "bg-gray-200 text-gray-700" : "bg-gray-100 hover:bg-gray-200",
                 )}
                 onClick={() => {
@@ -607,6 +620,7 @@ export default function Replay() {
                 title="クリックしてコピー"
               >
                 {id}
+                <Copy className="h-3 w-3 opacity-60" />
               </code>
               {copyFeedback && (
                 <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-600 text-white text-xs rounded whitespace-nowrap animate-fade-in-out">

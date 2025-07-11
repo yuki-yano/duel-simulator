@@ -115,11 +115,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-center mb-4 sm:mb-8">Duel Simulator</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-center mb-4 sm:mb-8">Duel Simulator</h1>
 
         {/* Image Upload Section */}
         {uploadedImage === null && (
-          <div className="max-w-2xl mx-auto mb-8 space-y-4">
+          <div className="max-w-2xl mx-auto mb-4 space-y-4">
             <DeckImageUploader onImageUpload={handleImageUpload} />
             <div className="text-center">
               <button
@@ -134,7 +134,7 @@ export default function App() {
 
         {/* Image Processing Section */}
         {uploadedImage !== null && processedCards.length === 0 && (
-          <div className="max-w-2xl mx-auto mb-8">
+          <div className="max-w-2xl mx-auto mb-4">
             <DeckImageProcessor imageDataUrl={uploadedImage} onProcessComplete={handleProcessComplete} />
           </div>
         )}
