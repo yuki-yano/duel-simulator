@@ -81,29 +81,25 @@ export function Zone({
       )}
       {/* Display cards - either single card or multiple cards */}
       {cards && cards.length > 0 ? (
-        <div
-          className="relative w-full h-full"
-          style={{
-            // Add padding to accommodate stacked cards
-            paddingRight:
-              cards.length > 1
-                ? `${(cards.length - 1) * (window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
-                : 0,
-            paddingBottom:
-              cards.length > 1
-                ? `${(cards.length - 1) * (window.innerWidth >= 768 ? 13 : window.innerWidth >= 640 ? 10 : 8)}px`
-                : 0,
-          }}
-        >
+        <div className="relative w-full h-full overflow-visible">
           {cards.map((c, index) => {
             // Calculate offset based on screen size
             let offsetPx: number
+            let cardWidth: string
+            let cardHeight: string
+            
             if (window.innerWidth >= 768) {
               offsetPx = 13 // Tablet and Desktop: 13px offset
+              cardHeight = "96px" // md:h-24
+              cardWidth = `${Math.round((96 * 59) / 86)}px` // Maintain aspect ratio
             } else if (window.innerWidth >= 640) {
               offsetPx = 10 // Small tablet: 10px offset
+              cardHeight = "80px" // sm:h-20
+              cardWidth = `${Math.round((80 * 59) / 86)}px` // Maintain aspect ratio
             } else {
               offsetPx = 8 // Mobile: 8px offset
+              cardHeight = "56px" // h-14
+              cardWidth = `${Math.round((56 * 59) / 86)}px` // Maintain aspect ratio
             }
 
             return (
@@ -114,8 +110,8 @@ export function Zone({
                 style={{
                   left: `${index * offsetPx}px`,
                   top: `${index * offsetPx}px`,
-                  width: "100%",
-                  height: "100%",
+                  width: cardWidth,
+                  height: cardHeight,
                   zIndex: cards.length - index,
                 }}
               >
