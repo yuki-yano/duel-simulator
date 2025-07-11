@@ -71,6 +71,7 @@ export function GameFieldContent() {
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
+  const [mobileStackBottom, setMobileStackBottom] = useState(false)
   const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
   const [gameState] = useAtom(gameStateAtom)
@@ -150,11 +151,26 @@ export function GameFieldContent() {
       return
     }
 
+    // Check if target zone has existing cards
+    let hasExistingCards = false
+    const targetBoard = to.player === "self" ? playerBoard : opponentBoard
+
+    if (to.type === "monsterZone" && to.index !== undefined) {
+      hasExistingCards = targetBoard.monsterZones[to.index].length > 0
+    } else if (to.type === "spellTrapZone" && to.index !== undefined) {
+      hasExistingCards = targetBoard.spellTrapZones[to.index].length > 0
+    } else if (to.type === "extraMonsterZone" && to.index !== undefined) {
+      hasExistingCards = targetBoard.extraMonsterZones[to.index].length > 0
+    } else if (to.type === "freeZone") {
+      hasExistingCards = targetBoard.freeZone.length > 0
+    }
+
     // Prepare options with separate mobile toggle states
     const options = {
-      shiftKey: shiftKey,
+      shiftKey: shiftKey === true && !hasExistingCards, // Only apply shiftKey for defense/face-down when zone is empty
       defenseMode: mobileDefenseMode,
       faceDownMode: mobileFaceDownMode,
+      stackPosition: (shiftKey === true && hasExistingCards) || mobileStackBottom ? ("bottom" as const) : undefined, // Stack at bottom when shift+drop on existing cards or mobile toggle is on
     }
 
     if (draggedCard.zone != null && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
@@ -431,8 +447,10 @@ export function GameFieldContent() {
           currentReplayIndex={currentReplayIndex}
           mobileDefenseMode={mobileDefenseMode}
           mobileFaceDownMode={mobileFaceDownMode}
+          mobileStackBottom={mobileStackBottom}
           onToggleDefenseMode={() => setMobileDefenseMode(!mobileDefenseMode)}
           onToggleFaceDownMode={() => setMobileFaceDownMode(!mobileFaceDownMode)}
+          onToggleStackBottom={() => setMobileStackBottom(!mobileStackBottom)}
           isTouchDevice={isTouchDevice}
         />
 
@@ -512,7 +530,7 @@ export function GameFieldContent() {
               "grid gap-1 sm:gap-2 p-1 sm:p-2 mx-auto relative overflow-visible",
               isLargeScreen
                 ? "grid-cols-[max-content_max-content_repeat(5,max-content)_max-content]"
-                : "grid-cols-[max-content_repeat(5,max-content)_max-content]"
+                : "grid-cols-[max-content_repeat(5,max-content)_max-content]",
             )}
           >
             {/* Side Free Zone (1024px and above) */}
@@ -520,7 +538,7 @@ export function GameFieldContent() {
               <div
                 className={cn(
                   "side-free-zone-self col-start-1 row-span-2",
-                  isOpponentFieldOpen ? "row-start-4" : "row-start-2"
+                  isOpponentFieldOpen ? "row-start-4" : "row-start-2",
                 )}
                 style={{
                   marginTop:
@@ -593,12 +611,7 @@ export function GameFieldContent() {
                             : window.innerWidth >= 640
                               ? "168px"
                               : "116px",
-                      width:
-                        window.innerWidth >= 768
-                          ? "82px"
-                          : window.innerWidth >= 640
-                            ? "70px"
-                            : "56px",
+                      width: window.innerWidth >= 768 ? "82px" : window.innerWidth >= 640 ? "70px" : "56px",
                     }}
                   />
                   <GraveZone
@@ -619,12 +632,7 @@ export function GameFieldContent() {
                             : window.innerWidth >= 640
                               ? "168px"
                               : "116px",
-                      width:
-                        window.innerWidth >= 768
-                          ? "82px"
-                          : window.innerWidth >= 640
-                            ? "70px"
-                            : "56px",
+                      width: window.innerWidth >= 768 ? "82px" : window.innerWidth >= 640 ? "70px" : "56px",
                     }}
                   />
                 </div>
@@ -657,7 +665,7 @@ export function GameFieldContent() {
               className={cn(
                 "emz-zone-self",
                 isOpponentFieldOpen ? "row-start-3" : "row-start-1",
-                isLargeScreen ? "col-start-4" : "col-start-3"
+                isLargeScreen ? "col-start-4" : "col-start-3",
               )}
               type="emz"
               zone={{ player: "self", type: "extraMonsterZone", index: 0 }}
@@ -669,7 +677,7 @@ export function GameFieldContent() {
             <Zone
               className={cn(
                 isOpponentFieldOpen ? "row-start-3" : "row-start-1",
-                isLargeScreen ? "col-start-6" : "col-start-5"
+                isLargeScreen ? "col-start-6" : "col-start-5",
               )}
               type="emz"
               zone={{ player: "self", type: "extraMonsterZone", index: 1 }}
@@ -680,10 +688,7 @@ export function GameFieldContent() {
             />
             {/* Player's Field + Monster Zones */}
             <Zone
-              className={cn(
-                isOpponentFieldOpen ? "row-start-4" : "row-start-2",
-                isLargeScreen ? "col-start-2" : ""
-              )}
+              className={cn(isOpponentFieldOpen ? "row-start-4" : "row-start-2", isLargeScreen ? "col-start-2" : "")}
               type="field"
               zone={{ player: "self", type: "fieldZone" }}
               card={playerBoard.fieldZone}
@@ -790,10 +795,7 @@ export function GameFieldContent() {
             {/* Player's Spell/Trap Zones */}
             {/* Free Zone (below field zone) */}
             <Zone
-              className={cn(
-                isOpponentFieldOpen ? "row-start-5" : "row-start-3",
-                isLargeScreen ? "col-start-2" : ""
-              )}
+              className={cn(isOpponentFieldOpen ? "row-start-5" : "row-start-3", isLargeScreen ? "col-start-2" : "")}
               type="free"
               zone={{ player: "self", type: "freeZone" }}
               cards={playerBoard.freeZone}
@@ -981,6 +983,10 @@ export function GameFieldContent() {
             </div>
             <div className="ml-4 text-xs">- モンスター: 表側守備表示</div>
             <div className="ml-4 text-xs">- 魔法・罠: セット</div>
+            <div>
+              • <span className="text-blue-400">カードの上にドロップ</span>: 重ねて配置
+            </div>
+            <div className="ml-4 text-xs">- モンスター/魔法罠/EMZゾーン</div>
             <div>
               • <span className="text-gray-400">右クリック</span>: カードメニュー
             </div>

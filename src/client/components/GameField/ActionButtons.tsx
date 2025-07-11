@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { cn } from "@client/lib/utils"
-import { Undo2, Redo2, RotateCcw, Shield, EyeOff } from "lucide-react"
+import { Undo2, Redo2, RotateCcw, Shield, EyeOff, Layers } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@client/components/ui/tooltip"
 
 interface ActionButtonsProps {
@@ -25,8 +25,10 @@ interface ActionButtonsProps {
   // Mobile mode toggles
   mobileDefenseMode: boolean
   mobileFaceDownMode: boolean
+  mobileStackBottom: boolean
   onToggleDefenseMode: () => void
   onToggleFaceDownMode: () => void
+  onToggleStackBottom: () => void
 
   // Touch device detection
   isTouchDevice: boolean
@@ -47,8 +49,10 @@ export function ActionButtons({
   currentReplayIndex,
   mobileDefenseMode,
   mobileFaceDownMode,
+  mobileStackBottom,
   onToggleDefenseMode,
   onToggleFaceDownMode,
+  onToggleStackBottom,
   isTouchDevice,
 }: ActionButtonsProps) {
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | "reset" | null>(null)
@@ -177,6 +181,22 @@ export function ActionButtons({
         >
           <EyeOff className="w-4 h-4" />
           <span>裏側表示{mobileFaceDownMode ? " ON" : ""}</span>
+        </button>
+        <button
+          onClick={() => onToggleStackBottom()}
+          disabled={!isDeckLoaded || isPlaying}
+          className={cn(
+            "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs font-medium",
+            mobileStackBottom
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : isDeckLoaded && !isPlaying
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed",
+          )}
+          aria-label="Toggle stack position"
+        >
+          <Layers className="w-4 h-4" />
+          <span>下に重ねる{mobileStackBottom ? " ON" : ""}</span>
         </button>
       </div>
     </div>

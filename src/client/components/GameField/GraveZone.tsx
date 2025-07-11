@@ -49,16 +49,14 @@ export function GraveZone({
   const orderedDisplayCards = type === "grave" ? [...displayCards].reverse() : displayCards
 
   // Card dimensions based on height (maintaining 59:86 ratio)
-  const cardHeightPx =
-    window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+  const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
   const spacing = 4 // gap between cards when not overlapping
 
   // Calculate available height for cards
   // Container has padding applied via className, so we need to subtract it
   // Also reserve space for the label at the bottom (20px)
-  const containerPaddingY =
-    window.innerWidth >= 768 ? 8 : window.innerWidth >= 640 ? 6 : 4 // py-2, py-1.5, py-1 in pixels
+  const containerPaddingY = window.innerWidth >= 768 ? 8 : window.innerWidth >= 640 ? 6 : 4 // py-2, py-1.5, py-1 in pixels
   const labelHeight = 20 // Height reserved for label
   const availableHeight = containerHeight - containerPaddingY * 2 - labelHeight
 

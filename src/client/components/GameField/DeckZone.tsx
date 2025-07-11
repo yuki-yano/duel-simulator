@@ -73,8 +73,7 @@ export function DeckZone({
         const relativeX = e.clientX - rect.left
 
         // Get card dimensions
-        const cardHeightPx =
-          window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+        const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
         const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
         const padding = window.innerWidth >= 640 ? 16 : 8
         const availableWidth = containerWidth - padding * 2
@@ -199,8 +198,7 @@ export function DeckZone({
 
   if (orientation === "horizontal") {
     // Card dimensions for horizontal layout (maintaining aspect ratio)
-    const cardHeightPx =
-      window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+    const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
     const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
     const padding = window.innerWidth >= 640 ? 16 : 8 // Container padding (smaller on mobile)
 
@@ -222,8 +220,7 @@ export function DeckZone({
         return "h-[244px] sm:h-[308px] md:h-[344px]"
       } else {
         // For 4+ rows, calculate dynamically with tighter spacing
-        const cardHeight =
-          window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+        const cardHeight = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
         const gap = 4 // gap between rows
         const paddingY = window.innerWidth >= 640 ? 12 : 8 // total vertical padding
         const totalHeight = cardHeight * rowCount + gap * (rowCount - 1) + paddingY
@@ -281,11 +278,7 @@ export function DeckZone({
                   const needsOverlap = totalWidth > availableWidth
 
                   return (
-                    <div
-                      key={rowIndex}
-                      className="relative h-14 sm:h-20 md:h-24"
-                      style={{ width: availableWidth }}
-                    >
+                    <div key={rowIndex} className="relative h-14 sm:h-20 md:h-24" style={{ width: availableWidth }}>
                       {rowCards.map((item, cardIndex) => {
                         const globalIndex = startIdx + cardIndex
                         const isCard = typeof item === "object" && item !== null

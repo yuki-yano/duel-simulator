@@ -16,6 +16,7 @@ import {
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
 } from "@client/atoms/boardAtoms"
+import { ExternalLink } from "lucide-react"
 
 export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
@@ -124,8 +125,9 @@ export default function App() {
             <div className="text-center">
               <button
                 onClick={() => setShowGoToReplayDialog(true)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2 mx-auto"
               >
+                <ExternalLink className="w-4 h-4" />
                 リプレイIDからリプレイを開く
               </button>
             </div>

@@ -413,9 +413,7 @@ export const redoAtom = atom(null, async (get, set) => {
         currentState = nextState
 
         // Small delay to ensure DOM is updated
-        await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
-        )
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)))
 
         // Update animations with actual end positions
         const updatedAnimations = animations.map((anim) => {
@@ -1014,7 +1012,7 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
         }
         // Perform the move operation with options (for shift key state)
         const options = operation.metadata as
-          | { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean }
+          | { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom" }
           | undefined
         newState = performCardMove(state, fromPosition, toPosition, options)
         return newState
@@ -1096,7 +1094,7 @@ const buildReplayHistory = (initialState: GameState, operations: GameOperation[]
 const updateReplayState = (
   set: <T>(atom: WritableAtom<T, [T], void>, value: T) => void,
   nextState: GameState,
-  index: number
+  index: number,
 ) => {
   set(gameStateAtom, nextState)
   set(gameHistoryIndexAtom, index)
@@ -1107,7 +1105,7 @@ const updateReplayState = (
 export const playReplayAtom = atom(null, async (get, set) => {
   const isPlaying = get(replayPlayingAtom)
   const isPaused = get(replayPausedAtom)
-  
+
   // Check if already playing and not paused
   if (isPlaying && !isPaused) {
     console.warn("Replay is already playing - blocking duplicate execution")
@@ -1134,7 +1132,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
   // Set playing state
   set(replayPlayingAtom, true)
   set(replayPausedAtom, false)
-  
+
   // Set initial state and build history only if starting fresh
   if (!isResume) {
     set(replayCurrentIndexAtom, 0)
@@ -1188,22 +1186,22 @@ export const playReplayAtom = atom(null, async (get, set) => {
   // undo/redo後も履歴が最新の状態を反映している
   const currentHistory = get(gameHistoryAtom)
   const lastHistoryEntry = currentHistory[currentHistory.length - 1]
-  
+
   // 履歴の最後のエントリには、現在までのすべての操作が含まれている
   const operationsToPlay = lastHistoryEntry?.operations ?? replayData.operations
 
   // Always recalculate from snapshot to ensure consistency
   let currentState: GameState = produce(replayData.startSnapshot, () => {})
-  
+
   // If resuming, apply operations up to the start index instantly
   if (isResume && startIndex > 0) {
     // Apply operations up to startIndex to reconstruct current state
     const operationsToApply = operationsToPlay.slice(0, startIndex)
-    
+
     for (const operation of operationsToApply) {
       currentState = applyOperation(currentState, operation)
     }
-    
+
     // Set the recalculated state
     set(gameStateAtom, currentState)
     set(gameHistoryIndexAtom, startIndex)
@@ -1268,9 +1266,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
       currentState = nextState
 
       // Small delay to ensure DOM is updated
-      await new Promise((resolve) =>
-        setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
-      )
+      await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)))
 
       // Update animations with actual end positions
       const updatedAnimations = animations.map((anim) => {
@@ -1302,9 +1298,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         currentState = nextState
 
         // Small delay to ensure DOM is updated
-        await new Promise((resolve) =>
-          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
-        )
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)))
 
         // Create activation animation
         const animationId = uuidv4()
@@ -1386,7 +1380,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
   // Wait for final animation to complete (only if not paused)
   const wasPausedDuringReplay = get(replayPausedAtom)
-  
+
   if (!wasPausedDuringReplay) {
     // Use operationsToPlay instead of replayData.operations for consistency
     const finalOperation = operationsToPlay[operationsToPlay.length - 1]
@@ -1412,21 +1406,21 @@ export const playReplayAtom = atom(null, async (get, set) => {
 
   // End replay - check if it was paused or completed
   const wasPaused = get(replayPausedAtom)
-  
+
   if (!wasPaused) {
     // Only set to false if not paused (i.e., replay completed naturally or was stopped)
     set(replayPlayingAtom, false)
     set(replayCurrentIndexAtom, null)
   }
   // If paused, keep replayPlayingAtom true and current index for resume
-  
+
   // No need to clear replay ID anymore
-  
+
   // Don't reset pause state here - let toggleReplayPauseAtom handle it
   if (!wasPaused) {
     set(replayPausedAtom, false)
   }
-  
+
   set(cardAnimationsAtom, [])
   set(highlightedZonesAtom, [])
 })
@@ -1435,7 +1429,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
 export const toggleReplayPauseAtom = atom(null, async (get, set) => {
   const isPlaying = get(replayPlayingAtom)
   const isPaused = get(replayPausedAtom)
-  
+
   if (isPlaying && !isPaused) {
     // Pause the replay - stop it completely but keep isPlaying true for UI
     set(replayPausedAtom, true)
@@ -1497,7 +1491,7 @@ export const moveCardAtom = atom(
     set,
     from: Position,
     to: Position,
-    options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean },
+    options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom" },
   ) => {
     const state = get(gameStateAtom)
     const newState = performCardMove(state, from, to, options)
@@ -1638,7 +1632,6 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
   try {
-
     // Get the card at this position to get its ID
     const state = get(gameStateAtom)
     const playerBoard = state.players[position.zone.player]
@@ -1795,7 +1788,7 @@ function performCardMove(
   state: GameState,
   from: Position,
   to: Position,
-  options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean },
+  options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom" },
 ): GameState {
   return produce(state, (draft) => {
     const fromPlayer = state.players[from.zone.player]
@@ -1889,10 +1882,44 @@ function performCardMove(
     const shouldKeepIndex =
       to.zone.type === "monsterZone" || to.zone.type === "spellTrapZone" || to.zone.type === "extraMonsterZone"
 
-    const targetZone =
+    let targetZone =
       isCrossZoneMove && !shouldKeepIndex
         ? { ...to.zone, index: undefined } // Clear index for non-zone-specific cross-zone moves
         : to.zone // Keep index for same-zone moves and zone-specific moves
+
+    // Calculate cardIndex based on stackPosition for stackable zones
+    if (shouldKeepIndex && targetZone.index !== undefined) {
+      const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
+      let existingCards: Card[] = []
+
+      // Get existing cards in the target zone
+      if (to.zone.type === "monsterZone") {
+        existingCards = targetPlayer.monsterZones[targetZone.index] ?? []
+      } else if (to.zone.type === "spellTrapZone") {
+        existingCards = targetPlayer.spellTrapZones[targetZone.index] ?? []
+      } else if (to.zone.type === "extraMonsterZone") {
+        existingCards = targetPlayer.extraMonsterZones[targetZone.index] ?? []
+      }
+
+      // Set cardIndex based on stackPosition
+      if (options?.stackPosition === "bottom") {
+        targetZone = { ...targetZone, cardIndex: existingCards.length }
+      } else {
+        // Default to top (index 0)
+        targetZone = { ...targetZone, cardIndex: 0 }
+      }
+    } else if (to.zone.type === "freeZone") {
+      // Also handle stackPosition for free zones
+      const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
+      const existingCards = targetPlayer.freeZone
+
+      if (options?.stackPosition === "bottom") {
+        targetZone = { ...targetZone, cardIndex: existingCards.length }
+      } else {
+        // Default to top (index 0)
+        targetZone = { ...targetZone, cardIndex: 0 }
+      }
+    }
 
     // Add card to new location
     const newToPlayer = addCardToZone(
@@ -2307,10 +2334,11 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         break
       }
       case "freeZone": {
-        // If index is specified, insert at that position
-        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.freeZone.length) {
+        // Use cardIndex for stack position, or index for legacy compatibility
+        const insertIndex = zone.cardIndex ?? zone.index
+        if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.freeZone.length) {
           // Insert card at specified position
-          draft.freeZone.splice(zone.index, 0, card)
+          draft.freeZone.splice(insertIndex, 0, card)
         } else {
           // Otherwise append to end
           draft.freeZone.push(card)
@@ -2318,10 +2346,11 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         break
       }
       case "sideFreeZone": {
-        // If index is specified, insert at that position
-        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.sideFreeZone.length) {
+        // Use cardIndex for stack position, or index for legacy compatibility
+        const insertIndex = zone.cardIndex ?? zone.index
+        if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.sideFreeZone.length) {
           // Insert card at specified position
-          draft.sideFreeZone.splice(zone.index, 0, card)
+          draft.sideFreeZone.splice(insertIndex, 0, card)
         } else {
           // Otherwise append to end
           draft.sideFreeZone.push(card)

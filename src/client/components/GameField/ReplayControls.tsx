@@ -271,7 +271,6 @@ export function ReplayControls({
         </div>
       )}
 
-
       {/* Recording status */}
       {isRecording && (
         <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-red-600">
