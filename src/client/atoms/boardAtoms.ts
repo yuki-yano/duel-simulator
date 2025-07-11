@@ -933,6 +933,8 @@ export const replayEndIndexAtom = atom<number | null>(null)
 export const replayDataAtom = atom<ReplayData | null>(null)
 // Separate operations list for replay recording to avoid undo/redo interference
 export const replayOperationsAtom = atom<GameOperation[]>([])
+// Track if replay has ever been played in replay mode
+export const hasEverPlayedInReplayModeAtom = atom<boolean>(false)
 
 // Replay playback atoms
 export const replayPlayingAtom = atom<boolean>(false)

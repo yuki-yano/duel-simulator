@@ -47,6 +47,7 @@ import {
   generateTokenAtom,
   shuffleDeckAtom,
   drawMultipleCardsAtom,
+  hasEverPlayedInReplayModeAtom,
 } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
@@ -84,7 +85,7 @@ export function GameField() {
 export function GameFieldContent() {
   const location = useLocation()
   const isReplayMode = location.pathname.startsWith("/replay/")
-  const [hasEverPlayedInReplayMode, setHasEverPlayedInReplayMode] = useState(false)
+  const [hasEverPlayedInReplayMode, setHasEverPlayedInReplayMode] = useAtom(hasEverPlayedInReplayModeAtom)
 
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [isExtraActionsOpen, setIsExtraActionsOpen] = useState(false)
@@ -164,7 +165,7 @@ export function GameFieldContent() {
     if (isReplayMode && isPlaying) {
       setHasEverPlayedInReplayMode(true)
     }
-  }, [isReplayMode, isPlaying])
+  }, [isReplayMode, isPlaying, setHasEverPlayedInReplayMode])
 
   const playerBoard = gameState.players.self
   const opponentBoard = gameState.players.opponent

@@ -18,6 +18,7 @@ import {
   playReplayAtom,
   stopReplayAtom,
   replayTotalOperationsAtom,
+  hasEverPlayedInReplayModeAtom,
 } from "@/client/atoms/boardAtoms"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
 import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema } from "@/client/schemas/replay"
@@ -51,6 +52,7 @@ export default function Replay() {
   const stopReplay = useSetAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
   const setReplayTotalOperations = useSetAtom(replayTotalOperationsAtom)
+  const setHasEverPlayedInReplayMode = useSetAtom(hasEverPlayedInReplayModeAtom)
   const [copyFeedback, setCopyFeedback] = useState(false)
 
   useEffect(() => {
@@ -568,12 +570,12 @@ export default function Replay() {
         endTime: Date.now() + replaySaveData.metadata.duration,
       })
 
+      // Set total operations for redo functionality
+      setReplayTotalOperations(replaySaveData.data.operations.length)
+
       // If we reach here, replay data should be valid - proceed with auto play dialog
       setShowDeckProcessor(false)
       setShowAutoPlayDialog(true)
-
-      // Set total operations for redo functionality
-      setReplayTotalOperations(replaySaveData.data.operations.length)
     } catch (e) {
       console.error("Failed to prepare replay:", e)
       setError("リプレイの準備に失敗しました")
@@ -603,6 +605,8 @@ export default function Replay() {
   // Handle auto play cancel
   const handleAutoPlayCancel = () => {
     setShowAutoPlayDialog(false)
+    // キャンセル時もリプレイコントロールボタンを表示するため、hasEverPlayedInReplayModeをtrueに設定
+    setHasEverPlayedInReplayMode(true)
     // キャンセル時も初期状態は維持する（デッキにカードが入った状態）
     // すでにhandleReplayStartでsnapshotを復元済みなので、追加の処理は不要
   }
