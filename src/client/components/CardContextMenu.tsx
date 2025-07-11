@@ -56,22 +56,22 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
     {
       id: "activate",
       label: "効果の発動",
-      enabled: card.faceDown !== true && !isReplayActive,
+      enabled: card.faceDown !== true && isReplayActive === false,
     },
     {
       id: "highlight",
       label: card.highlighted === true ? "ハイライトを解除" : "ハイライト",
-      enabled: !isReplayActive,
+      enabled: isReplayActive === false,
     },
     {
       id: "rotate",
       label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
-      enabled: isMonsterZone && !isReplayActive,
+      enabled: isMonsterZone && isReplayActive === false,
     },
     {
       id: "flip",
       label: card.faceDown === true ? "表側表示にする" : "裏側表示にする",
-      enabled: isMonsterSpellTrapZone && !isReplayActive,
+      enabled: isMonsterSpellTrapZone && isReplayActive === false,
     },
   ]
 

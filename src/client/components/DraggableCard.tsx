@@ -493,9 +493,16 @@ export function DraggableCard({
         dragOffsetRef.current &&
         createPortal(
           (() => {
-            // Use fixed size for drag image
-            const baseWidth = 60
-            const baseHeight = 86
+            // Use responsive size for drag image based on screen size
+            let baseHeight: number
+            if (window.innerWidth >= 768) {
+              baseHeight = 96 // md: 96px
+            } else if (window.innerWidth >= 640) {
+              baseHeight = 80 // sm: 80px
+            } else {
+              baseHeight = 56 // default: 56px
+            }
+            const baseWidth = Math.round((baseHeight * 59) / 86) // Maintain aspect ratio
 
             // Adjust container size based on rotation
             const isRotated = card.rotation === -90 || card.rotation === 90

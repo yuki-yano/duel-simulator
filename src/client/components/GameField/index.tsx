@@ -1,0 +1,917 @@
+import React, { useState, useRef, useEffect, useCallback } from "react"
+import { cn } from "@client/lib/utils"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
+import { TooltipProvider } from "@client/components/ui/tooltip"
+import {
+  gameStateAtom,
+  draggedCardAtom,
+  moveCardAtom,
+  undoAtom,
+  redoAtom,
+  canUndoAtom,
+  canRedoAtom,
+  undoOperationDescriptionAtom,
+  redoOperationDescriptionAtom,
+  operationsAtom,
+  replayRecordingAtom,
+  replayStartIndexAtom,
+  replayPlayingAtom,
+  replayPausedAtom,
+  replayCurrentIndexAtom,
+  replaySpeedAtom,
+  replayStartDelayAtom,
+  startReplayRecordingAtom,
+  stopReplayRecordingAtom,
+  playReplayAtom,
+  toggleReplayPauseAtom,
+  stopReplayAtom,
+  replayDataAtom,
+  isDeckLoadedAtom,
+  rotateCardAtom,
+  activateEffectAtom,
+  flipCardAtom,
+  toggleCardHighlightAtom,
+  resetToInitialStateAtom,
+  initialStateAfterDeckLoadAtom,
+  deckMetadataAtom,
+} from "@/client/atoms/boardAtoms"
+import type { Card as GameCard, ZoneId } from "@/shared/types/game"
+import { CardContextMenu } from "@/client/components/CardContextMenu"
+import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
+import { SaveReplayDialog } from "@/client/components/SaveReplayDialog"
+import { ShareUrlDisplay } from "@/client/components/ShareUrlDisplay"
+import { ZoneExpandModal } from "@/client/components/ZoneExpandModal"
+import { saveReplayData } from "@/client/api/gameState"
+import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
+import type { ReplaySaveData } from "@/shared/types/game"
+import { Zone } from "./Zone"
+import { DeckZone } from "./DeckZone"
+import { GraveZone } from "./GraveZone"
+import { ReplayControls } from "./ReplayControls"
+import { ActionButtons } from "./ActionButtons"
+
+export function GameField() {
+  return (
+    <TooltipProvider delayDuration={100}>
+      <GameFieldContent />
+    </TooltipProvider>
+  )
+}
+
+export function GameFieldContent() {
+  const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
+  const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
+  const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
+  const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
+  const [gameState] = useAtom(gameStateAtom)
+  const [, moveCard] = useAtom(moveCardAtom)
+  const [, undo] = useAtom(undoAtom)
+  const [, redo] = useAtom(redoAtom)
+  const canUndo = useAtomValue(canUndoAtom)
+  const canRedo = useAtomValue(canRedoAtom)
+  const undoDescription = useAtomValue(undoOperationDescriptionAtom)
+  const redoDescription = useAtomValue(redoOperationDescriptionAtom)
+  const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
+  const rotateCard = useSetAtom(rotateCardAtom)
+  const activateEffect = useSetAtom(activateEffectAtom)
+  const flipCard = useSetAtom(flipCardAtom)
+  const toggleCardHighlight = useSetAtom(toggleCardHighlightAtom)
+  const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
+  const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
+  const [contextMenu, setContextMenu] = useState<{
+    card: GameCard
+    zone: ZoneId
+    position: { x: number; y: number }
+    cardElement?: HTMLElement | null
+  } | null>(null)
+
+  // Zone expand modal state - only one modal can be open at a time
+  const [expandedZone, setExpandedZone] = useState<ZoneId | null>(null)
+  const [modalBounds, setModalBounds] = useState<{
+    top: number
+    left: number
+    right: number
+    bottom: number
+  }>({ top: 0, left: 0, right: 0, bottom: 0 })
+
+  // Recording confirmation dialog state
+  const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
+
+  // Reset confirmation dialog state
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
+
+  // Save replay dialog state
+  const [showSaveReplayDialog, setShowSaveReplayDialog] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string>("")
+  const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
+
+  // Replay atoms
+  const [isRecording] = useAtom(replayRecordingAtom)
+  const [replayStartIndex] = useAtom(replayStartIndexAtom)
+  const [isPlaying] = useAtom(replayPlayingAtom)
+  const [isPaused] = useAtom(replayPausedAtom)
+  const [currentReplayIndex] = useAtom(replayCurrentIndexAtom)
+  const [replayData] = useAtom(replayDataAtom)
+  const [replaySpeed, setReplaySpeed] = useAtom(replaySpeedAtom)
+  const [replayStartDelay, setReplayStartDelay] = useAtom(replayStartDelayAtom)
+  const operations = useAtomValue(operationsAtom)
+  const [, startRecording] = useAtom(startReplayRecordingAtom)
+  const [, stopRecording] = useAtom(stopReplayRecordingAtom)
+  const [, playReplay] = useAtom(playReplayAtom)
+  const [, togglePause] = useAtom(toggleReplayPauseAtom)
+  const [, stopReplay] = useAtom(stopReplayAtom)
+  const deckMetadata = useAtomValue(deckMetadataAtom)
+
+  const playerBoard = gameState.players.self
+  const opponentBoard = gameState.players.opponent
+
+  const draggedCard = useAtomValue(draggedCardAtom)
+
+  // Refs for dynamic height calculation
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [playerGraveHeight, setPlayerGraveHeight] = useState<number | null>(null)
+  const [playerGraveMarginTop, setPlayerGraveMarginTop] = useState<number | null>(null)
+  const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
+
+  const handleCardDrop = (from: ZoneId, to: ZoneId, shiftKey?: boolean) => {
+    console.log("handleCardDrop called:", { from, to, draggedCard })
+    if (!draggedCard) {
+      console.error("No dragged card available for drop operation")
+      return
+    }
+
+    // Prepare options with separate mobile toggle states
+    const options = {
+      shiftKey: shiftKey,
+      defenseMode: mobileDefenseMode,
+      faceDownMode: mobileFaceDownMode,
+    }
+
+    if (draggedCard.zone != null && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
+      // draggedCardのzone情報にindexを含める
+      const fromWithIndex = { ...from, index: draggedCard.zone.cardIndex }
+      // Include card ID for ID-based tracking
+      moveCard({ zone: fromWithIndex, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
+    } else {
+      // Include card ID even without index
+      moveCard({ zone: from, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
+    }
+  }
+
+  const handleCardContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => {
+    e.preventDefault()
+    const position =
+      "touches" in e ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }
+
+    // Store the card element that was clicked
+    const cardElement = (e.target as HTMLElement).closest('[draggable="true"]') as HTMLElement | null
+    setContextMenu({ card, zone, position, cardElement })
+  }, [])
+
+  const handleContextMenuAction = useCallback(
+    (action: string, card: GameCard) => {
+      try {
+        if (action === "rotate" && contextMenu) {
+          // Toggle between normal (0) and defense position (-90)
+          const newRotation = card.rotation === -90 ? 0 : -90
+          // Include card ID for ID-based tracking
+          rotateCard({ zone: contextMenu.zone, cardId: card.id }, newRotation)
+        } else if (action === "activate" && contextMenu) {
+          // Include card ID in the zone for accurate card identification
+          activateEffect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
+        } else if (action === "flip" && contextMenu) {
+          // Include card ID for ID-based tracking
+          flipCard({ zone: contextMenu.zone, cardId: card.id })
+        } else if (action === "highlight" && contextMenu) {
+          // Toggle highlight state
+          toggleCardHighlight({ zone: contextMenu.zone, cardId: card.id })
+        }
+      } catch (error) {
+        // Show error on mobile for debugging
+        alert(`Error in ${action}: ${error instanceof Error ? error.message : String(error)}`)
+        console.error(`Error in handleContextMenuAction (${action}):`, error)
+      }
+    },
+    [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
+  )
+
+  // Remove auto-close on drag - keep modal open
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Z for undo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo) {
+          undo()
+        }
+      }
+      // Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y for redo
+      if (((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) || ((e.metaKey || e.ctrlKey) && e.key === "y")) {
+        e.preventDefault()
+        if (canRedo) {
+          void redo()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [canUndo, canRedo, undo, redo])
+
+  // Handle replay save
+  const handleSaveReplay = useCallback(
+    async (title: string, description?: string) => {
+      if (!replayData || !deckMetadata) {
+        console.error("No replay data or deck metadata available")
+        return
+      }
+
+      try {
+        // Calculate deck image hash
+        const imageHash = await calculateImageHash(deckMetadata.imageDataUrl)
+
+        // First, save the deck image to ensure it exists in the database
+        await saveDeckImage({
+          hash: imageHash,
+          imageData: deckMetadata.imageDataUrl,
+          mainDeckCount: deckMetadata.mainDeckCount,
+          extraDeckCount: deckMetadata.extraDeckCount,
+          sourceWidth: deckMetadata.sourceWidth,
+          sourceHeight: deckMetadata.sourceHeight,
+        })
+
+        // Create ReplaySaveData
+        const saveData: ReplaySaveData = {
+          version: "1.0",
+          type: "replay",
+          data: {
+            initialState: replayData.startSnapshot,
+            operations: replayData.operations,
+            deckImageHash: imageHash,
+            deckCardIds: deckMetadata.deckCardIds,
+          },
+          metadata: {
+            title,
+            description,
+            createdAt: Date.now(),
+            duration: replayData.endTime !== undefined ? replayData.endTime - replayData.startTime : 0,
+            operationCount: replayData.operations.length,
+          },
+        }
+
+        // Save replay
+        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds)
+
+        // Show share URL dialog
+        setShareUrl(response.shareUrl)
+        setShowSaveReplayDialog(false)
+        setShowShareUrlDialog(true)
+      } catch (error) {
+        console.error("Failed to save replay:", error)
+        alert("リプレイの保存に失敗しました")
+      }
+    },
+    [replayData, deckMetadata],
+  )
+
+  // Function to open zone expand modal (only for self player)
+  const openZoneExpandModal = useCallback((zone: ZoneId) => {
+    // Calculate modal bounds based on current layout
+    const calculateModalBounds = () => {
+      // Get zone elements
+      const handElement = document.querySelector(".hand-zone-self")
+      const extraDeckElement = document.querySelector(".extra-zone-self")
+      const graveElement = document.querySelector(".grave-zone-self")
+      const banishElement = document.querySelector(".banish-zone-self")
+      const deckElement = document.querySelector(".deck-zone-self")
+
+      if (!handElement || !extraDeckElement || !graveElement || !banishElement || !deckElement) {
+        console.error("Could not find required zone elements")
+        return null
+      }
+
+      const _handRect = handElement.getBoundingClientRect()
+      const _extraDeckRect = extraDeckElement.getBoundingClientRect()
+      const graveRect = graveElement.getBoundingClientRect()
+      const banishRect = banishElement.getBoundingClientRect()
+      const deckRect = deckElement.getBoundingClientRect()
+
+      return {
+        top: Math.max(graveRect.bottom, banishRect.bottom) + window.scrollY,
+        left: graveRect.left + window.scrollX,
+        right: banishRect.right + window.scrollX,
+        bottom: deckRect.bottom + window.scrollY,
+      }
+    }
+
+    const bounds = calculateModalBounds()
+    if (bounds) {
+      setModalBounds(bounds)
+      setExpandedZone(zone)
+    }
+  }, [])
+
+  // Calculate grave zone positions dynamically
+  useEffect(() => {
+    const calculatePositions = () => {
+      if (!gridRef.current) return
+
+      // Get all zone elements
+      const emzElement = gridRef.current.querySelector(".emz-zone-self")
+      const spellTrapElement = gridRef.current.querySelector(".spell-trap-zone-self")
+      const opponentSpellTrapElement = gridRef.current.querySelector(".spell-trap-zone-opponent")
+      const opponentMonsterElement = gridRef.current.querySelector(".monster-zone-opponent")
+
+      if (emzElement && spellTrapElement) {
+        const emzRect = emzElement.getBoundingClientRect()
+        const spellTrapRect = spellTrapElement.getBoundingClientRect()
+
+        // Calculate player grave zone height
+        const height = spellTrapRect.bottom - emzRect.top
+        setPlayerGraveHeight(height)
+
+        // Calculate margin top to align with EMZ top
+        // Get the parent container of grave zones
+        const graveContainer = gridRef.current.querySelector(".player-grave-container")
+        if (graveContainer) {
+          const containerRect = graveContainer.getBoundingClientRect()
+          const marginTop = emzRect.top - containerRect.top
+          setPlayerGraveMarginTop(marginTop)
+        }
+      }
+
+      if (isOpponentFieldOpen && opponentSpellTrapElement && opponentMonsterElement) {
+        const spellTrapRect = opponentSpellTrapElement.getBoundingClientRect()
+        const monsterRect = opponentMonsterElement.getBoundingClientRect()
+
+        // Calculate opponent grave zone height (2 rows: spell/trap to monster)
+        const height = monsterRect.bottom - spellTrapRect.top
+        setOpponentGraveHeight(height)
+      }
+    }
+
+    // Initial calculation
+    calculatePositions()
+
+    // Recalculate on window resize
+    window.addEventListener("resize", calculatePositions)
+
+    // Observe grid changes
+    const resizeObserver = new ResizeObserver(calculatePositions)
+    if (gridRef.current) {
+      resizeObserver.observe(gridRef.current)
+    }
+
+    return () => {
+      window.removeEventListener("resize", calculatePositions)
+      resizeObserver.disconnect()
+    }
+  }, [isOpponentFieldOpen])
+
+  return (
+    <>
+      <div className="w-full max-w-6xl mx-auto p-2 sm:p-4">
+        {/* Replay recording controls */}
+        <ReplayControls
+          isRecording={isRecording}
+          isDeckLoaded={isDeckLoaded}
+          replayData={replayData}
+          replayStartIndex={replayStartIndex}
+          operations={operations}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          onConfirmRecording={() => setShowRecordingConfirmDialog(true)}
+          isPlaying={isPlaying}
+          isPaused={isPaused}
+          currentReplayIndex={currentReplayIndex}
+          onPlayReplay={playReplay}
+          onTogglePause={togglePause}
+          onStopReplay={stopReplay}
+          replaySpeed={replaySpeed}
+          replayStartDelay={replayStartDelay}
+          onReplaySpeedChange={setReplaySpeed}
+          onReplayStartDelayChange={setReplayStartDelay}
+          onShareReplay={() => setShowSaveReplayDialog(true)}
+        />
+
+        {/* Action buttons (Undo/Redo/Reset and mobile toggles) */}
+        <ActionButtons
+          canUndo={canUndo}
+          canRedo={canRedo}
+          undoDescription={undoDescription}
+          redoDescription={redoDescription}
+          onUndo={undo}
+          onRedo={redo}
+          isDeckLoaded={isDeckLoaded}
+          hasInitialState={!!initialStateAfterDeckLoad}
+          onReset={() => setShowResetConfirmDialog(true)}
+          isPlaying={isPlaying}
+          isPaused={isPaused}
+          currentReplayIndex={currentReplayIndex}
+          mobileDefenseMode={mobileDefenseMode}
+          mobileFaceDownMode={mobileFaceDownMode}
+          onToggleDefenseMode={() => setMobileDefenseMode(!mobileDefenseMode)}
+          onToggleFaceDownMode={() => setMobileFaceDownMode(!mobileFaceDownMode)}
+          isTouchDevice={isTouchDevice}
+        />
+
+        {/* Opponent's Area */}
+        <div className="mb-2">
+          <div className="flex items-center justify-start mb-1">
+            <button
+              onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                "bg-secondary text-secondary-foreground hover:bg-secondary/90",
+              )}
+              aria-label={isOpponentFieldOpen ? "Hide opponent field" : "Show opponent field"}
+            >
+              {isOpponentFieldOpen ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  <span>相手フィールドを非表示</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  <span>相手フィールドの表示</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {isOpponentFieldOpen && (
+            <div className="space-y-2 mb-2">
+              {/* Opponent's Deck */}
+              <DeckZone
+                type="deck"
+                zone={{ player: "opponent", type: "deck" }}
+                isOpponent={true}
+                cardCount={opponentBoard.deck.length}
+                cards={opponentBoard.deck}
+                onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
+                onContextMenuClose={() => setContextMenu(null)}
+              />
+
+              {/* Opponent's Hand & Extra Deck */}
+              <div className="flex gap-2 items-start">
+                <DeckZone
+                  type="hand"
+                  zone={{ player: "opponent", type: "hand" }}
+                  isOpponent={true}
+                  cardCount={opponentBoard.hand.length}
+                  cards={opponentBoard.hand}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  style={{ flex: "0 0 35%" }}
+                />
+                <DeckZone
+                  type="extra"
+                  zone={{ player: "opponent", type: "extraDeck" }}
+                  isOpponent={true}
+                  cardCount={opponentBoard.extraDeck.length}
+                  cards={opponentBoard.extraDeck}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  style={{ flex: "0 0 65%" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Combined Field Layout */}
+        <div className="mb-2 flex justify-center">
+          <div
+            ref={gridRef}
+            className="grid grid-cols-[max-content_repeat(5,max-content)_max-content] gap-1 sm:gap-2 p-1 sm:p-2 mx-auto relative overflow-visible"
+          >
+            {/* Opponent's Field (when open) */}
+            {isOpponentFieldOpen && (
+              <>
+                {/* Row 1: Opponent's Spell/Trap Zones + Grave/Banish */}
+                <div /> {/* Empty space above field zone */}
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <Zone
+                    key={`opponent-spell-${index}`}
+                    className={index === 0 ? "spell-trap-zone-opponent" : ""}
+                    type="spell"
+                    zone={{ player: "opponent", type: "spellTrapZone", index }}
+                    cards={opponentBoard.spellTrapZones[index]}
+                    onDrop={handleCardDrop}
+                    onContextMenu={handleCardContextMenu}
+                    onContextMenuClose={() => setContextMenu(null)}
+                  />
+                ))}
+                <div className="row-span-2 flex gap-1 sm:gap-2" style={{ zIndex: 10, position: "relative" }}>
+                  <GraveZone
+                    type="grave"
+                    cardCount={opponentBoard.graveyard.length}
+                    cards={opponentBoard.graveyard}
+                    zone={{ player: "opponent", type: "graveyard" }}
+                    onDrop={handleCardDrop}
+                    isOpponent={true}
+                    onContextMenu={handleCardContextMenu}
+                    onContextMenuClose={() => setContextMenu(null)}
+                    style={{
+                      height:
+                        opponentGraveHeight != null
+                          ? `${opponentGraveHeight}px`
+                          : window.innerWidth >= 768
+                            ? "200px"
+                            : window.innerWidth >= 640
+                              ? "168px"
+                              : "116px",
+                      width:
+                        window.innerWidth >= 768
+                          ? "82px"
+                          : window.innerWidth >= 640
+                            ? "70px"
+                            : "56px",
+                    }}
+                  />
+                  <GraveZone
+                    type="banish"
+                    cardCount={opponentBoard.banished.length}
+                    cards={opponentBoard.banished}
+                    zone={{ player: "opponent", type: "banished" }}
+                    onDrop={handleCardDrop}
+                    isOpponent={true}
+                    onContextMenu={handleCardContextMenu}
+                    onContextMenuClose={() => setContextMenu(null)}
+                    style={{
+                      height:
+                        opponentGraveHeight != null
+                          ? `${opponentGraveHeight}px`
+                          : window.innerWidth >= 768
+                            ? "200px"
+                            : window.innerWidth >= 640
+                              ? "168px"
+                              : "116px",
+                      width:
+                        window.innerWidth >= 768
+                          ? "82px"
+                          : window.innerWidth >= 640
+                            ? "70px"
+                            : "56px",
+                    }}
+                  />
+                </div>
+                {/* Row 2: Opponent's Field + Monster Zones */}
+                <Zone
+                  className="row-start-2"
+                  type="field"
+                  zone={{ player: "opponent", type: "fieldZone" }}
+                  card={opponentBoard.fieldZone}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                />
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <Zone
+                    key={`opponent-monster-${index}`}
+                    className={cn("row-start-2", index === 0 ? "monster-zone-opponent" : "")}
+                    type="monster"
+                    zone={{ player: "opponent", type: "monsterZone", index }}
+                    cards={opponentBoard.monsterZones[index]}
+                    onDrop={handleCardDrop}
+                    onContextMenu={handleCardContextMenu}
+                    onContextMenuClose={() => setContextMenu(null)}
+                  />
+                ))}
+              </>
+            )}
+            {/* Row 3: EMZs (shared row between both players) */}
+            <Zone
+              className={cn("col-start-3 emz-zone-self", isOpponentFieldOpen ? "row-start-3" : "row-start-1")}
+              type="emz"
+              zone={{ player: "self", type: "extraMonsterZone", index: 0 }}
+              cards={playerBoard.extraMonsterZones[0]}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+            />
+            <Zone
+              className={cn("col-start-5", isOpponentFieldOpen ? "row-start-3" : "row-start-1")}
+              type="emz"
+              zone={{ player: "self", type: "extraMonsterZone", index: 1 }}
+              cards={playerBoard.extraMonsterZones[1]}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+            />
+            {/* Player's Field + Monster Zones */}
+            <Zone
+              className={cn("", isOpponentFieldOpen ? "row-start-4" : "row-start-2")}
+              type="field"
+              zone={{ player: "self", type: "fieldZone" }}
+              card={playerBoard.fieldZone}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+            />
+            {[0, 1, 2, 3, 4].map((index) => (
+              <Zone
+                key={`self-monster-${index}`}
+                className={cn("", isOpponentFieldOpen ? "row-start-4" : "row-start-2")}
+                type="monster"
+                zone={{ player: "self", type: "monsterZone", index }}
+                cards={playerBoard.monsterZones[index]}
+                onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
+                onContextMenuClose={() => setContextMenu(null)}
+              />
+            ))}
+            {/* Player's Grave/Banish (spanning monster and spell rows) */}
+            <div
+              className={cn(
+                "row-span-2 flex gap-1 sm:gap-2 player-grave-container",
+                isOpponentFieldOpen ? "row-start-4" : "row-start-2",
+              )}
+            >
+              <div
+                className="flex gap-1 sm:gap-2"
+                style={{
+                  marginTop:
+                    playerGraveMarginTop != null
+                      ? `${playerGraveMarginTop}px`
+                      : window.innerWidth >= 768
+                        ? "-116px"
+                        : window.innerWidth >= 640
+                          ? "-84px"
+                          : "-58px",
+                  zIndex: 10,
+                  position: "relative",
+                }}
+              >
+                <GraveZone
+                  type="grave"
+                  cardCount={playerBoard.graveyard.length}
+                  cards={playerBoard.graveyard}
+                  zone={{ player: "self", type: "graveyard" }}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  onLabelClick={() => openZoneExpandModal({ player: "self", type: "graveyard" })}
+                  isDisabled={expandedZone?.type === "graveyard"}
+                  className="grave-zone-self"
+                  style={{
+                    height:
+                      playerGraveHeight != null
+                        ? `${playerGraveHeight}px`
+                        : window.innerWidth >= 768
+                          ? "348px"
+                          : window.innerWidth >= 640
+                            ? "252px"
+                            : "174px",
+                    width:
+                      window.innerWidth >= 1024
+                        ? "93px"
+                        : window.innerWidth >= 768
+                          ? "82px"
+                          : window.innerWidth >= 640
+                            ? "70px"
+                            : "56px",
+                  }}
+                />
+                <GraveZone
+                  type="banish"
+                  cardCount={playerBoard.banished.length}
+                  cards={playerBoard.banished}
+                  zone={{ player: "self", type: "banished" }}
+                  onDrop={handleCardDrop}
+                  onContextMenu={handleCardContextMenu}
+                  onContextMenuClose={() => setContextMenu(null)}
+                  onLabelClick={() => openZoneExpandModal({ player: "self", type: "banished" })}
+                  isDisabled={expandedZone?.type === "banished"}
+                  className="banish-zone-self"
+                  style={{
+                    height:
+                      playerGraveHeight != null
+                        ? `${playerGraveHeight}px`
+                        : window.innerWidth >= 768
+                          ? "348px"
+                          : window.innerWidth >= 640
+                            ? "252px"
+                            : "174px",
+                    width:
+                      window.innerWidth >= 1024
+                        ? "93px"
+                        : window.innerWidth >= 768
+                          ? "82px"
+                          : window.innerWidth >= 640
+                            ? "70px"
+                            : "56px",
+                  }}
+                />
+              </div>
+            </div>
+            {/* Player's Spell/Trap Zones */}
+            <div className={cn("", isOpponentFieldOpen ? "row-start-5" : "row-start-3")} />{" "}
+            {/* Empty space below field zone */}
+            {[0, 1, 2, 3, 4].map((index) => (
+              <Zone
+                key={`self-spell-${index}`}
+                className={cn(
+                  index === 0 ? "spell-trap-zone-self" : "",
+                  isOpponentFieldOpen ? "row-start-5" : "row-start-3",
+                )}
+                type="spell"
+                zone={{ player: "self", type: "spellTrapZone", index }}
+                cards={playerBoard.spellTrapZones[index]}
+                onDrop={handleCardDrop}
+                onContextMenu={handleCardContextMenu}
+                onContextMenuClose={() => setContextMenu(null)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Player's Hand & Extra Deck (Bottom) */}
+        <div className="space-y-2">
+          <div className="flex gap-2 items-start">
+            <DeckZone
+              type="hand"
+              zone={{ player: "self", type: "hand" }}
+              cardCount={playerBoard.hand.length}
+              cards={playerBoard.hand}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+              className="hand-zone-self"
+              style={{ flex: "0 0 35%" }}
+            />
+            <DeckZone
+              type="extra"
+              zone={{ player: "self", type: "extraDeck" }}
+              cardCount={playerBoard.extraDeck.length}
+              cards={playerBoard.extraDeck}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+              className="extra-zone-self"
+              style={{ flex: "0 0 65%" }}
+            />
+          </div>
+          <DeckZone
+            type="deck"
+            zone={{ player: "self", type: "deck" }}
+            cardCount={playerBoard.deck.length}
+            cards={playerBoard.deck}
+            onDrop={handleCardDrop}
+            onContextMenu={handleCardContextMenu}
+            onContextMenuClose={() => setContextMenu(null)}
+            className="deck-zone-self"
+          />
+        </div>
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <CardContextMenu
+          card={contextMenu.card}
+          zone={contextMenu.zone}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextMenuAction}
+          isReplayActive={isPlaying}
+        />
+      )}
+
+      {/* Card Animation Overlay */}
+      <CardAnimationOverlay />
+
+      {/* Recording Confirmation Dialog */}
+      <Dialog open={showRecordingConfirmDialog} onOpenChange={setShowRecordingConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>録画データの上書き確認</DialogTitle>
+            <DialogDescription>
+              既に録画されたリプレイデータが存在します。 新しい録画を開始すると、現在のリプレイデータは上書きされます。
+              続行しますか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setShowRecordingConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={() => {
+                setShowRecordingConfirmDialog(false)
+                startRecording()
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
+            >
+              録画開始
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetConfirmDialog} onOpenChange={setShowResetConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ゲーム状態のリセット確認</DialogTitle>
+            <DialogDescription>
+              現在のゲーム状態をリセットして、デッキ読み込み直後の状態に戻します。 この操作は元に戻すことができません。
+              続行しますか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setShowResetConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={() => {
+                setShowResetConfirmDialog(false)
+                resetToInitialState()
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors"
+            >
+              リセット
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Replay Dialog */}
+      {replayData && (
+        <SaveReplayDialog
+          isOpen={showSaveReplayDialog}
+          onOpenChange={setShowSaveReplayDialog}
+          replayData={replayData}
+          onSave={handleSaveReplay}
+          onCancel={() => setShowSaveReplayDialog(false)}
+        />
+      )}
+
+      {/* Share URL Dialog */}
+      <ShareUrlDisplay
+        isOpen={showShareUrlDialog}
+        onOpenChange={setShowShareUrlDialog}
+        shareUrl={shareUrl}
+        onClose={() => setShowShareUrlDialog(false)}
+      />
+
+      {/* Zone Expand Modal */}
+      {expandedZone && (
+        <ZoneExpandModal
+          isOpen={true}
+          onClose={() => setExpandedZone(null)}
+          zone={expandedZone}
+          cards={expandedZone.type === "graveyard" ? playerBoard.graveyard : playerBoard.banished}
+          onDrop={handleCardDrop}
+          onContextMenu={handleCardContextMenu}
+          onContextMenuClose={() => setContextMenu(null)}
+          modalBounds={modalBounds}
+        />
+      )}
+
+      {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
+      <div
+        className={cn(
+          "hidden md:block fixed bottom-4 right-4 max-w-xs",
+          isTouchDevice && "md:hidden lg:hidden", // Hide on touch devices regardless of screen size
+        )}
+      >
+        <div className="bg-gray-800/90 text-white rounded-lg p-3 text-xs">
+          <div className="font-semibold mb-1">操作ヒント</div>
+          <div className="space-y-1 text-gray-300">
+            <div>
+              • <span className="text-yellow-400">Shift + ドラッグ</span>:
+            </div>
+            <div className="ml-4 text-xs">- モンスター: 表側守備表示</div>
+            <div className="ml-4 text-xs">- 魔法・罠: セット</div>
+            <div>
+              • <span className="text-gray-400">右クリック</span>: カードメニュー
+            </div>
+            <div>
+              • <span className="text-gray-400">Ctrl/Cmd + Z/Y</span>: 元に戻す/やり直し
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
