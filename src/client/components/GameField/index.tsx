@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@client/components/ui/dialog"
 import { TooltipProvider } from "@client/components/ui/tooltip"
+import { HelpButton } from "@client/components/HelpButton"
 import {
   gameStateAtom,
   draggedCardAtom,
@@ -1018,6 +1019,9 @@ export function GameFieldContent() {
 
       {/* Card Animation Overlay */}
       <CardAnimationOverlay />
+
+      {/* Help Button for Touch Devices */}
+      {isTouchDevice && <HelpButton />}
 
       {/* Recording Confirmation Dialog */}
       <Dialog open={showRecordingConfirmDialog} onOpenChange={setShowRecordingConfirmDialog}>
