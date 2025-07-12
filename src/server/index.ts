@@ -264,6 +264,14 @@ app.get("/api/deck-images/:hash", async (c) => {
   }
 })
 
+// Handle CORS preflight for deck image
+app.options("/api/deck-images/:hash/image", async (c) => {
+  c.header("Access-Control-Allow-Origin", "*")
+  c.header("Access-Control-Allow-Methods", "GET, OPTIONS")
+  c.header("Access-Control-Allow-Headers", "Content-Type")
+  return c.text("")
+})
+
 // Get deck image file directly (for caching)
 app.get("/api/deck-images/:hash/image", async (c) => {
   try {
@@ -279,6 +287,10 @@ app.get("/api/deck-images/:hash/image", async (c) => {
     // Set cache headers for 1 year (images are immutable by hash)
     c.header("Cache-Control", "public, max-age=31536000, immutable")
     c.header("Content-Type", "image/png")
+    // CORSヘッダーを追加
+    c.header("Access-Control-Allow-Origin", "*")
+    c.header("Access-Control-Allow-Methods", "GET, OPTIONS")
+    c.header("Access-Control-Allow-Headers", "Content-Type")
 
     // Return the image directly
     return c.body(object.body)

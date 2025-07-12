@@ -21,6 +21,7 @@ export async function extractCardsFromDeckImage(
   deckCardIds: DeckCardIdsMapping,
 ): Promise<Map<string, string>> {
   const img = new Image()
+  img.crossOrigin = "anonymous" // CORSを有効化
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve()
     img.onerror = () => reject(new Error("Failed to load deck image"))

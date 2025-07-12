@@ -19,9 +19,11 @@ export interface DeckImageResponse {
 }
 
 import { ErrorResponseSchema } from "@/shared/types/api"
+import { apiUrl } from "@/client/lib/api"
+import { sha256 } from "js-sha256"
 
 export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ success: boolean; hash: string }> {
-  const response = await fetch("/api/deck-images", {
+  const response = await fetch(apiUrl("/deck-images"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -39,7 +41,7 @@ export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ succe
 }
 
 export async function getDeckImage(hash: string): Promise<DeckImageResponse> {
-  const response = await fetch(`/api/deck-images/${hash}`)
+  const response = await fetch(apiUrl(`/deck-images/${hash}`))
 
   if (!response.ok) {
     const errorData = await response.json()
@@ -52,15 +54,11 @@ export async function getDeckImage(hash: string): Promise<DeckImageResponse> {
 
 // Calculate hash for deck image
 export async function calculateImageHash(imageData: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(imageData)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-  return hashHex
+  // js-sha256を使用してSHA-256ハッシュを計算
+  return sha256(imageData)
 }
 
 // Get direct image URL for caching
 export function getDeckImageUrl(hash: string): string {
-  return `/api/deck-images/${hash}/image`
+  return apiUrl(`/deck-images/${hash}/image`)
 }

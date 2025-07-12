@@ -1,6 +1,7 @@
 import type { ReplaySaveData, DeckCardIdsMapping, DeckConfiguration } from "@/shared/types/game"
 import { ErrorResponseSchema, SaveStateSuccessResponseSchema, SavedStateResponseSchema } from "@/shared/types/api"
 import { z } from "zod"
+import { apiUrl } from "@/client/lib/api"
 
 export type SaveGameStateResponse = z.infer<typeof SaveStateSuccessResponseSchema>
 
@@ -10,7 +11,7 @@ export type { GameState } from "@/shared/types/game"
 export type LoadGameStateResponse = z.infer<typeof SavedStateResponseSchema>
 
 export async function loadGameState(id: string): Promise<LoadGameStateResponse> {
-  const response = await fetch(`/api/save-states/${id}`)
+  const response = await fetch(apiUrl(`/save-states/${id}`))
 
   if (!response.ok) {
     const errorData = await response.json()
@@ -29,7 +30,7 @@ export async function saveReplayData(
   deckConfig: DeckConfiguration,
   deckCardIds: DeckCardIdsMapping,
 ): Promise<SaveGameStateResponse> {
-  const response = await fetch("/api/save-states", {
+  const response = await fetch(apiUrl("/save-states"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
