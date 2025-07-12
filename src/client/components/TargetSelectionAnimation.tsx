@@ -20,17 +20,17 @@ export function TargetSelectionAnimation({
     // 拡大から縮小への切り替え
     const expandTimer = setTimeout(() => {
       setAnimationState('shrinking')
+    }, ANIMATION_DURATIONS.TARGET_SELECTION)
+    
+    // 完全に非表示とonComplete呼び出し
+    const hideTimer = setTimeout(() => {
+      setAnimationState('hidden')
       
-      // onCompleteは一度だけ呼ぶ
+      // onCompleteは縮小アニメーション完了後に呼ぶ
       if (!onCompleteCalledRef.current) {
         onCompleteCalledRef.current = true
         onComplete()
       }
-    }, ANIMATION_DURATIONS.TARGET_SELECTION)
-    
-    // 完全に非表示
-    const hideTimer = setTimeout(() => {
-      setAnimationState('hidden')
     }, ANIMATION_DURATIONS.TARGET_SELECTION * 2)
     
     // Cleanup function

@@ -1069,6 +1069,9 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
     case "activate":
       // Activate operations don't change state, only visual effects
       break
+    case "target":
+      // Target operations don't change state, only visual effects
+      break
     case "toggleHighlight":
       if (operation.to && operation.cardId) {
         // Reconstruct Position object
@@ -1424,6 +1427,66 @@ export const playReplayAtom = atom(null, async (get, set) => {
         await new Promise((resolve) =>
           setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
         )
+      } else if (operation.type === "target" && operation.to) {
+        // Update state (no change for target) WITHOUT adding to history
+        updateReplayState(set, nextState, i + 1)
+        currentState = nextState
+
+        // Small delay to ensure DOM is updated
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)))
+
+        // Create target animation
+        const animationId = uuidv4()
+        const animations = get(cardAnimationsAtom)
+
+        // Try to get card element position for replay
+        let cardRect: { x: number; y: number; width: number; height: number } | undefined
+        const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+        if (cardElement) {
+          const rect = cardElement.getBoundingClientRect()
+          cardRect = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          }
+        }
+
+        // Get card rotation from current state
+        let cardRotation: number | undefined = 0
+        if (operation.to != null && operation.cardId != null) {
+          const player = currentState.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result != null) {
+            cardRotation = result.card.rotation
+          }
+        }
+
+        const newAnimation: CardAnimation = {
+          id: animationId,
+          type: "target",
+          cardId: operation.cardId,
+          position: {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          },
+          cardRect,
+          cardRotation,
+          startTime: Date.now(),
+          duration: ANIMATION_DURATIONS.TARGET_SELECTION,
+        }
+
+        set(cardAnimationsAtom, [...animations, newAnimation])
+
+        // Wait for target animation to complete (expand + shrink)
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.TARGET_SELECTION * 2, get)),
+        )
       } else {
         // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
         updateReplayState(set, nextState, i + 1)
@@ -1463,6 +1526,11 @@ export const playReplayAtom = atom(null, async (get, set) => {
         // Wait for summon animation (token generation)
         await new Promise((resolve) =>
           setTimeout(resolve, Math.round(ANIMATION_DURATIONS.BASE_MOVE_DURATION / get(replaySpeedAtom))),
+        )
+      } else if (finalOperation.type === "target") {
+        // Wait for target animation (expand + shrink)
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.TARGET_SELECTION * 2, get)),
         )
       }
     }
