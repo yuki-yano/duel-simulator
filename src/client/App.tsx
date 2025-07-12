@@ -16,7 +16,7 @@ import {
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
 } from "@client/atoms/boardAtoms"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, ImageIcon } from "lucide-react"
 
 export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
@@ -122,14 +122,21 @@ export default function App() {
         {uploadedImage === null && (
           <div className="max-w-2xl mx-auto mb-4 space-y-4">
             <DeckImageUploader onImageUpload={handleImageUpload} />
-            <div className="text-center">
+            <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
               <button
                 onClick={() => setShowGoToReplayDialog(true)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2 mx-auto"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
                 リプレイIDからリプレイを開く
               </button>
+              <a
+                href="/deck-image-replacer"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2"
+              >
+                <ImageIcon className="w-4 h-4" />
+                デッキ画像置換ツール
+              </a>
             </div>
           </div>
         )}
