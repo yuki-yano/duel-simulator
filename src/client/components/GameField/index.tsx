@@ -1183,6 +1183,9 @@ export function GameFieldContent() {
             <div className="ml-4 text-xs">- 通常: 上に重ねる</div>
             <div className="ml-4 text-xs">- Shift押下: 下に重ねる</div>
             <div>
+              • <span className="text-green-400">墓地/除外ラベルクリック</span>: ゾーン拡大
+            </div>
+            <div>
               • <span className="text-gray-400">右クリック</span>: カードメニュー
             </div>
             <div>
