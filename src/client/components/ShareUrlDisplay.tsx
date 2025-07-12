@@ -5,10 +5,11 @@ interface ShareUrlDisplayProps {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   shareUrl: string
+  shareTitle: string
   onClose: () => void
 }
 
-export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, onClose }: ShareUrlDisplayProps) {
+export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, onClose }: ShareUrlDisplayProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -42,6 +43,23 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, onClose }: Sha
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2"
             >
               {copied ? "コピーしました！" : "コピー"}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const text = encodeURIComponent(`Duel Simulatorのリプレイを共有します！\n${shareTitle} ${shareUrl}\n#DuelSimulator\n`)
+                window.open(`https://x.com/intent/tweet?text=${text}`, "_blank", "noopener,noreferrer")
+              }}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-black text-white hover:bg-gray-800 h-10 px-4 py-2"
+            >
+              Xにポスト
+            </button>
+            <button
+              onClick={() => window.open(shareUrl, "_blank", "noopener,noreferrer")}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gray-600 text-white hover:bg-gray-700 h-10 px-4 py-2"
+            >
+              リプレイを開く
             </button>
           </div>
         </div>

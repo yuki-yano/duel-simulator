@@ -143,6 +143,7 @@ export function GameFieldContent() {
   const [showSaveReplayDialog, setShowSaveReplayDialog] = useState(false)
   const [_isSavingReplay, setIsSavingReplay] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>("")
+  const [shareTitle, setShareTitle] = useState<string>("")
   const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
 
   // Token generation error dialog state
@@ -372,11 +373,13 @@ export function GameFieldContent() {
 
         // Show share URL dialog
         setShareUrl(response.shareUrl)
+        setShareTitle(title)
         setShowSaveReplayDialog(false)
         setShowShareUrlDialog(true)
       } catch (error) {
         console.error("Failed to save replay:", error)
-        alert("リプレイの保存に失敗しました")
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        alert(`リプレイの保存に失敗しました${errorMessage ? `\n\n${errorMessage}` : ""}`)
       } finally {
         setIsSavingReplay(false)
       }
@@ -1099,6 +1102,7 @@ export function GameFieldContent() {
         isOpen={showShareUrlDialog}
         onOpenChange={setShowShareUrlDialog}
         shareUrl={shareUrl}
+        shareTitle={shareTitle}
         onClose={() => setShowShareUrlDialog(false)}
       />
 
