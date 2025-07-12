@@ -73,7 +73,7 @@ export function HelpButton() {
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">墓地・除外ゾーン</h3>
               <p className="text-sm text-gray-600">
-                ゾーン名（墓地/除外）をタップすると、 カードを拡大表示して確認できます。
+                ゾーン名（墓地/除外）をタップすると、ゾーンを拡大表示してカードの選択ができます。
               </p>
             </div>
 
