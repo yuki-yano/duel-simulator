@@ -87,7 +87,7 @@ export function Zone({
             let offsetPx: number
             let cardWidth: string
             let cardHeight: string
-            
+
             if (window.innerWidth >= 768) {
               offsetPx = 13 // Tablet and Desktop: 13px offset
               cardHeight = "96px" // md:h-24

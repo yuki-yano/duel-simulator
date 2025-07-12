@@ -12,7 +12,14 @@ interface SaveReplayDialogProps {
   isLoading?: boolean
 }
 
-export function SaveReplayDialog({ isOpen, onOpenChange, replayData, onSave, onCancel, isLoading = false }: SaveReplayDialogProps) {
+export function SaveReplayDialog({
+  isOpen,
+  onOpenChange,
+  replayData,
+  onSave,
+  onCancel,
+  isLoading = false,
+}: SaveReplayDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
 

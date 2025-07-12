@@ -7,31 +7,27 @@ interface TargetSelectionAnimationProps {
   onComplete: () => void
 }
 
-export function TargetSelectionAnimation({
-  cardRect,
-  cardRotation = 0,
-  onComplete,
-}: TargetSelectionAnimationProps) {
-  const [animationState, setAnimationState] = useState<'expanding' | 'shrinking' | 'hidden'>('expanding')
+export function TargetSelectionAnimation({ cardRect, cardRotation = 0, onComplete }: TargetSelectionAnimationProps) {
+  const [animationState, setAnimationState] = useState<"expanding" | "shrinking" | "hidden">("expanding")
   const onCompleteCalledRef = useRef(false)
 
   useEffect(() => {
     // 拡大から縮小への切り替え
     const expandTimer = setTimeout(() => {
-      setAnimationState('shrinking')
+      setAnimationState("shrinking")
     }, ANIMATION_DURATIONS.TARGET_SELECTION)
-    
+
     // 完全に非表示とonComplete呼び出し
     const hideTimer = setTimeout(() => {
-      setAnimationState('hidden')
-      
+      setAnimationState("hidden")
+
       // onCompleteは縮小アニメーション完了後に呼ぶ
       if (!onCompleteCalledRef.current) {
         onCompleteCalledRef.current = true
         onComplete()
       }
     }, ANIMATION_DURATIONS.TARGET_SELECTION * 2)
-    
+
     // Cleanup function
     return () => {
       clearTimeout(expandTimer)
@@ -39,11 +35,11 @@ export function TargetSelectionAnimation({
     }
   }, [onComplete]) // Include onComplete in dependencies
 
-  if (animationState === 'hidden') return null
+  if (animationState === "hidden") return null
 
   // Check if card is rotated
   const isRotated = cardRotation === -90 || cardRotation === 90
-  const isExpanded = animationState === 'expanding'
+  const isExpanded = animationState === "expanding"
 
   return (
     <>
@@ -52,12 +48,8 @@ export function TargetSelectionAnimation({
         className="fixed pointer-events-none"
         style={{
           // 守備表示の場合、カードの中心に合わせて位置調整
-          left: isRotated
-            ? `${cardRect.x + (cardRect.width - cardRect.height) / 2}px`
-            : `${cardRect.x}px`,
-          top: isRotated
-            ? `${cardRect.y - (cardRect.width - cardRect.height) / 2}px`
-            : `${cardRect.y}px`,
+          left: isRotated ? `${cardRect.x + (cardRect.width - cardRect.height) / 2}px` : `${cardRect.x}px`,
+          top: isRotated ? `${cardRect.y - (cardRect.width - cardRect.height) / 2}px` : `${cardRect.y}px`,
           // 守備表示の場合、幅と高さを入れ替え
           width: isRotated ? `${cardRect.height}px` : `${cardRect.width}px`,
           height: isRotated ? `${cardRect.width}px` : `${cardRect.height}px`,

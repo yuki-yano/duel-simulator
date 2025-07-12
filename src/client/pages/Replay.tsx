@@ -563,7 +563,7 @@ export default function Replay() {
 
       // Set initial game state with restored images
       setGameState(replaySaveData.data.initialState)
-      
+
       // Set initial state for reset functionality
       setInitialStateAfterDeckLoad(replaySaveData.data.initialState)
 

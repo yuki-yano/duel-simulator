@@ -69,17 +69,15 @@ export function DraggableCard({
 
   // Detect target animation and trigger scale effect
   useEffect(() => {
-    const targetAnimation = cardAnimations.find(
-      (anim) => anim.type === "target" && anim.cardId === card.id
-    )
-    
+    const targetAnimation = cardAnimations.find((anim) => anim.type === "target" && anim.cardId === card.id)
+
     if (targetAnimation) {
       setTargetAnimating(true)
       // Reset after expansion duration (same as TargetSelectionAnimation)
       const timer = setTimeout(() => {
         setTargetAnimating(false)
       }, ANIMATION_DURATIONS.TARGET_SELECTION)
-      
+
       return () => clearTimeout(timer)
     }
   }, [cardAnimations, card.id])
@@ -425,7 +423,6 @@ export function DraggableCard({
     }
   }
 
-
   return (
     <>
       <div
@@ -452,17 +449,21 @@ export function DraggableCard({
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           position: "relative",
-          transform: highlightAnimating || targetAnimating
-            ? "scale(1.1)"
-            : (isHovered || isTouching) && !isReplayPlaying
-              ? hoverDirection === "left"
-                ? "translateX(-8px)"
-                : hoverDirection === "right"
-                  ? "translateX(8px)"
-                  : "translateY(-8px)"
-              : "translate(0)",
+          transform:
+            highlightAnimating || targetAnimating
+              ? "scale(1.1)"
+              : (isHovered || isTouching) && !isReplayPlaying
+                ? hoverDirection === "left"
+                  ? "translateX(-8px)"
+                  : hoverDirection === "right"
+                    ? "translateX(8px)"
+                    : "translateY(-8px)"
+                : "translate(0)",
           zIndex: (isHovered || isTouching) && !isReplayPlaying ? 1000 : 1,
-          transition: highlightAnimating || targetAnimating ? `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)` : "transform 0.2s ease",
+          transition:
+            highlightAnimating || targetAnimating
+              ? `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)`
+              : "transform 0.2s ease",
           ...style,
         }}
       >

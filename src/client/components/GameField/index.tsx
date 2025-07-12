@@ -1126,15 +1126,11 @@ export function GameFieldContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>トークン生成エラー</AlertDialogTitle>
             <AlertDialogDescription>
-              フリーゾーンには既に5枚以上のカードが存在します。
-              これ以上トークンを生成することはできません。
+              フリーゾーンには既に5枚以上のカードが存在します。 これ以上トークンを生成することはできません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              onClick={() => setShowTokenLimitDialog(false)}
-              variant="default"
-            >
+            <Button onClick={() => setShowTokenLimitDialog(false)} variant="default">
               OK
             </Button>
           </AlertDialogFooter>
@@ -1149,8 +1145,7 @@ export function GameFieldContent() {
             <DialogDescription>
               手札・デッキ・エクストラデッキ以外のゾーンにカードが存在します。
               5枚ドローを実行すると、全てのカードがデッキに戻され、シャッフル後に5枚を引き直します。
-              この操作は元に戻すことができません。
-              続行しますか？
+              この操作は元に戻すことができません。 続行しますか？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
