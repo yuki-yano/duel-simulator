@@ -39,6 +39,7 @@ import {
   isDeckLoadedAtom,
   rotateCardAtom,
   activateEffectAtom,
+  targetSelectAtom,
   flipCardAtom,
   toggleCardHighlightAtom,
   resetToInitialStateAtom,
@@ -110,6 +111,7 @@ export function GameFieldContent() {
   const isDeckLoaded = useAtomValue(isDeckLoadedAtom)
   const [, rotateCard] = useAtom(rotateCardAtom)
   const [, activateEffect] = useAtom(activateEffectAtom)
+  const [, targetSelect] = useAtom(targetSelectAtom)
   const [, flipCard] = useAtom(flipCardAtom)
   const [, toggleCardHighlight] = useAtom(toggleCardHighlightAtom)
   const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
@@ -244,6 +246,9 @@ export function GameFieldContent() {
         } else if (action === "activate" && contextMenu) {
           // Include card ID in the zone for accurate card identification
           activateEffect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
+        } else if (action === "target" && contextMenu) {
+          // Include card ID in the zone for accurate card identification
+          targetSelect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
         } else if (action === "flip" && contextMenu) {
           // Include card ID for ID-based tracking
           flipCard({ zone: contextMenu.zone, cardId: card.id })
@@ -257,7 +262,7 @@ export function GameFieldContent() {
         console.error(`Error in handleContextMenuAction (${action}):`, error)
       }
     },
-    [rotateCard, activateEffect, flipCard, toggleCardHighlight, contextMenu],
+    [rotateCard, activateEffect, targetSelect, flipCard, toggleCardHighlight, contextMenu],
   )
 
   // Handle token generation

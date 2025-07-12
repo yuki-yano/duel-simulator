@@ -17,13 +17,16 @@ import type {
 import type { DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 
 // Animation duration constants (in milliseconds)
-const ANIMATION_DURATIONS = {
+export const ANIMATION_DURATIONS = {
   EFFECT_ACTIVATION: 300,
+  HIGHLIGHT: 300, // Duration for highlight animation
+  TARGET_SELECTION: 300, // Same as highlight
   CARD_ROTATION: 200,
   REPLAY_DELAY: 50,
   EFFECT_ACTIVATION_WAIT: 300, // Wait time after effect activation in replay
   ROTATION_WAIT: 300, // Wait time after rotation in replay
   BASE_MOVE_DURATION: 750, // Base duration for move animations at 1x speed
+  FADE_OUT: 200, // Fade out duration for animations
 } as const
 
 // Get animation duration based on current speed multiplier
@@ -1530,7 +1533,7 @@ export const stopReplayAtom = atom(null, (get, set) => {
 // Animation state for card movements during replay
 export interface CardAnimation {
   id: string
-  type: "move" | "activate"
+  type: "move" | "activate" | "target"
   cardId?: string
   cardImageUrl?: string
   fromPosition?: { x: number; y: number }
@@ -1767,16 +1770,88 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
 
     set(cardAnimationsAtom, [...animations, newAnimation])
 
-    // Remove animation after duration
-    setTimeout(() => {
-      set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animationId))
-    }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
-
     // Add to history for undo/redo support (same gameState, but new operation)
     const currentState = get(gameStateAtom)
     addToHistory(get, set, currentState)
   } catch (error) {
     console.error("Error in activateEffectAtom:", error)
+    throw error
+  }
+})
+
+// Target selection action (same as effect activation for now)
+export const targetSelectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
+  try {
+    // Get the card at this position to get its ID
+    const state = get(gameStateAtom)
+    const playerBoard = state.players[position.zone.player]
+    let card: Card | null = null
+    // Use ID-based approach (cardId is now required)
+    const cardId = position.cardId || position.zone.cardId
+    if (cardId === undefined) {
+      console.error("No cardId provided to targetSelectAtom")
+      return
+    }
+    const result = getCardById(playerBoard, cardId)
+    if (result !== null) {
+      card = result.card
+    }
+    // Add card ID to position for zoom effect
+    const positionWithCardId = {
+      ...position,
+      zone: {
+        ...position.zone,
+        cardId: card?.id,
+      },
+    }
+    // Target selection doesn't change game state, only visual effect
+    const operation: GameOperation = {
+      id: uuidv4(),
+      timestamp: Date.now(),
+      type: "target",
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
+      player: position.zone.player,
+    }
+    set(operationsAtom, [...get(operationsAtom), operation])
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
+    // Get card position if element is provided
+    let cardRect: DOMRect | null = null
+    if (cardElement) {
+      cardRect = cardElement.getBoundingClientRect()
+    }
+    // Trigger visual effect animation
+    const animations = get(cardAnimationsAtom)
+    const animationId = uuidv4()
+    const newAnimation = {
+      id: animationId,
+      type: "target" as const,
+      cardId: card?.id,
+      position: positionWithCardId,
+      cardRect: cardRect
+        ? {
+            x: cardRect.x,
+            y: cardRect.y,
+            width: cardRect.width,
+            height: cardRect.height,
+          }
+        : undefined,
+      cardRotation: card?.rotation,
+      startTime: Date.now(),
+    }
+    set(cardAnimationsAtom, [...animations, newAnimation])
+    // Add to history for undo/redo support (same gameState, but new operation)
+    const currentState = get(gameStateAtom)
+    addToHistory(get, set, currentState)
+  } catch (error) {
+    console.error("Error in targetSelectAtom:", error)
     throw error
   }
 })

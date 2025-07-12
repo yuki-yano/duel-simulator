@@ -3,6 +3,7 @@ import { useAtom } from "jotai"
 import { cardAnimationsAtom, type CardAnimation } from "@/client/atoms/boardAtoms"
 import { cn } from "@/client/lib/utils"
 import { EffectActivationAnimation } from "./EffectActivationAnimation"
+import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 
 interface AnimatedCardProps {
   animation: CardAnimation
@@ -76,6 +77,15 @@ export function CardAnimationOverlay() {
             <EffectActivationAnimation
               key={animation.id}
               position={animation.position}
+              cardRect={animation.cardRect}
+              cardRotation={animation.cardRotation}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        } else if (animation.type === "target" && animation.cardRect) {
+          return (
+            <TargetSelectionAnimation
+              key={animation.id}
               cardRect={animation.cardRect}
               cardRotation={animation.cardRotation}
               onComplete={() => handleAnimationComplete(animation.id)}

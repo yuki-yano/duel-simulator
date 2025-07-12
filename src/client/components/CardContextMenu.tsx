@@ -59,6 +59,11 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
       enabled: card.faceDown !== true && isReplayActive === false,
     },
     {
+      id: "target",
+      label: "対象に取る",
+      enabled: card.faceDown !== true && isReplayActive === false,
+    },
+    {
       id: "highlight",
       label: card.highlighted === true ? "ハイライトを解除" : "ハイライト",
       enabled: isReplayActive === false,

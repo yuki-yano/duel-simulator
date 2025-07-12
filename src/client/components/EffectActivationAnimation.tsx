@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/client/lib/utils"
+import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 import type { Position } from "@/shared/types/game"
 
 interface EffectActivationAnimationProps {
@@ -29,8 +30,8 @@ export function EffectActivationAnimation({
       // Hide and complete after animation
       const timer = setTimeout(() => {
         setIsVisible(false)
-        setTimeout(onComplete, 200) // Wait for fade out
-      }, 400)
+        setTimeout(onComplete, ANIMATION_DURATIONS.FADE_OUT) // Wait for fade out
+      }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
 
       return () => clearTimeout(timer)
     }
@@ -91,7 +92,7 @@ export function EffectActivationAnimation({
     const timer = setTimeout(() => {
       setIsVisible(false)
       setTimeout(onComplete, 200) // Wait for fade out
-    }, 400)
+    }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
 
     return () => clearTimeout(timer)
   }, [position, cardRect, onComplete])
@@ -108,9 +109,8 @@ export function EffectActivationAnimation({
         {`
           [data-card-id="${position.zone?.cardId ?? position.cardId ?? ""}"] {
             transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
-            transition: transform 0.3s ease-out !important;
+            transition: transform ${ANIMATION_DURATIONS.EFFECT_ACTIVATION}ms ease-out !important;
             z-index: ${isVisible ? "9997" : "auto"} !important;
-            position: relative !important;
           }
         `}
       </style>

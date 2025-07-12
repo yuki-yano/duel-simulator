@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
+import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
@@ -40,6 +40,7 @@ export function DraggableCard({
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
   const [highlightAnimating, setHighlightAnimating] = useState(false)
+  const [targetAnimating, setTargetAnimating] = useState(false)
   const [_isDragEnabled, setIsDragEnabled] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -51,8 +52,8 @@ export function DraggableCard({
   const dragEnableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isScrollingRef = useRef<boolean>(false)
 
-  // Check if this card is currently animating
-  const isAnimating = cardAnimations.some((anim) => anim.cardId === card.id)
+  // Check if this card is currently animating (only for move animations)
+  const isAnimating = cardAnimations.some((anim) => anim.type === "move" && anim.cardId === card.id)
 
   // Detect highlight state changes and trigger animation
   useEffect(() => {
@@ -61,10 +62,27 @@ export function DraggableCard({
       setHighlightAnimating(true)
       setTimeout(() => {
         setHighlightAnimating(false)
-      }, 300) // Animation duration
+      }, ANIMATION_DURATIONS.HIGHLIGHT)
     }
     setPrevHighlighted(card.highlighted)
   }, [card.highlighted, prevHighlighted])
+
+  // Detect target animation and trigger scale effect
+  useEffect(() => {
+    const targetAnimation = cardAnimations.find(
+      (anim) => anim.type === "target" && anim.cardId === card.id
+    )
+    
+    if (targetAnimation) {
+      setTargetAnimating(true)
+      // Reset after expansion duration (same as TargetSelectionAnimation)
+      const timer = setTimeout(() => {
+        setTargetAnimating(false)
+      }, ANIMATION_DURATIONS.TARGET_SELECTION)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [cardAnimations, card.id])
 
   // Clean up timers on unmount and setup touch listeners
   useEffect(() => {
@@ -407,6 +425,7 @@ export function DraggableCard({
     }
   }
 
+
   return (
     <>
       <div
@@ -433,7 +452,7 @@ export function DraggableCard({
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           position: "relative",
-          transform: highlightAnimating
+          transform: highlightAnimating || targetAnimating
             ? "scale(1.1)"
             : (isHovered || isTouching) && !isReplayPlaying
               ? hoverDirection === "left"
@@ -443,7 +462,7 @@ export function DraggableCard({
                   : "translateY(-8px)"
               : "translate(0)",
           zIndex: (isHovered || isTouching) && !isReplayPlaying ? 1000 : 1,
-          transition: highlightAnimating ? "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)" : "transform 0.2s ease",
+          transition: highlightAnimating || targetAnimating ? `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)` : "transform 0.2s ease",
           ...style,
         }}
       >
@@ -457,7 +476,7 @@ export function DraggableCard({
             )}
             style={{
               transform: `rotate(${card.rotation}deg)`,
-              transition: "transform 0.2s ease",
+              transition: `transform ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               WebkitUserSelect: "none",
               userSelect: "none",
               WebkitTouchCallout: "none",
@@ -471,7 +490,7 @@ export function DraggableCard({
               className="absolute inset-0 rounded pointer-events-none bg-black/40"
               style={{
                 transform: `rotate(${card.rotation}deg)`,
-                transition: "transform 0.2s ease",
+                transition: `transform ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               }}
             />
           )}
@@ -483,7 +502,7 @@ export function DraggableCard({
                 transform: `rotate(${card.rotation}deg)`,
                 border: "3px solid #ef4444",
                 boxShadow: "inset 0 0 10px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.6)",
-                transition: "all 0.2s ease",
+                transition: `all ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               }}
             />
           )}

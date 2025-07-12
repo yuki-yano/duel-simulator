@@ -76,6 +76,7 @@ export const GameOperationSchema = z.object({
     "set",
     "attack",
     "activate",
+    "target",
     "draw",
     "shuffle",
     "rotate",
