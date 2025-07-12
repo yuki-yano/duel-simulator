@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react"
-import { cn } from "@/client/lib/utils"
 import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 
 interface TargetSelectionAnimationProps {
@@ -38,7 +37,7 @@ export function TargetSelectionAnimation({
       clearTimeout(expandTimer)
       clearTimeout(hideTimer)
     }
-  }, []) // Empty dependencies array - run only on mount
+  }, [onComplete]) // Include onComplete in dependencies
 
   if (animationState === 'hidden') return null
 
