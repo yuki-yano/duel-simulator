@@ -312,56 +312,68 @@ export default function DeckImageReplacer() {
         )}
 
         {/* Main Content */}
-        {deckMetadata && (
-          <div className="max-w-4xl mx-auto space-y-4">
-            {/* Replacement Image Upload */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">置換画像のアップロード</h2>
-                <div className="space-y-4">
-                  <div>
-                    <input
-                      ref={fileInputRef}
-                      id="replacement-image"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleReplacementImageUpload}
-                      className="hidden"
-                    />
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      className={`
-                        w-full py-12 px-4 border-2 border-dashed rounded-lg
-                        flex flex-col items-center justify-center gap-3
-                        cursor-pointer transition-colors
-                        ${
-                          isDragging
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                        }
-                      `}
-                    >
-                      <Upload className="w-8 h-8 text-gray-400" />
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-700">クリックして画像を選択</p>
-                        <p className="text-xs text-gray-500">またはドラッグ&ドロップ</p>
-                      </div>
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Replacement Image Upload */}
+          <Card className={deckMetadata === null ? "opacity-50" : ""}>
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold mb-4">置換画像のアップロード</h2>
+              <div className="space-y-4">
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    id="replacement-image"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleReplacementImageUpload}
+                    className="hidden"
+                    disabled={deckMetadata === null}
+                  />
+                  <div
+                    onClick={() => deckMetadata !== null && fileInputRef.current?.click()}
+                    onDragOver={deckMetadata !== null ? handleDragOver : undefined}
+                    onDragLeave={deckMetadata !== null ? handleDragLeave : undefined}
+                    onDrop={deckMetadata !== null ? handleDrop : undefined}
+                    className={`
+                      w-full py-12 px-4 border-2 border-dashed rounded-lg
+                      flex flex-col items-center justify-center gap-3
+                      transition-colors
+                      ${
+                        deckMetadata === null
+                          ? "border-gray-200 bg-gray-50 cursor-not-allowed"
+                          : isDragging
+                            ? "border-blue-500 bg-blue-50 cursor-pointer"
+                            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
+                      }
+                    `}
+                  >
+                    <Upload className={`w-8 h-8 ${deckMetadata === null ? "text-gray-300" : "text-gray-400"}`} />
+                    <div className="text-center">
+                      <p className={`text-sm font-medium ${deckMetadata === null ? "text-gray-400" : "text-gray-700"}`}>
+                        {deckMetadata === null
+                          ? "デッキ画像を先に読み込んでください"
+                          : "クリックして画像を選択（複数対応）"}
+                      </p>
+                      {deckMetadata !== null && <p className="text-xs text-gray-500">またはドラッグ&ドロップ</p>}
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Position Selection */}
-            {deckMetadata !== null && (
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">置換位置の選択</h2>
+          {/* Position Selection */}
+          <Card className={deckMetadata === null ? "opacity-50" : ""}>
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold mb-4">置換位置の選択</h2>
 
+              {/* Show placeholder when deck not loaded */}
+              {deckMetadata === null ? (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-gray-400">デッキ画像を読み込むと、ここで置換位置を選択できます</p>
+                </div>
+              ) : (
+                <>
                   {/* Uploaded Images List - moved here for image selection */}
                   {replacementImages.length > 0 ? (
                     <div className="flex gap-2 flex-wrap mb-4">
@@ -533,44 +545,44 @@ export default function DeckImageReplacer() {
                       </div>
                     </>
                   )}
-                </CardContent>
-              </Card>
-            )}
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Generate Button */}
-            {replacementImages.some((img) => img.positions.length > 0) && (
-              <Card>
-                <CardContent className="p-6">
-                  <button
-                    onClick={() => void generateReplacedImage()}
-                    disabled={isGenerating}
-                    className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isGenerating ? "生成中..." : "画像を生成"}
-                  </button>
-                </CardContent>
-              </Card>
-            )}
+          {/* Generate Button */}
+          {replacementImages.some((img) => img.positions.length > 0) && (
+            <Card>
+              <CardContent className="p-6">
+                <button
+                  onClick={() => void generateReplacedImage()}
+                  disabled={isGenerating}
+                  className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? "生成中..." : "画像を生成"}
+                </button>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Generated Image Result */}
-            {generatedImage !== null && (
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">生成結果</h2>
-                  <div className="space-y-4">
-                    <div className="border rounded-lg overflow-hidden">
-                      <img src={generatedImage} alt="生成されたデッキ画像" className="w-full h-auto" />
-                    </div>
-                    <Button onClick={downloadImage} className="w-full flex items-center justify-center gap-2">
-                      <Download className="w-4 h-4" />
-                      画像をダウンロード
-                    </Button>
+          {/* Generated Image Result */}
+          {generatedImage !== null && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold mb-4">生成結果</h2>
+                <div className="space-y-4">
+                  <div className="border rounded-lg overflow-hidden">
+                    <img src={generatedImage} alt="生成されたデッキ画像" className="w-full h-auto" />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
+                  <Button onClick={downloadImage} className="w-full flex items-center justify-center gap-2">
+                    <Download className="w-4 h-4" />
+                    画像をダウンロード
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Hidden canvas for image processing */}
         <canvas ref={canvasRef} className="hidden" />
