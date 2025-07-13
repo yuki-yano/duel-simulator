@@ -37,8 +37,6 @@ export function TargetSelectionAnimation({ cardRect, cardRotation = 0, onComplet
 
   if (animationState === "hidden") return null
 
-  // Check if card is rotated
-  const isRotated = cardRotation === -90 || cardRotation === 90
   const isExpanded = animationState === "expanding"
 
   return (

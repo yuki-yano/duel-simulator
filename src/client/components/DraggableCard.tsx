@@ -7,13 +7,16 @@ import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 // Constants
-const LONG_PRESS_DURATION_MS = 600 // Long press duration for context menu (600ms)
-const _DRAG_THRESHOLD_MS = 100 // Minimum time before drag starts (100ms)
-const TOUCH_MOVE_THRESHOLD = 5 // Pixels of movement to cancel long press
+const LONG_PRESS_DURATION_MS = 600
+const TOUCH_MOVE_THRESHOLD = 5
+
+// Create empty image once to avoid re-creating on every drag
+const EMPTY_DRAG_IMAGE = new Image()
+EMPTY_DRAG_IMAGE.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs='
 
 interface DraggableCardProps {
   card: GameCard
-  zone: ZoneId // Zone information passed separately
+  zone: ZoneId
   className?: string
   hoverDirection?: "up" | "left" | "right"
   style?: React.CSSProperties
@@ -37,20 +40,18 @@ export function DraggableCard({
   const cardAnimations = useAtomValue(cardAnimationsAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
-  const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null)
   const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
   const [highlightAnimating, setHighlightAnimating] = useState(false)
   const [targetAnimating, setTargetAnimating] = useState(false)
-  const [_isDragEnabled, setIsDragEnabled] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
   const suppressDragImageRef = useRef<boolean>(false)
-  const touchStartTimeRef = useRef<number | null>(null)
-  const dragEnabledRef = useRef<boolean>(false)
-  const dragEnableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isScrollingRef = useRef<boolean>(false)
+  
+  // Unified drag state for PC and mobile
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
 
   // Check if this card is currently animating (only for move animations)
   const isAnimating = cardAnimations.some((anim) => anim.type === "move" && anim.cardId === card.id)
@@ -73,7 +74,7 @@ export function DraggableCard({
 
     if (targetAnimation) {
       setTargetAnimating(true)
-      // Reset after expansion duration (same as TargetSelectionAnimation)
+      // Reset after expansion duration
       const timer = setTimeout(() => {
         setTargetAnimating(false)
       }, ANIMATION_DURATIONS.TARGET_SELECTION)
@@ -102,9 +103,6 @@ export function DraggableCard({
       if (longPressTimerRef.current != null) {
         clearTimeout(longPressTimerRef.current)
       }
-      if (dragEnableTimerRef.current != null) {
-        clearTimeout(dragEnableTimerRef.current)
-      }
 
       // Prevent default to avoid scrolling when touching a card
       e.preventDefault()
@@ -113,12 +111,8 @@ export function DraggableCard({
       if (e.touches.length > 0) {
         const touch = e.touches[0]
 
-        // Store initial touch position and time
+        // Store initial touch position
         touchStartPosRef.current = { x: touch.clientX, y: touch.clientY }
-        touchStartTimeRef.current = Date.now()
-        dragEnabledRef.current = false
-        setIsDragEnabled(false)
-        isScrollingRef.current = false
 
         // Calculate offset from touch point to card center
         if (cardRef.current) {
@@ -138,37 +132,25 @@ export function DraggableCard({
 
         // Start dragging immediately
         setIsTouching(true)
+        setIsDragging(true)
         const cardWithZone = {
           ...card,
           zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
         }
         setDraggedCard(cardWithZone)
-        setTouchPosition({ x: touch.clientX, y: touch.clientY })
+        setDragPosition({ x: touch.clientX, y: touch.clientY })
 
         // Disable body scrolling
         document.body.style.overflow = "hidden"
         document.body.style.touchAction = "none"
 
-        /* TODO: Implement drag delay for better scroll handling
-        // Set up drag enable timer (100ms)
-        dragEnableTimerRef.current = setTimeout(() => {
-          // Only enable drag if not scrolling
-          if (!isScrollingRef.current) {
-            dragEnabledRef.current = true
-            setIsDragEnabled(true)
-            setIsTouching(true)  // Enable hover effect after threshold
-            // Disable body scrolling when drag is enabled
-            document.body.style.overflow = "hidden"
-            document.body.style.touchAction = "none"
-          }
-        }, DRAG_THRESHOLD_MS)
-        */
 
         // Set up long press detection (600ms)
         longPressTimerRef.current = setTimeout(() => {
           if (touchStartPosRef.current && onContextMenu) {
             // Hide drag image when showing context menu
-            setTouchPosition(null)
+            setDragPosition(null)
+            setIsDragging(false)
             suppressDragImageRef.current = true
             // Create synthetic event for onContextMenu
             const syntheticEvent = {
@@ -194,19 +176,33 @@ export function DraggableCard({
       if (longPressTimerRef.current != null) {
         clearTimeout(longPressTimerRef.current)
       }
-      if (dragEnableTimerRef.current != null) {
-        clearTimeout(dragEnableTimerRef.current)
-      }
       element.removeEventListener("touchstart", handleTouchStart)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReplayPlaying, card, stackIndex, onContextMenu, setDraggedCard, setTouchPosition])
+  }, [isReplayPlaying, card, stackIndex, onContextMenu, setDraggedCard])
 
   const handleDragStart = (e: React.DragEvent) => {
     // Disable dragging during replay
     if (isReplayPlaying) {
       e.preventDefault()
       return
+    }
+
+    // Hide default drag image
+    e.dataTransfer.setDragImage(EMPTY_DRAG_IMAGE, 0, 0)
+
+    // Calculate offset from mouse point to card center
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect()
+      const cardCenterX = rect.left + rect.width / 2
+      const cardCenterY = rect.top + rect.height / 2
+      
+      dragOffsetRef.current = {
+        x: cardCenterX - e.clientX,
+        y: cardCenterY - e.clientY,
+      }
+    } else {
+      dragOffsetRef.current = { x: 0, y: 0 }
     }
 
     // If the card has a zone and stackIndex is provided, update the zone with cardIndex
@@ -216,6 +212,10 @@ export function DraggableCard({
     }
     setDraggedCard(cardWithZone)
     e.dataTransfer.effectAllowed = "move"
+
+    // Set drag state
+    setIsDragging(true)
+    setDragPosition({ x: e.clientX, y: e.clientY })
 
     // Set high z-index for the dragging element
     const element = e.currentTarget as HTMLElement
@@ -227,6 +227,8 @@ export function DraggableCard({
 
   const handleDragEnd = (e: React.DragEvent) => {
     setDraggedCard(null)
+    setIsDragging(false)
+    setDragPosition(null)
 
     // Reset z-index
     const element = e.currentTarget as HTMLElement
@@ -241,10 +243,6 @@ export function DraggableCard({
     if (longPressTimerRef.current != null) {
       clearTimeout(longPressTimerRef.current)
       longPressTimerRef.current = null
-    }
-    if (dragEnableTimerRef.current != null) {
-      clearTimeout(dragEnableTimerRef.current)
-      dragEnableTimerRef.current = null
     }
 
     // Reset touch action on element
@@ -262,6 +260,7 @@ export function DraggableCard({
         if (deltaX <= TOUCH_MOVE_THRESHOLD && deltaY <= TOUCH_MOVE_THRESHOLD) {
           // User hasn't moved, keep context menu open
           setIsTouching(false)
+          setIsDragging(false)
           setDraggedCard(null)
           touchStartPosRef.current = null
           dragOffsetRef.current = null
@@ -271,19 +270,12 @@ export function DraggableCard({
       }
 
       // Temporarily hide the dragging card to get the correct element
-      setTouchPosition(null)
+      setDragPosition(null)
 
       // Small delay to ensure the dragging card is hidden
       setTimeout(() => {
         // Use clientX/clientY directly for elementFromPoint
         const element = document.elementFromPoint(touch.clientX, touch.clientY)
-        console.log("Element at touch point:", {
-          element,
-          className: element?.className,
-          tagName: element?.tagName,
-          x: touch.clientX,
-          y: touch.clientY,
-        })
 
         // Trigger drag and drop events on the element under touch point
         if (element) {
@@ -309,11 +301,6 @@ export function DraggableCard({
           }
 
           if (foundDroppable && targetElement) {
-            console.log("Found droppable target:", {
-              element: targetElement,
-              classList: targetElement.classList.toString(),
-              dataDroppable: targetElement.getAttribute("data-droppable"),
-            })
             // Create and dispatch dragenter, dragover, and drop events
             const dragOverEvent = new DragEvent("dragover", {
               bubbles: true,
@@ -333,7 +320,6 @@ export function DraggableCard({
                 clientX: touch.clientX,
                 clientY: touch.clientY,
               })
-              console.log("Dispatching drop event to:", targetElement)
               targetElement.dispatchEvent(dropEvent)
 
               // Clear dragged card after drop event is processed
@@ -351,21 +337,20 @@ export function DraggableCard({
         }
 
         setIsTouching(false)
+        setIsDragging(false)
+        setDragPosition(null)
         // Don't clear dragged card here - it's handled above
       }, 0)
     } else {
       setIsTouching(false)
+      setIsDragging(false)
       setDraggedCard(null)
-      setTouchPosition(null)
+      setDragPosition(null)
     }
 
     touchStartPosRef.current = null
     dragOffsetRef.current = null
     suppressDragImageRef.current = false
-    touchStartTimeRef.current = null
-    dragEnabledRef.current = false
-    setIsDragEnabled(false)
-    isScrollingRef.current = false
 
     // Restore body scrolling
     document.body.style.overflow = ""
@@ -405,7 +390,7 @@ export function DraggableCard({
       // Update touch position if not suppressed
       if (!suppressDragImageRef.current) {
         // Use clientX/clientY (viewport coordinates)
-        setTouchPosition({ x: touch.clientX, y: touch.clientY })
+        setDragPosition({ x: touch.clientX, y: touch.clientY })
       }
 
       // Fire dragOver event on the element under the touch point
@@ -431,6 +416,11 @@ export function DraggableCard({
         draggable={!isReplayPlaying}
         data-card-id={card.id}
         onDragStart={handleDragStart}
+        onDrag={(e) => {
+          if (e.clientX !== 0 && e.clientY !== 0) {
+            setDragPosition({ x: e.clientX, y: e.clientY })
+          }
+        }}
         onDragEnd={handleDragEnd}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -444,7 +434,7 @@ export function DraggableCard({
         onTouchMove={handleTouchMove}
         style={{
           cursor: isReplayPlaying ? "not-allowed" : "grab",
-          opacity: isAnimating ? 0 : isTouching ? 0.5 : 1,
+          opacity: isAnimating ? 0 : (isTouching || isDragging) ? 0.5 : 1,
           visibility: isAnimating ? "hidden" : "visible",
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
@@ -485,7 +475,6 @@ export function DraggableCard({
             }}
             onContextMenu={(e) => e.preventDefault()}
           />
-          {/* Face down overlay */}
           {card.faceDown === true && (
             <div
               className="absolute inset-0 rounded pointer-events-none bg-black/40"
@@ -495,7 +484,6 @@ export function DraggableCard({
               }}
             />
           )}
-          {/* Highlight overlay */}
           {card.highlighted === true && (
             <div
               className="absolute inset-0 rounded pointer-events-none"
@@ -509,19 +497,19 @@ export function DraggableCard({
           )}
         </div>
       </div>
-      {isTouching &&
-        touchPosition &&
+      {isDragging &&
+        dragPosition &&
         dragOffsetRef.current &&
         createPortal(
           (() => {
             // Use responsive size for drag image based on screen size
             let baseHeight: number
             if (window.innerWidth >= 768) {
-              baseHeight = 96 // md: 96px
+              baseHeight = 96
             } else if (window.innerWidth >= 640) {
-              baseHeight = 80 // sm: 80px
+              baseHeight = 80
             } else {
-              baseHeight = 56 // default: 56px
+              baseHeight = 56
             }
             const baseWidth = Math.round((baseHeight * 59) / 86) // Maintain aspect ratio
 
@@ -530,9 +518,12 @@ export function DraggableCard({
             const dragImageWidth = isRotated ? baseHeight : baseWidth
             const dragImageHeight = isRotated ? baseWidth : baseHeight
 
-            // Simple positioning without any pinch zoom adjustments
-            const displayX = touchPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
-            const displayY = touchPosition.y + dragOffsetRef.current.y - dragImageHeight / 2
+            const displayX = isTouching 
+              ? dragPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
+              : dragPosition.x - dragImageWidth / 2
+            const displayY = isTouching
+              ? dragPosition.y + dragOffsetRef.current.y - dragImageHeight / 2  
+              : dragPosition.y - dragImageHeight / 2
 
             return (
               <div
@@ -570,7 +561,6 @@ export function DraggableCard({
                     }}
                     onContextMenu={(e) => e.preventDefault()}
                   />
-                  {/* Face down overlay for drag image */}
                   {card.faceDown === true && (
                     <div className="absolute inset-0 rounded pointer-events-none bg-black/40" />
                   )}
