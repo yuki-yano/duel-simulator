@@ -2515,6 +2515,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.monsterZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
+          // Reset rotation for all cards except the top card (index 0)
+          for (let i = 1; i < cards.length; i++) {
+            cards[i].rotation = 0
+          }
         } else {
           // Find first empty zone
           const emptyZoneIndex = draft.monsterZones.findIndex((cards) => cards.length === 0)
@@ -2533,6 +2537,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.spellTrapZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
+          // Reset rotation for all cards except the top card (index 0)
+          for (let i = 1; i < cards.length; i++) {
+            cards[i].rotation = 0
+          }
         } else {
           // Find first empty zone
           const emptyZoneIndex = draft.spellTrapZones.findIndex((cards) => cards.length === 0)
@@ -2558,6 +2566,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.extraMonsterZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
+          // Reset rotation for all cards except the top card (index 0)
+          for (let i = 1; i < cards.length; i++) {
+            cards[i].rotation = 0
+          }
         } else {
           // Find first empty zone
           const emptyZoneIndex = draft.extraMonsterZones.findIndex((cards) => cards.length === 0)
