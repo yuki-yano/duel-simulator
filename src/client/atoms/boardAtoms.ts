@@ -1706,17 +1706,26 @@ function createAnimationsFromOperations(
       case "summon":
       case "set":
       case "draw": {
-        // For reverse (undo), from and to are swapped in terms of game state
-        const _fromState = isReverse ? nextState : prevState
-        const _toState = isReverse ? prevState : nextState
+        // Get card data from the state
+        const fromState = isReverse ? nextState : prevState
+        
+        // Find card in from state to get imageUrl
+        let cardImageUrl: string | undefined
+        const fromPlayer = fromState.players[operation.player]
+        const cardResult = getCardById(fromPlayer, operation.cardId)
+        if (cardResult) {
+          const card = cardResult.card
+          cardImageUrl = card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl
+        }
         
         // Get card element position before state change
         const cardPos = getCardElementPosition(operation.cardId)
-        if (cardPos) {
+        if (cardPos && cardImageUrl !== undefined) {
           animations.push({
             id: uuidv4(),
             type: "move",
             cardId: operation.cardId,
+            cardImageUrl,
             fromPosition: cardPos,
             toPosition: cardPos, // Will be updated after state change
             startTime: Date.now(),
