@@ -310,7 +310,7 @@ export function GameFieldContent() {
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault()
         if (canUndo) {
-          undo()
+          void undo()
         }
       }
       // Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y for redo

@@ -154,100 +154,20 @@ export function ReplayControls({
         </div>
       )}
 
-      {/* Replay controls on mobile - separate row */}
-      {replayData && replayData.operations.length > 0 && !isRecording && (
-        <div className="w-full sm:hidden mt-2">
-          <div className="flex flex-wrap gap-2">
-            {/* Replay speed control */}
-            <div className="flex items-center gap-2 flex-1">
-              <span className="text-xs text-muted-foreground">速度:</span>
-              <div className="flex-1 max-w-[120px]">
-                <Slider
-                  value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
-                  onValueChange={(value) => {
-                    const speeds = [0.5, 1, 2, 3]
-                    // Map slider values to array indices
-                    const index = Math.round(value[0])
-                    onReplaySpeedChange(speeds[Math.min(index, speeds.length - 1)])
-                  }}
-                  min={0}
-                  max={3}
-                  step={1}
-                  className="cursor-pointer"
-                />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground w-8">{replaySpeed}x</span>
-            </div>
-
-            {/* Start delay control */}
-            <div className="flex items-center gap-2 flex-1">
-              <span className="text-xs text-muted-foreground">待機:</span>
-              <div className="flex-1 max-w-[120px]">
-                <Slider
-                  value={[replayStartDelay]}
-                  onValueChange={(value) => {
-                    // Snap to specific values: 0, 0.5, 1, 2, 3
-                    const snapValues = [0, 0.5, 1, 2, 3]
-                    const closest = snapValues.reduce((prev, curr) => {
-                      return Math.abs(curr - value[0]) < Math.abs(prev - value[0]) ? curr : prev
-                    })
-                    onReplayStartDelayChange(closest)
-                  }}
-                  min={0}
-                  max={3}
-                  step={0.1}
-                  className="cursor-pointer"
-                />
-              </div>
-              <span className="text-xs font-medium text-muted-foreground w-8">{replayStartDelay}秒</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Replay controls on desktop - same row */}
-      {replayData && replayData.operations.length > 0 && !isRecording && (
-        <div className="hidden sm:flex items-center gap-4">
-          {/* Playback controls when playing */}
-          {isPlaying && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (isPaused) {
-                    onPlayReplay()
-                  } else {
-                    onTogglePause()
-                  }
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
-                aria-label={isPaused ? "Resume" : "Pause"}
-              >
-                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                <span>{isPaused ? "再開" : "一時停止"}</span>
-              </button>
-              <button
-                onClick={() => onStopReplay()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-gray-500 text-white hover:bg-gray-600"
-                aria-label="Stop replay"
-              >
-                <Square className="w-4 h-4" />
-                <span>停止</span>
-              </button>
-              <div className="flex items-center px-3 py-1.5 text-sm font-medium text-muted-foreground">
-                ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
-              </div>
-            </div>
-          )}
-
+      {/* Replay controls on mobile - separate row - Always show */}
+      <div className="w-full sm:hidden mt-2">
+        <div className="flex flex-wrap gap-2">
           {/* Replay speed control */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">速度:</span>
-            <div className="w-24">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xs text-muted-foreground">速度:</span>
+            <div className="flex-1 max-w-[120px]">
               <Slider
                 value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
                 onValueChange={(value) => {
                   const speeds = [0.5, 1, 2, 3]
-                  onReplaySpeedChange(speeds[value[0]])
+                  // Map slider values to array indices
+                  const index = Math.round(value[0])
+                  onReplaySpeedChange(speeds[Math.min(index, speeds.length - 1)])
                 }}
                 min={0}
                 max={3}
@@ -255,13 +175,13 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">{replaySpeed}x</span>
           </div>
 
           {/* Start delay control */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">待機:</span>
-            <div className="w-24">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xs text-muted-foreground">待機:</span>
+            <div className="flex-1 max-w-[120px]">
               <Slider
                 value={[replayStartDelay]}
                 onValueChange={(value) => {
@@ -278,10 +198,86 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-sm font-medium text-muted-foreground">{replayStartDelay}秒</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">{replayStartDelay}秒</span>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Replay controls on desktop - same row */}
+      <div className="hidden sm:flex items-center gap-4">
+        {/* Playback controls when playing */}
+        {replayData && replayData.operations.length > 0 && !isRecording && isPlaying && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (isPaused) {
+                  onPlayReplay()
+                } else {
+                  onTogglePause()
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-blue-500 text-white hover:bg-blue-600"
+              aria-label={isPaused ? "Resume" : "Pause"}
+            >
+              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              <span>{isPaused ? "再開" : "一時停止"}</span>
+            </button>
+            <button
+              onClick={() => onStopReplay()}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-sm font-medium bg-gray-500 text-white hover:bg-gray-600"
+              aria-label="Stop replay"
+            >
+              <Square className="w-4 h-4" />
+              <span>停止</span>
+            </button>
+            <div className="flex items-center px-3 py-1.5 text-sm font-medium text-muted-foreground">
+              ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+            </div>
+          </div>
+        )}
+
+        {/* Replay speed control - Always show */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">速度:</span>
+          <div className="w-24">
+            <Slider
+              value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
+              onValueChange={(value) => {
+                const speeds = [0.5, 1, 2, 3]
+                onReplaySpeedChange(speeds[value[0]])
+              }}
+              min={0}
+              max={3}
+              step={1}
+              className="cursor-pointer"
+            />
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
+        </div>
+
+        {/* Start delay control - Always show */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">待機:</span>
+          <div className="w-24">
+            <Slider
+              value={[replayStartDelay]}
+              onValueChange={(value) => {
+                // Snap to specific values: 0, 0.5, 1, 2, 3
+                const snapValues = [0, 0.5, 1, 2, 3]
+                const closest = snapValues.reduce((prev, curr) => {
+                  return Math.abs(curr - value[0]) < Math.abs(prev - value[0]) ? curr : prev
+                })
+                onReplayStartDelayChange(closest)
+              }}
+              min={0}
+              max={3}
+              step={0.1}
+              className="cursor-pointer"
+            />
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{replayStartDelay}秒</span>
+        </div>
+      </div>
 
       {/* Recording status */}
       {isRecording && (
