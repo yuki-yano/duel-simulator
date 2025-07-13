@@ -971,7 +971,7 @@ export const replayPlayingAtom = atom<boolean>(false)
 export const replayPausedAtom = atom<boolean>(false)
 export const replayCurrentIndexAtom = atom<number | null>(null)
 export const replaySpeedAtom = atom<number>(1) // Default 1x speed
-export const replayStartDelayAtom = atom<number>(0) // Default 0 seconds delay
+export const replayStartDelayAtom = atom<number>(1) // Default 1 second delay
 // Track the total number of operations in replay for redo after stop
 export const replayTotalOperationsAtom = atom<number>(0)
 

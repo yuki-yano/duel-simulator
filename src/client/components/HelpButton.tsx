@@ -113,7 +113,7 @@ export function HelpButton() {
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">ゲームリセット</h3>
-              <p className="text-sm text-gray-600">「Reset」ボタンでゲームを初期状態に戻せます。</p>
+              <p className="text-sm text-gray-600">「リセット」ボタンでゲームを初期状態に戻せます。</p>
             </div>
           </TabsContent>
         </Tabs>
