@@ -166,11 +166,13 @@ export function ReplayControls({
                   value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
                   onValueChange={(value) => {
                     const speeds = [0.5, 1, 2, 3]
-                    onReplaySpeedChange(speeds[value[0]])
+                    // Map slider values to array indices
+                    const index = Math.round(value[0])
+                    onReplaySpeedChange(speeds[Math.min(index, speeds.length - 1)])
                   }}
                   min={0}
                   max={3}
-                  step={0.5}
+                  step={1}
                   className="cursor-pointer"
                 />
               </div>
