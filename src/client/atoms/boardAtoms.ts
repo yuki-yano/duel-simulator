@@ -309,6 +309,21 @@ export const undoAtom = atom(null, (get, set) => {
   if (currentIndex > 0) {
     const newIndex = currentIndex - 1
     const previousEntry = history[newIndex]
+    const currentEntry = history[currentIndex] // Get current entry before updating index
+
+    // Get operations that will be removed BEFORE updating operationsAtom
+    const currentOperations = get(operationsAtom)
+    const removedOperationIds = new Set<string>()
+    if (get(replayRecordingAtom)) {
+      // Find operations that will be removed by this undo
+      // We need to remove operations between the target state and current state
+      for (let i = previousEntry.operationCount; i < currentEntry.operationCount; i++) {
+        const op = currentOperations[i]
+        if (op != null) {
+          removedOperationIds.add(op.id)
+        }
+      }
+    }
 
     // Update game state
     set(gameStateAtom, previousEntry.gameState)
@@ -325,15 +340,25 @@ export const undoAtom = atom(null, (get, set) => {
 
     // Also trim replay operations if recording
     if (get(replayRecordingAtom)) {
-      // Calculate how many operations to trim from replay operations
-      const currentEntry = history[currentIndex]
-      const operationsToRemove = currentEntry.operationCount - previousEntry.operationCount
-
       const replayOps = get(replayOperationsAtom)
 
-      // Remove the last N operations from replay operations
-      const trimmedReplayOps = replayOps.slice(0, replayOps.length - operationsToRemove)
-      set(replayOperationsAtom, trimmedReplayOps)
+      if (removedOperationIds.size > 0) {
+        // Filter out the removed operations from replay operations
+        const trimmedReplayOps = replayOps.filter((op) => !removedOperationIds.has(op.id))
+        set(replayOperationsAtom, trimmedReplayOps)
+      } else if (newIndex === 0 && replayOps.length > 0) {
+        // Special case: undoing to initial state (index 0)
+        // Remove the last operation from replay operations
+        const lastOp = currentOperations[currentOperations.length - 1]
+        if (lastOp != null) {
+          const trimmedReplayOps = replayOps.filter((op) => op.id !== lastOp.id)
+          set(replayOperationsAtom, trimmedReplayOps)
+        } else {
+          // Fallback: remove the last operation from replay list
+          const trimmedReplayOps = replayOps.slice(0, -1)
+          set(replayOperationsAtom, trimmedReplayOps)
+        }
+      }
     }
   }
 })
@@ -936,6 +961,8 @@ export const replayEndIndexAtom = atom<number | null>(null)
 export const replayDataAtom = atom<ReplayData | null>(null)
 // Separate operations list for replay recording to avoid undo/redo interference
 export const replayOperationsAtom = atom<GameOperation[]>([])
+// Track replay start timestamp for filtering operations
+export const replayStartTimestampAtom = atom<number | null>(null)
 // Track if replay has ever been played in replay mode
 export const hasEverPlayedInReplayModeAtom = atom<boolean>(false)
 
@@ -969,6 +996,7 @@ export const startReplayRecordingAtom = atom(null, (get, set) => {
   set(replayEndIndexAtom, null)
   set(replayDataAtom, replayData)
   set(replayOperationsAtom, []) // Clear replay operations
+  set(replayStartTimestampAtom, Date.now()) // Record start timestamp
 })
 
 // Stop replay recording
@@ -991,6 +1019,7 @@ export const stopReplayRecordingAtom = atom(null, (get, set) => {
   set(replayRecordingAtom, false)
   set(replayEndIndexAtom, _currentIndex)
   set(replayOperationsAtom, []) // Clear replay operations
+  set(replayStartTimestampAtom, null) // Clear start timestamp
 })
 
 // Helper to apply operation to state
@@ -1633,10 +1662,7 @@ export const moveCardAtom = atom(
     const stateChanged = JSON.stringify(state) !== JSON.stringify(newState)
 
     if (stateChanged) {
-      set(gameStateAtom, newState)
-      addToHistory(get, set, newState)
-
-      // Record operation with new structure
+      // Record operation with new structure BEFORE adding to history
       const operation: GameOperation = {
         id: uuidv4(),
         timestamp: Date.now(),
@@ -1656,7 +1682,13 @@ export const moveCardAtom = atom(
         player: from.zone.player,
         metadata: options,
       }
+
+      // Update operations BEFORE history
       set(operationsAtom, [...get(operationsAtom), operation])
+
+      // Then update game state and add to history
+      set(gameStateAtom, newState)
+      addToHistory(get, set, newState)
 
       // Also record to replay operations if recording
       if (get(replayRecordingAtom)) {
@@ -1676,9 +1708,7 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
   const newState = performCardRotation(state, position, angle)
 
   if (newState !== state) {
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
-
+    // Create operation BEFORE adding to history
     const operation: GameOperation = {
       id: uuidv4(),
       timestamp: Date.now(),
@@ -1692,7 +1722,13 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
       player: position.zone.player,
       metadata: { angle },
     }
+
+    // Update operations BEFORE history
     set(operationsAtom, [...get(operationsAtom), operation])
+
+    // Then update game state and add to history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
 
     // Also record to replay operations if recording
     if (get(replayRecordingAtom)) {
@@ -1707,9 +1743,7 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
   const newState = performCardFlip(state, position)
 
   if (newState !== state) {
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
-
+    // Create operation BEFORE adding to history
     const operation: GameOperation = {
       id: uuidv4(),
       timestamp: Date.now(),
@@ -1723,7 +1757,13 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
       player: position.zone.player,
       metadata: { flip: true },
     }
+
+    // Update operations BEFORE history
     set(operationsAtom, [...get(operationsAtom), operation])
+
+    // Then update game state and add to history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
 
     // Also record to replay operations if recording
     if (get(replayRecordingAtom)) {
@@ -1737,9 +1777,7 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
   const newState = performCardHighlightToggle(state, position)
 
   if (newState !== state) {
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
-
+    // Create operation BEFORE adding to history
     const operation: GameOperation = {
       id: uuidv4(),
       timestamp: Date.now(),
@@ -1752,7 +1790,13 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
       },
       player: position.zone.player,
     }
+
+    // Update operations BEFORE history
     set(operationsAtom, [...get(operationsAtom), operation])
+
+    // Then update game state and add to history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
 
     // Also record to replay operations if recording
     if (get(replayRecordingAtom)) {
@@ -1957,10 +2001,8 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
     },
   }
 
-  set(gameStateAtom, newState)
-  addToHistory(get, set, newState)
-
-  // Record draw operation for each card
+  // Record draw operation for each card BEFORE updating history
+  const operations: GameOperation[] = []
   drawnCards.forEach((card, _index) => {
     const operation: GameOperation = {
       id: uuidv4(),
@@ -1978,13 +2020,22 @@ export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", c
       },
       player,
     }
-    set(operationsAtom, [...get(operationsAtom), operation])
-
-    // Also record to replay operations if recording
-    if (get(replayRecordingAtom)) {
-      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
-    }
+    operations.push(operation)
   })
+
+  // Update operations BEFORE history
+  const currentOps = get(operationsAtom)
+  set(operationsAtom, [...currentOps, ...operations])
+
+  // Then update game state and add to history
+  set(gameStateAtom, newState)
+  addToHistory(get, set, newState)
+
+  // Also record to replay operations if recording
+  if (get(replayRecordingAtom)) {
+    const currentReplayOps = get(replayOperationsAtom)
+    set(replayOperationsAtom, [...currentReplayOps, ...operations])
+  }
 })
 
 // Helper function: Execute card move
@@ -2715,10 +2766,12 @@ export const generateTokenAtom = atom(null, (get, set, targetPlayer: "self" | "o
     },
   }
 
-  // Update state and history
+  // Update operations BEFORE history
+  set(operationsAtom, (prev) => [...prev, operation])
+
+  // Then update state and history
   set(gameStateAtom, newState)
   addToHistory(get, set, newState)
-  set(operationsAtom, (prev) => [...prev, operation])
 
   // Also record to replay operations if recording
   if (get(replayRecordingAtom)) {
@@ -2768,10 +2821,12 @@ export const shuffleDeckAtom = atom(null, (get, set, targetPlayer: "self" | "opp
     },
   }
 
-  // Update state and history
+  // Update operations BEFORE history
+  set(operationsAtom, (prev) => [...prev, operation])
+
+  // Then update state and history
   set(gameStateAtom, newState)
   addToHistory(get, set, newState)
-  set(operationsAtom, (prev) => [...prev, operation])
 
   // Also record to replay operations if recording
   if (get(replayRecordingAtom)) {

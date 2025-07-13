@@ -188,7 +188,6 @@ export function GameFieldContent() {
   const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
 
   const handleCardDrop = (from: ZoneId, to: ZoneId, shiftKey?: boolean) => {
-    console.log("handleCardDrop called:", { from, to, draggedCard })
     if (!draggedCard) {
       console.error("No dragged card available for drop operation")
       return

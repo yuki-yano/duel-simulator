@@ -143,6 +143,9 @@ export default function Replay() {
       setTitle(savedState.title)
       setDescription(savedState.description ?? "")
 
+      // Set document title
+      document.title = `${savedState.title} - Duel Simulator`
+
       // Set deck metadata - always set if we have deck image data
       // This allows deck display even if deckCardIds is invalid
       if (deckData !== null && deckConfig !== null) {
