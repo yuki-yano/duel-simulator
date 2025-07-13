@@ -184,11 +184,16 @@ export function ReplayControls({
                 <Slider
                   value={[replayStartDelay]}
                   onValueChange={(value) => {
-                    onReplayStartDelayChange(value[0])
+                    // Snap to specific values: 0, 0.5, 1, 2, 3
+                    const snapValues = [0, 0.5, 1, 2, 3]
+                    const closest = snapValues.reduce((prev, curr) => {
+                      return Math.abs(curr - value[0]) < Math.abs(prev - value[0]) ? curr : prev
+                    })
+                    onReplayStartDelayChange(closest)
                   }}
                   min={0}
                   max={3}
-                  step={0.5}
+                  step={0.1}
                   className="cursor-pointer"
                 />
               </div>
@@ -258,11 +263,16 @@ export function ReplayControls({
               <Slider
                 value={[replayStartDelay]}
                 onValueChange={(value) => {
-                  onReplayStartDelayChange(value[0])
+                  // Snap to specific values: 0, 0.5, 1, 2, 3
+                  const snapValues = [0, 0.5, 1, 2, 3]
+                  const closest = snapValues.reduce((prev, curr) => {
+                    return Math.abs(curr - value[0]) < Math.abs(prev - value[0]) ? curr : prev
+                  })
+                  onReplayStartDelayChange(closest)
                 }}
                 min={0}
                 max={3}
-                step={1}
+                step={0.1}
                 className="cursor-pointer"
               />
             </div>
