@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react"
-import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
+import { ANIM } from "@/client/constants/animation"
 
 interface TargetSelectionAnimationProps {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -27,7 +27,7 @@ export function TargetSelectionAnimation({
     // 拡大完了後に縮小開始
     const shrinkTimer = setTimeout(() => {
       setAnimationState("shrinking")
-    }, ANIMATION_DURATIONS.TARGET_SELECTION)
+    }, ANIM.TARGET.ANIMATION)
 
     // 縮小完了後に onComplete を呼ぶ（overlay は親の unmount で消える）
     const completeTimer = setTimeout(() => {
@@ -35,7 +35,7 @@ export function TargetSelectionAnimation({
         onCompleteCalledRef.current = true
         onComplete()
       }
-    }, ANIMATION_DURATIONS.TARGET_SELECTION * 2)
+    }, ANIM.TARGET.DURATION)
 
     return () => {
       cancelAnimationFrame(startId)
@@ -57,7 +57,7 @@ export function TargetSelectionAnimation({
         zIndex: 9998,
         transform: `rotate(${cardRotation}deg) scale(${scale})`,
         transformOrigin: "center",
-        transition: `transform ${ANIMATION_DURATIONS.TARGET_SELECTION}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+        transition: `transform ${ANIM.TARGET.ANIMATION}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
       }}
     >
       {/* Card image */}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react"
-import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
+import { ANIM } from "@/client/constants/animation"
 
 interface HighlightAnimationProps {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -31,7 +31,7 @@ export function HighlightAnimation({
     // 拡大完了後に縮小
     const shrinkTimer = setTimeout(() => {
       setAnimationState("shrinking")
-    }, ANIMATION_DURATIONS.HIGHLIGHT)
+    }, ANIM.HIGHLIGHT.ANIMATION)
 
     // 縮小完了後に onComplete を呼ぶ（overlay は親の unmount で消える）
     const completeTimer = setTimeout(() => {
@@ -39,7 +39,7 @@ export function HighlightAnimation({
         onCompleteCalledRef.current = true
         onComplete()
       }
-    }, ANIMATION_DURATIONS.HIGHLIGHT * 2)
+    }, ANIM.HIGHLIGHT.DURATION)
 
     return () => {
       cancelAnimationFrame(startId)
@@ -61,7 +61,7 @@ export function HighlightAnimation({
         zIndex: 9998,
         transform: `rotate(${cardRotation}deg) scale(${scale})`,
         transformOrigin: "center",
-        transition: `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+        transition: `transform ${ANIM.HIGHLIGHT.ANIMATION}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
       }}
     >
       {/* card image */}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
+import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, updateCardRefAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
@@ -37,6 +37,7 @@ export function DraggableCard({
   const setDraggedCard = useSetAtom(draggedCardAtom)
   const isReplayPlaying = useAtomValue(replayPlayingAtom)
   const cardAnimations = useAtomValue(cardAnimationsAtom)
+  const updateCardRef = useSetAtom(updateCardRefAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -60,6 +61,18 @@ export function DraggableCard({
   const activateAnimating = cardAnimations.some((anim) => anim.type === "activate" && anim.cardId === card.id)
   // Check if this card is in rotate animation (used to suppress hover shift)
   const rotateAnimating = cardAnimations.some((anim) => anim.type === "rotate" && anim.cardId === card.id)
+
+  // Track card ref
+  useEffect(() => {
+    if (cardRef.current) {
+      updateCardRef(card.id, cardRef.current)
+    }
+    
+    return () => {
+      // Clean up ref when unmounting
+      updateCardRef(card.id, null)
+    }
+  }, [card.id, updateCardRef])
 
   // Clean up timers on unmount and setup touch listeners
   useEffect(() => {

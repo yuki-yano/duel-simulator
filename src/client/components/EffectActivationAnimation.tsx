@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
-import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
+import { ANIM } from "@/client/constants/animation"
 import type { Position } from "@/shared/types/game"
 
 interface EffectActivationAnimationProps {
@@ -38,7 +38,7 @@ export function EffectActivationAnimation({
   }
 
   useEffect(() => {
-    const D = ANIMATION_DURATIONS.EFFECT_ACTIVATION
+    const D = ANIM.EFFECT.ANIMATION
 
     const startId = requestAnimationFrame(() => setAnimationState("expanding"))
 
@@ -64,52 +64,38 @@ export function EffectActivationAnimation({
 
   // 拡大率を旧演出に合わせる
   const scale = animationState === "expanding" ? 1.1 : 1
-  const isRotated = cardRotation === -90 || cardRotation === 90
-
   const pos = effectPosition.current
 
-  // Common style calc
-  const left = isRotated ? pos.x + (pos.width - pos.height) / 2 : pos.x
-  const top = isRotated ? pos.y - (pos.width - pos.height) / 2 : pos.y
-  const width = isRotated ? pos.height : pos.width
-  const height = isRotated ? pos.width : pos.height
-
   return (
-    <>
+    <div
+      className="fixed pointer-events-none"
+      style={{
+        left: `${pos.x}px`,
+        top: `${pos.y}px`,
+        width: `${pos.width}px`,
+        height: `${pos.height}px`,
+        transform: `rotate(${cardRotation}deg) scale(${scale})`,
+        transformOrigin: "center",
+        transition: `transform ${ANIM.EFFECT.ANIMATION}ms ease-out`,
+        zIndex: 9997,
+      }}
+    >
       {/* Card zoom */}
-      <div
-        className="fixed pointer-events-none"
-        style={{
-          left: `${left}px`,
-          top: `${top}px`,
-          width: `${width}px`,
-          height: `${height}px`,
-          transform: `rotate(${cardRotation}deg) scale(${scale})`,
-          transformOrigin: "center",
-          transition: `transform ${ANIMATION_DURATIONS.EFFECT_ACTIVATION}ms ease-out`,
-          zIndex: 9997,
-        }}
-      >
-        <img
-          src={cardImageUrl}
-          alt="Effect card"
-          className="absolute inset-0 w-full h-full object-cover rounded"
-          draggable={false}
-        />
-      </div>
+      <img
+        src={cardImageUrl}
+        alt="Effect card"
+        className="absolute inset-0 w-full h-full object-cover rounded"
+        draggable={false}
+      />
 
       {/* flash / mist overlays similar logic, reuse previous but depends on animationState */}
       <div
         className={cn(
-          "fixed pointer-events-none transition-opacity duration-200",
+          "absolute pointer-events-none transition-opacity duration-200 inset-[-2px]",
           animationState === "initial" ? "opacity-0" : "opacity-100",
         )}
         style={{
-          left: `${left - 2}px`,
-          top: `${top - 2}px`,
-          width: `${width + 4}px`,
-          height: `${height + 4}px`,
-          zIndex: 9998,
+          zIndex: 1,
         }}
       >
         {/* white flash */}
@@ -167,6 +153,6 @@ export function EffectActivationAnimation({
           )}
         />
       </div>
-    </>
+    </div>
   )
 }

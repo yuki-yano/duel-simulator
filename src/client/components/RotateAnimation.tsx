@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from "react"
-import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
+import { ANIM } from "@/client/constants/animation"
 
 interface RotateAnimationProps {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -15,7 +15,7 @@ export function RotateAnimation({
   fromRotation = 0,
   toRotation = 0,
   cardImageUrl,
-  duration = ANIMATION_DURATIONS.CARD_ROTATION,
+  duration = ANIM.ROTATION.ANIMATION,
   onComplete,
 }: RotateAnimationProps) {
   const [rotation, setRotation] = useState(fromRotation)

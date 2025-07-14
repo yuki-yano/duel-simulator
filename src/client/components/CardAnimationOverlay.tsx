@@ -14,6 +14,7 @@ interface AnimatedCardProps {
 
 function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
   const [position, setPosition] = useState(animation.fromPosition!)
+  const [rotation, setRotation] = useState(animation.fromRotation ?? 0)
 
   useEffect(() => {
     if (animation.type !== "move") {
@@ -25,6 +26,9 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
     const timer = setTimeout(() => {
       if (animation.toPosition) {
         setPosition(animation.toPosition)
+      }
+      if (animation.toRotation !== undefined) {
+        setRotation(animation.toRotation)
       }
     }, 10)
 
@@ -50,6 +54,8 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
         transition: `all ${animation.duration ?? 300}ms ease-in-out`,
         width: window.innerWidth >= 768 ? "66px" : window.innerWidth >= 640 ? "55px" : "40px",
         height: window.innerWidth >= 768 ? "96px" : window.innerWidth >= 640 ? "80px" : "56px",
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: "center",
       }}
     >
       <img
@@ -100,7 +106,7 @@ export function CardAnimationOverlay() {
             <HighlightAnimation
               key={animation.id}
               cardRect={animation.cardRect}
-              cardRotation={animation.cardRotation ?? 0}
+              cardRotation={animation.cardRotation}
               cardImageUrl={animation.cardImageUrl}
               onComplete={() => handleAnimationComplete(animation.id)}
             />

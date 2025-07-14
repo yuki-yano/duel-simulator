@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { produce } from "immer"
@@ -60,17 +60,11 @@ export function DeckImageProcessor({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const setExtractedCards = useSetAtom(extractedCardsAtom)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
+  
+  // 解析済みフラグを追加して重複実行を防ぐ
+  const analyzedRef = useRef(false)
 
-  useEffect(() => {
-    if (imageDataUrl) {
-      drawPreview()
-      // 画像が読み込まれたら自動的にデッキ構造を解析
-      void analyzeDeckStructure()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imageDataUrl])
-
-  const drawPreview = () => {
+  const drawPreview = useCallback(() => {
     const img = new Image()
     img.onload = () => {
       const canvas = canvasRef.current
@@ -89,7 +83,7 @@ export function DeckImageProcessor({
       }
     }
     img.src = imageDataUrl
-  }
+  }, [imageDataUrl])
 
   const extractTextFromRegion = async (
     img: HTMLImageElement,
@@ -175,9 +169,10 @@ export function DeckImageProcessor({
     // Perform OCR on this region
     const worker = await createWorker("jpn")
 
-    // Set OCR parameters for better number recognition
+    // Tesseract.jsの設定
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
+      tessedit_char_whitelist: "0123456789枚",
     })
 
     const result = await worker.recognize(regionCanvas)
@@ -186,7 +181,10 @@ export function DeckImageProcessor({
     return result.data.text
   }
 
-  const analyzeDeckStructure = async () => {
+  const analyzeDeckStructure = useCallback(async () => {
+    // 既に解析済みの場合はスキップ
+    if (analyzedRef.current) return
+    
     setIsAnalyzing(true)
     setOcrDebugCanvases({}) // Clear previous debug canvases
     setOcrProcessedCanvases({}) // Clear previous processed canvases
@@ -325,6 +323,7 @@ export function DeckImageProcessor({
         }
 
         setDeckConfig(config)
+        analyzedRef.current = true // 解析完了フラグを設定
 
         // Show debug information
         if (showDebug && debugCanvasRef.current) {
@@ -359,7 +358,20 @@ export function DeckImageProcessor({
     }
 
     img.src = imageDataUrl
-  }
+  }, [imageDataUrl, showDebug])
+
+  useEffect(() => {
+    if (imageDataUrl) {
+      drawPreview()
+      // 画像が読み込まれたら自動的にデッキ構造を解析
+      void analyzeDeckStructure()
+    }
+    
+    // クリーンアップ関数で解析済みフラグをリセット
+    return () => {
+      analyzedRef.current = false
+    }
+  }, [imageDataUrl, drawPreview, analyzeDeckStructure])
 
   const processImage = async () => {
     // In replay mode, skip actual processing and just trigger replay start
