@@ -474,7 +474,7 @@ export function DraggableCard({
               }}
             />
           )}
-          {card.highlighted === true && (
+          {card.highlighted === true && !highlightAnimating && (
             <div
               className="absolute inset-0 rounded pointer-events-none"
               style={{
