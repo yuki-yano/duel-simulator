@@ -67,8 +67,14 @@ export function CardAnimationOverlay() {
   const [animations, setAnimations] = useAtom(cardAnimationsAtom)
 
   const handleAnimationComplete = (animationId: string) => {
+    console.log(`Removing animation ${animationId} from cardAnimationsAtom`)
     setAnimations((prev) => prev.filter((anim) => anim.id !== animationId))
   }
+  
+  // Debug: Log all current animations
+  console.log(`CardAnimationOverlay rendering with ${animations.length} animations:`, 
+    animations.map(a => ({ id: a.id, type: a.type, cardId: a.cardId }))
+  )
 
   return (
     <>

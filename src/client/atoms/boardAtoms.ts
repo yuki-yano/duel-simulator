@@ -2150,8 +2150,9 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
       const cardElement = document.querySelector(`[data-card-id="${position.cardId}"]`)
       if (cardElement) {
         const rect = cardElement.getBoundingClientRect()
+        const animationId = uuidv4()
         const animation: CardAnimation = {
-          id: uuidv4(),
+          id: animationId,
           type: "highlight",
           cardId: position.cardId,
           position,
@@ -2162,9 +2163,21 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
             height: rect.height,
           },
           startTime: Date.now(),
-          duration: ANIMATION_DURATIONS.HIGHLIGHT + 100, // Add buffer to ensure animation completes before static border shows
+          duration: ANIMATION_DURATIONS.HIGHLIGHT,
         }
-        set(cardAnimationsAtom, [...get(cardAnimationsAtom), animation])
+        
+        // Check if highlight animation already exists for this card
+        const existingAnimations = get(cardAnimationsAtom)
+        const hasExistingHighlight = existingAnimations.some(
+          anim => anim.type === "highlight" && anim.cardId === position.cardId
+        )
+        
+        if (!hasExistingHighlight) {
+          console.log(`Creating highlight animation for card ${position.cardId}, animation ID: ${animationId}`)
+          set(cardAnimationsAtom, [...existingAnimations, animation])
+        } else {
+          console.log(`Highlight animation already exists for card ${position.cardId}, skipping`)
+        }
       }
     }
   }

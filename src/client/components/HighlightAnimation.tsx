@@ -11,20 +11,26 @@ interface HighlightAnimationProps {
 export function HighlightAnimation({ cardRect, cardRotation = 0, onComplete }: HighlightAnimationProps) {
   const [animationState, setAnimationState] = useState<"expanding" | "shrinking" | "hidden">("expanding")
   const onCompleteCalledRef = useRef(false)
+  const mountTimeRef = useRef(Date.now())
 
   useEffect(() => {
+    console.log(`HighlightAnimation mounted at ${mountTimeRef.current}`)
+    
     // 拡大から縮小への切り替え
     const expandTimer = setTimeout(() => {
+      console.log(`HighlightAnimation switching to shrinking state after ${Date.now() - mountTimeRef.current}ms`)
       setAnimationState("shrinking")
     }, ANIMATION_DURATIONS.HIGHLIGHT / 2)
 
     // 完全に非表示とonComplete呼び出し
     const hideTimer = setTimeout(() => {
+      console.log(`HighlightAnimation hiding after ${Date.now() - mountTimeRef.current}ms`)
       setAnimationState("hidden")
 
       // onCompleteは縮小アニメーション完了後に呼ぶ
       if (!onCompleteCalledRef.current) {
         onCompleteCalledRef.current = true
+        console.log(`HighlightAnimation calling onComplete after ${Date.now() - mountTimeRef.current}ms`)
         onComplete()
       }
     }, ANIMATION_DURATIONS.HIGHLIGHT)
