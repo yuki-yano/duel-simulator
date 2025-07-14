@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
-import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2 } from "lucide-react"
+import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown } from "lucide-react"
 import { useAtom, useAtomValue } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
@@ -95,6 +95,7 @@ export function GameFieldContent() {
   const [mobileDefenseMode, setMobileDefenseMode] = useState(false)
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [mobileStackBottom, setMobileStackBottom] = useState(false)
+  const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
   const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
   const [gameState] = useAtom(gameStateAtom)
@@ -213,7 +214,9 @@ export function GameFieldContent() {
       defenseMode: mobileDefenseMode,
       faceDownMode: mobileFaceDownMode,
       stackPosition: (shiftKey === true && hasExistingCards) || mobileStackBottom ? ("bottom" as const) : undefined, // Stack at bottom when shift+drop on existing cards or mobile toggle is on
+      preventSameZoneReorder: !preventSameZoneReorder,
     }
+    
 
     if (draggedCard.zone != null && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
       // draggedCardのzone情報にindexを含める
@@ -578,7 +581,7 @@ export function GameFieldContent() {
             </button>
           </div>
           {isExtraActionsOpen && (
-            <div className="flex items-center justify-start gap-2 mb-1">
+            <div className="flex flex-wrap items-center justify-start gap-2 mb-1">
               <button
                 onClick={handleShuffleDeck}
                 disabled={!isDeckLoaded || isPlaying}
@@ -620,6 +623,22 @@ export function GameFieldContent() {
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>トークン生成</span>
+              </button>
+              <button
+                onClick={() => setPreventSameZoneReorder(!preventSameZoneReorder)}
+                disabled={!isDeckLoaded || isPlaying}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+                  preventSameZoneReorder
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : isDeckLoaded && !isPlaying
+                      ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                      : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+                aria-label="Toggle zone reordering"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                <span>並び替え{!preventSameZoneReorder ? "禁止" : "可能"}</span>
               </button>
             </div>
           )}

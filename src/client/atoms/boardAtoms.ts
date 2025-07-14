@@ -404,7 +404,8 @@ export const undoAtom = atom(null, async (get, set) => {
     }
 
     // Play animations for removed operations (in reverse)
-    if (removedOperations.length > 0 && !isPlaying) {
+    const isPaused = get(replayPausedAtom)
+    if (removedOperations.length > 0 && (!isPlaying || isPaused)) {
       const currentSpeed = get(replaySpeedAtom)
       // Fire and forget animation
       playOperationAnimations(get, set, removedOperations, currentState, previousEntry.gameState, true, currentSpeed).catch(() => {
@@ -750,7 +751,8 @@ export const redoAtom = atom(null, async (get, set) => {
     }
 
     // Play animations for added operations
-    if (operationsToAdd.length > 0 && !isPlaying) {
+    const isPaused = get(replayPausedAtom)
+    if (operationsToAdd.length > 0 && (!isPlaying || isPaused)) {
       const currentSpeed = get(replaySpeedAtom)
       // Fire and forget animation
       playOperationAnimations(get, set, operationsToAdd, currentState, nextEntry.gameState, false, currentSpeed).catch(() => {
@@ -2270,7 +2272,7 @@ export const moveCardAtom = atom(
     set,
     from: Position,
     to: Position,
-    options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom" },
+    options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom"; preventSameZoneReorder?: boolean },
   ) => {
     const state = get(gameStateAtom)
     const newState = performCardMove(state, from, to, options)
@@ -2733,7 +2735,7 @@ function performCardMove(
   state: GameState,
   from: Position,
   to: Position,
-  options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom" },
+  options?: { shiftKey?: boolean; defenseMode?: boolean; faceDownMode?: boolean; stackPosition?: "top" | "bottom"; preventSameZoneReorder?: boolean },
 ): GameState {
   return produce(state, (draft) => {
     const fromPlayer = state.players[from.zone.player]
@@ -2824,6 +2826,20 @@ function performCardMove(
 
     // Determine if this is a cross-zone move
     const isCrossZoneMove = actualFromZone.type !== to.zone.type
+    
+    // Check if preventSameZoneReorder is enabled and this is a same-zone move
+    if (options?.preventSameZoneReorder === true && !isCrossZoneMove && actualFromZone.player === to.zone.player) {
+      const hasIndex = actualFromZone.type === "monsterZone" || actualFromZone.type === "spellTrapZone" || actualFromZone.type === "extraMonsterZone"
+      
+      // For indexed zones, only prevent if it's the exact same slot
+      if (hasIndex && actualFromZone.index === to.zone.index) {
+        return state
+      }
+      // For non-indexed zones, prevent any reordering
+      if (!hasIndex) {
+        return state
+      }
+    }
 
     // For zone-specific moves, keep the index for certain zone types
     const shouldKeepIndex =
