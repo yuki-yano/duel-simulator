@@ -321,14 +321,12 @@ export const undoAtom = atom(null, async (get, set) => {
     // Get operations that will be removed BEFORE updating operationsAtom
     const currentOperations = get(operationsAtom)
     const removedOperations: GameOperation[] = []
-    if (get(replayRecordingAtom)) {
-      // Find operations that will be removed by this undo
-      // We need to remove operations between the target state and current state
-      for (let i = previousEntry.operationCount; i < currentEntry.operationCount; i++) {
-        const op = currentOperations[i]
-        if (op != null) {
-          removedOperations.push(op)
-        }
+    // Find operations that will be removed by this undo
+    // We need to remove operations between the target state and current state
+    for (let i = previousEntry.operationCount; i < currentEntry.operationCount; i++) {
+      const op = currentOperations[i]
+      if (op != null) {
+        removedOperations.push(op)
       }
     }
 
