@@ -4,6 +4,7 @@ import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 interface HighlightAnimationProps {
   cardRect: { x: number; y: number; width: number; height: number }
   cardRotation?: number
+  hideStaticBorder?: boolean
   onComplete: () => void
 }
 

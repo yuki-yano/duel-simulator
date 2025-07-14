@@ -2162,7 +2162,7 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
             height: rect.height,
           },
           startTime: Date.now(),
-          duration: ANIMATION_DURATIONS.HIGHLIGHT,
+          duration: ANIMATION_DURATIONS.HIGHLIGHT + 100, // Add buffer to ensure animation completes before static border shows
         }
         set(cardAnimationsAtom, [...get(cardAnimationsAtom), animation])
       }
