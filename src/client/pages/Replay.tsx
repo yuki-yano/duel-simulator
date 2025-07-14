@@ -403,35 +403,9 @@ export default function Replay() {
 
         // バリデーションエラーでも、デッキの初期状態を設定して通常操作可能にする
         try {
-          console.log("Validation error - attempting to load deck anyway")
-
-          // deckMetadataから画像データを除外してログ出力
-          const metadataForLog =
-            deckMetadata != null
-              ? {
-                  ...deckMetadata,
-                  imageDataUrl: "[DATA URI OMITTED]",
-                  imageUrl: deckMetadata.imageUrl ?? "",
-                }
-              : null
-          console.log("deckMetadata (without image):", metadataForLog)
-          console.log("deckMetadata?.deckCardIds:", deckMetadata?.deckCardIds)
-
+          // 以前のデバッグ用ログを削除
           // 既にデッキメタデータがある場合はそれを使用
           if (deckMetadata != null) {
-            console.log("Regenerating deck from image due to validation error...")
-            console.log("Validation error details:", {
-              error: validationError,
-              zodErrors: errors,
-              parsedData: (() => {
-                try {
-                  return JSON.parse(savedStateData.stateJson)
-                } catch {
-                  return "Failed to parse JSON"
-                }
-              })(),
-            })
-
             // バリデーションエラー時は新しいカードIDマッピングを生成
             const regeneratedCardIds = {
               mainDeck: {} as Record<string, string>,
@@ -450,11 +424,8 @@ export default function Replay() {
               regeneratedCardIds.extraDeck[i.toString()] = newId
             }
 
-            console.log("Generated new card IDs:", regeneratedCardIds)
-
             // 新しいIDマッピングで画像を切り出し
             const cardImageMap = await extractCardsFromDeckImage(deckMetadata, regeneratedCardIds)
-            console.log("Extracted cards count:", cardImageMap.size)
 
             // カードオブジェクトを作成
             const mainDeckCards = []
@@ -476,9 +447,6 @@ export default function Replay() {
                 extraDeckCards.push(card)
               }
             }
-
-            console.log("mainDeckCards count:", mainDeckCards.length)
-            console.log("extraDeckCards count:", extraDeckCards.length)
 
             // 初期状態を設定
             setGameState({
@@ -528,9 +496,8 @@ export default function Replay() {
               phase: "main1",
               currentPlayer: "self",
             })
-            console.log("Game state set successfully")
           } else {
-            console.log("deckMetadata or deckCardIds is null, cannot load deck")
+            // deck metadata not available
           }
         } catch (e) {
           console.error("Failed to setup initial state on validation error:", e)

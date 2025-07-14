@@ -4,75 +4,82 @@ import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 interface HighlightAnimationProps {
   cardRect: { x: number; y: number; width: number; height: number }
   cardRotation?: number
+  cardImageUrl?: string
   hideStaticBorder?: boolean
   onComplete: () => void
 }
 
-export function HighlightAnimation({ cardRect, cardRotation = 0, onComplete }: HighlightAnimationProps) {
-  const [animationState, setAnimationState] = useState<"expanding" | "shrinking" | "hidden">("expanding")
+// Remove the global tracking since it's not solving the root issue
+// const activeAnimations = new Set<string>()
+
+export function HighlightAnimation({
+  cardRect,
+  cardRotation = 0,
+  cardImageUrl,
+  onComplete,
+}: HighlightAnimationProps) {
+  const [animationState, setAnimationState] =
+    useState<"initial" | "expanding" | "shrinking">("initial")
   const onCompleteCalledRef = useRef(false)
-  const mountTimeRef = useRef(Date.now())
 
   useEffect(() => {
-    console.log(`HighlightAnimation mounted at ${mountTimeRef.current}`)
-    
-    // 拡大から縮小への切り替え
-    const expandTimer = setTimeout(() => {
-      console.log(`HighlightAnimation switching to shrinking state after ${Date.now() - mountTimeRef.current}ms`)
+    // 次のフレームで拡大開始
+    const startId = requestAnimationFrame(() => {
+      setAnimationState("expanding")
+    })
+
+    // 拡大完了後に縮小
+    const shrinkTimer = setTimeout(() => {
       setAnimationState("shrinking")
-    }, ANIMATION_DURATIONS.HIGHLIGHT / 2)
-
-    // 完全に非表示とonComplete呼び出し
-    const hideTimer = setTimeout(() => {
-      console.log(`HighlightAnimation hiding after ${Date.now() - mountTimeRef.current}ms`)
-      setAnimationState("hidden")
-
-      // onCompleteは縮小アニメーション完了後に呼ぶ
-      if (!onCompleteCalledRef.current) {
-        onCompleteCalledRef.current = true
-        console.log(`HighlightAnimation calling onComplete after ${Date.now() - mountTimeRef.current}ms`)
-        onComplete()
-      }
     }, ANIMATION_DURATIONS.HIGHLIGHT)
 
-    // Cleanup function
+    // 縮小完了後に onComplete を呼ぶ（overlay は親の unmount で消える）
+    const completeTimer = setTimeout(() => {
+      if (!onCompleteCalledRef.current) {
+        onCompleteCalledRef.current = true
+        onComplete()
+      }
+    }, ANIMATION_DURATIONS.HIGHLIGHT * 2)
+
     return () => {
-      clearTimeout(expandTimer)
-      clearTimeout(hideTimer)
+      cancelAnimationFrame(startId)
+      clearTimeout(shrinkTimer)
+      clearTimeout(completeTimer)
     }
   }, [onComplete])
 
-  if (animationState === "hidden") return null
-
-  const isExpanded = animationState === "expanding"
+  const scale = animationState === "expanding" ? 1.1 : 1
 
   return (
-    <>
-      {/* Red highlight overlay - 赤いハイライトオーバーレイ */}
+    <div
+      className="fixed pointer-events-none"
+      style={{
+        left: `${cardRect.x}px`,
+        top: `${cardRect.y}px`,
+        width: `${cardRect.width}px`,
+        height: `${cardRect.height}px`,
+        zIndex: 9998,
+        transform: `rotate(${cardRotation}deg) scale(${scale})`,
+        transformOrigin: "center",
+        transition: `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+      }}
+    >
+      {/* card image */}
+      <img
+        src={cardImageUrl}
+        alt="Highlighted card"
+        className="absolute inset-0 w-full h-full object-cover rounded"
+        style={{ pointerEvents: "none" }}
+        draggable={false}
+      />
+      {/* red border */}
       <div
-        className="fixed pointer-events-none"
+        className="absolute inset-0 rounded pointer-events-none"
         style={{
-          // カードの元の位置（回転前の位置）
-          left: `${cardRect.x}px`,
-          top: `${cardRect.y}px`,
-          width: `${cardRect.width}px`,
-          height: `${cardRect.height}px`,
-          zIndex: 9998,
-          // 回転と拡大を同時に適用
-          transform: `rotate(${cardRotation}deg) ${isExpanded ? "scale(1.1)" : "scale(1)"}`,
-          transformOrigin: "center",
-          transition: `all ${ANIMATION_DURATIONS.HIGHLIGHT / 2}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+          border: "3px solid #ef4444",
+          boxShadow: "inset 0 0 10px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.6)",
         }}
-      >
-        <div
-          className="absolute inset-0 rounded pointer-events-none"
-          style={{
-            border: "3px solid #ef4444",
-            boxShadow: "inset 0 0 10px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.6)",
-            transition: "all 0.2s ease",
-          }}
-        />
-      </div>
-    </>
+      />
+    </div>
   )
 }

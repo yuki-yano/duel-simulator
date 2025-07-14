@@ -1,18 +1,17 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
+import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
-// Constants
 const LONG_PRESS_DURATION_MS = 600
 const TOUCH_MOVE_THRESHOLD = 5
 
 // Create empty image once to avoid re-creating on every drag
 const EMPTY_DRAG_IMAGE = new Image()
-EMPTY_DRAG_IMAGE.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs='
+EMPTY_DRAG_IMAGE.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs="
 
 interface DraggableCardProps {
   card: GameCard
@@ -40,38 +39,27 @@ export function DraggableCard({
   const cardAnimations = useAtomValue(cardAnimationsAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
-  const [targetAnimating, setTargetAnimating] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
   const suppressDragImageRef = useRef<boolean>(false)
-  
+
   // Unified drag state for PC and mobile
   const [isDragging, setIsDragging] = useState(false)
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null)
 
   // Check if this card is currently animating (only for move animations)
   const isAnimating = cardAnimations.some((anim) => anim.type === "move" && anim.cardId === card.id)
-  
+
   // Check if this card has a highlight animation
   const highlightAnimating = cardAnimations.some((anim) => anim.type === "highlight" && anim.cardId === card.id)
-
-
-  // Detect target animation and trigger scale effect
-  useEffect(() => {
-    const targetAnimation = cardAnimations.find((anim) => anim.type === "target" && anim.cardId === card.id)
-
-    if (targetAnimation) {
-      setTargetAnimating(true)
-      // Reset after expansion duration
-      const timer = setTimeout(() => {
-        setTargetAnimating(false)
-      }, ANIMATION_DURATIONS.TARGET_SELECTION)
-
-      return () => clearTimeout(timer)
-    }
-  }, [cardAnimations, card.id])
+  // Check if this card is in target animation (used to suppress hover shift only)
+  const targetAnimating = cardAnimations.some((anim) => anim.type === "target" && anim.cardId === card.id)
+  // Check if this card is in effect activation animation (used to suppress hover shift)
+  const activateAnimating = cardAnimations.some((anim) => anim.type === "activate" && anim.cardId === card.id)
+  // Check if this card is in rotate animation (used to suppress hover shift)
+  const rotateAnimating = cardAnimations.some((anim) => anim.type === "rotate" && anim.cardId === card.id)
 
   // Clean up timers on unmount and setup touch listeners
   useEffect(() => {
@@ -134,7 +122,6 @@ export function DraggableCard({
         document.body.style.overflow = "hidden"
         document.body.style.touchAction = "none"
 
-
         // Set up long press detection (600ms)
         longPressTimerRef.current = setTimeout(() => {
           if (touchStartPosRef.current && onContextMenu) {
@@ -186,7 +173,7 @@ export function DraggableCard({
       const rect = cardRef.current.getBoundingClientRect()
       const cardCenterX = rect.left + rect.width / 2
       const cardCenterY = rect.top + rect.height / 2
-      
+
       dragOffsetRef.current = {
         x: cardCenterX - e.clientX,
         y: cardCenterY - e.clientY,
@@ -402,7 +389,7 @@ export function DraggableCard({
     <>
       <div
         ref={cardRef}
-        className={cn("transition-all duration-200", className)}
+        className={cn("duration-200", className)}
         draggable={!isReplayPlaying}
         data-card-id={card.id}
         onDragStart={handleDragStart}
@@ -424,26 +411,28 @@ export function DraggableCard({
         onTouchMove={handleTouchMove}
         style={{
           cursor: isReplayPlaying ? "not-allowed" : "grab",
-          opacity: isAnimating ? 0 : (isTouching || isDragging) ? 0.5 : 1,
-          visibility: isAnimating ? "hidden" : "visible",
+          // activate アニメーション中は薄くする程度に留め、完全に隠さない
+          opacity: activateAnimating ? 0.25 : isTouching || isDragging ? 0.5 : 1,
+          visibility: isAnimating || rotateAnimating ? "hidden" : "visible",
+          // transform だけスムーズにする
+          transition: "transform 200ms",
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           position: "relative",
           transform:
-            highlightAnimating || targetAnimating
-              ? "scale(1.1)"
-              : (isHovered || isTouching) && !isReplayPlaying
-                ? hoverDirection === "left"
-                  ? "translateX(-8px)"
-                  : hoverDirection === "right"
-                    ? "translateX(8px)"
-                    : "translateY(-8px)"
-                : "translate(0)",
+            (isHovered || isTouching) &&
+            !isReplayPlaying &&
+            !highlightAnimating &&
+            !targetAnimating &&
+            !activateAnimating &&
+            !rotateAnimating
+              ? hoverDirection === "left"
+                ? "translateX(-8px)"
+                : hoverDirection === "right"
+                  ? "translateX(8px)"
+                  : "translateY(-8px)"
+              : "translate(0)",
           zIndex: (isHovered || isTouching) && !isReplayPlaying ? 1000 : 1,
-          transition:
-            highlightAnimating || targetAnimating
-              ? `transform ${ANIMATION_DURATIONS.HIGHLIGHT}ms cubic-bezier(0.34, 1.56, 0.64, 1)`
-              : "transform 0.2s ease",
           ...style,
         }}
       >
@@ -457,7 +446,6 @@ export function DraggableCard({
             )}
             style={{
               transform: `rotate(${card.rotation}deg)`,
-              transition: `transform ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               WebkitUserSelect: "none",
               userSelect: "none",
               WebkitTouchCallout: "none",
@@ -470,7 +458,6 @@ export function DraggableCard({
               className="absolute inset-0 rounded pointer-events-none bg-black/40"
               style={{
                 transform: `rotate(${card.rotation}deg)`,
-                transition: `transform ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               }}
             />
           )}
@@ -481,7 +468,6 @@ export function DraggableCard({
                 transform: `rotate(${card.rotation}deg)`,
                 border: "3px solid #ef4444",
                 boxShadow: "inset 0 0 10px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.6)",
-                transition: `all ${ANIMATION_DURATIONS.CARD_ROTATION}ms ease`,
               }}
             />
           )}
@@ -508,11 +494,11 @@ export function DraggableCard({
             const dragImageWidth = isRotated ? baseHeight : baseWidth
             const dragImageHeight = isRotated ? baseWidth : baseHeight
 
-            const displayX = isTouching 
+            const displayX = isTouching
               ? dragPosition.x + dragOffsetRef.current.x - dragImageWidth / 2
               : dragPosition.x - dragImageWidth / 2
             const displayY = isTouching
-              ? dragPosition.y + dragOffsetRef.current.y - dragImageHeight / 2  
+              ? dragPosition.y + dragOffsetRef.current.y - dragImageHeight / 2
               : dragPosition.y - dragImageHeight / 2
 
             return (

@@ -5,6 +5,7 @@ import { cn } from "@/client/lib/utils"
 import { EffectActivationAnimation } from "./EffectActivationAnimation"
 import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 import { HighlightAnimation } from "./HighlightAnimation"
+import { RotateAnimation } from "./RotateAnimation"
 
 interface AnimatedCardProps {
   animation: CardAnimation
@@ -67,14 +68,8 @@ export function CardAnimationOverlay() {
   const [animations, setAnimations] = useAtom(cardAnimationsAtom)
 
   const handleAnimationComplete = (animationId: string) => {
-    console.log(`Removing animation ${animationId} from cardAnimationsAtom`)
     setAnimations((prev) => prev.filter((anim) => anim.id !== animationId))
   }
-  
-  // Debug: Log all current animations
-  console.log(`CardAnimationOverlay rendering with ${animations.length} animations:`, 
-    animations.map(a => ({ id: a.id, type: a.type, cardId: a.cardId }))
-  )
 
   return (
     <>
@@ -86,6 +81,7 @@ export function CardAnimationOverlay() {
               position={animation.position}
               cardRect={animation.cardRect}
               cardRotation={animation.cardRotation}
+              cardImageUrl={animation.cardImageUrl}
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )
@@ -95,31 +91,32 @@ export function CardAnimationOverlay() {
               key={animation.id}
               cardRect={animation.cardRect}
               cardRotation={animation.cardRotation}
+              cardImageUrl={animation.cardImageUrl}
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )
-        } else if (animation.type === "highlight" && animation.position) {
-          // Use HighlightAnimation for highlight effect (red border + scale)
-          const cardElement = document.querySelector(`[data-card-id="${animation.cardId}"]`)
-          if (cardElement) {
-            const rect = cardElement.getBoundingClientRect()
-            return (
-              <HighlightAnimation
-                key={animation.id}
-                cardRect={{
-                  x: rect.x,
-                  y: rect.y,
-                  width: rect.width,
-                  height: rect.height,
-                }}
-                cardRotation={0}
-                onComplete={() => handleAnimationComplete(animation.id)}
-              />
-            )
-          }
-          // Fallback to onComplete if element not found
-          setTimeout(() => handleAnimationComplete(animation.id), 100)
-          return null
+        } else if (animation.type === "highlight" && animation.cardRect) {
+          return (
+            <HighlightAnimation
+              key={animation.id}
+              cardRect={animation.cardRect}
+              cardRotation={animation.cardRotation ?? 0}
+              cardImageUrl={animation.cardImageUrl}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        } else if (animation.type === "rotate" && animation.cardRect) {
+          return (
+            <RotateAnimation
+              key={animation.id}
+              cardRect={animation.cardRect}
+              fromRotation={animation.fromRotation ?? 0}
+              toRotation={animation.toRotation ?? 0}
+              cardImageUrl={animation.cardImageUrl}
+              duration={animation.duration}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
         } else {
           return (
             <AnimatedCard

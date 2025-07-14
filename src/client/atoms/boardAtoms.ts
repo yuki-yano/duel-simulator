@@ -18,12 +18,12 @@ import type { DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 
 // Animation duration constants (in milliseconds)
 export const ANIMATION_DURATIONS = {
-  EFFECT_ACTIVATION: 300,
+  EFFECT_ACTIVATION: 400,
   HIGHLIGHT: 300, // Duration for highlight animation
   TARGET_SELECTION: 300, // Same as highlight
   CARD_ROTATION: 200,
   REPLAY_DELAY: 50,
-  EFFECT_ACTIVATION_WAIT: 300, // Wait time after effect activation in replay
+  EFFECT_ACTIVATION_WAIT: 200, // Wait time after effect activation in replay
   ROTATION_WAIT: 300, // Wait time after rotation in replay
   BASE_MOVE_DURATION: 750, // Base duration for move animations at 1x speed
   FADE_OUT: 200, // Fade out duration for animations
@@ -532,11 +532,23 @@ export const redoAtom = atom(null, async (get, set) => {
                 }
               : undefined
 
+          // Get card image URL (fallback for token)
+          let cardImageUrl: string | undefined
+          if (operation.cardId) {
+            const player = currentState.players[operation.to.player]
+            const res = getCardById(player, operation.cardId)
+            if (res) {
+              cardImageUrl = res.card.name === "token" ? TOKEN_IMAGE_DATA_URL : res.card.imageUrl
+            }
+          }
+
           set(cardAnimationsAtom, [
             ...animations,
             {
               id: animationId,
               type: "activate",
+              cardId: operation.cardId,
+              cardImageUrl,
               position,
               cardRect,
               cardRotation,
@@ -1345,7 +1357,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
       // Create animations for moved cards BEFORE updating state
       const animations: CardAnimation[] = []
       const currentSpeed = get(replaySpeedAtom)
-      const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * currentSpeed)) // 2/3 of base duration adjusted by speed
+      const animationDuration = Math.floor((ANIMATION_DURATIONS.BASE_MOVE_DURATION * 2) / (3 * currentSpeed))
 
       // First, create animations with current positions
       for (const { card } of movedCards) {
@@ -1451,11 +1463,23 @@ export const playReplayAtom = atom(null, async (get, set) => {
               }
             : undefined
 
+        // Get card image URL (fallback for token)
+        let cardImageUrl: string | undefined
+        if (operation.cardId) {
+          const player = currentState.players[operation.to.player]
+          const res = getCardById(player, operation.cardId)
+          if (res) {
+            cardImageUrl = res.card.name === "token" ? TOKEN_IMAGE_DATA_URL : res.card.imageUrl
+          }
+        }
+
         set(cardAnimationsAtom, [
           ...animations,
           {
             id: animationId,
             type: "activate",
+            cardId: operation.cardId,
+            cardImageUrl,
             position,
             cardRect,
             cardRotation,
@@ -1522,10 +1546,21 @@ export const playReplayAtom = atom(null, async (get, set) => {
           }
         }
 
+        // Get card image URL (fallback to empty string if unavailable)
+        let cardImageUrl: string | undefined
+        if (operation.to != null && operation.cardId != null) {
+          const player = currentState.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result != null) {
+            cardImageUrl = result.card.imageUrl
+          }
+        }
+
         const newAnimation: CardAnimation = {
           id: animationId,
           type: "target",
           cardId: operation.cardId,
+          cardImageUrl,
           position: {
             zone: {
               player: operation.to.player,
@@ -1546,6 +1581,55 @@ export const playReplayAtom = atom(null, async (get, set) => {
         // Wait for target animation to complete (expand + shrink)
         await new Promise((resolve) =>
           setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.TARGET_SELECTION * 2, get)),
+        )
+      } else if (operation.type === "toggleHighlight" && operation.to) {
+        // Update state (no change) WITHOUT adding to history
+        updateReplayState(set, nextState, i + 1)
+        currentState = nextState
+
+        // Ensure DOM updated
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.REPLAY_DELAY, get)),
+        )
+
+        const animationId = uuidv4()
+        const animations = get(cardAnimationsAtom)
+
+        // Card position
+        let cardRect: { x: number; y: number; width: number; height: number } | undefined
+        const el = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+        if (el) {
+          const r = el.getBoundingClientRect()
+          cardRect = { x: r.x, y: r.y, width: r.width, height: r.height }
+        }
+
+        // Rotation & image
+        let cardRotation: number | undefined = 0
+        let cardImageUrl: string | undefined
+        if (operation.cardId) {
+          const player = currentState.players[operation.to.player]
+          const res = getCardById(player, operation.cardId)
+          if (res) {
+            cardRotation = res.card.rotation
+            cardImageUrl = res.card.imageUrl
+          }
+        }
+
+        const highlightAnim: CardAnimation = {
+          id: animationId,
+          type: "highlight",
+          cardId: operation.cardId,
+          cardImageUrl,
+          cardRect,
+          cardRotation,
+          startTime: Date.now(),
+          duration: ANIMATION_DURATIONS.HIGHLIGHT,
+        }
+
+        set(cardAnimationsAtom, [...animations, highlightAnim])
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, getAnimationDuration(ANIMATION_DURATIONS.HIGHLIGHT * 2, get)),
         )
       } else {
         // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
@@ -1735,13 +1819,39 @@ function createAnimationsFromOperations(
         
       case "rotate":
         if (operation.metadata && "angle" in operation.metadata) {
-          const angle = operation.metadata.angle as number
+          // prev / next のカード回転角を取得
+          const prevPlayer = prevState.players[operation.player]
+          const nextPlayer = nextState.players[operation.player]
+
+          const prevCardRes = getCardById(prevPlayer, operation.cardId)
+          const nextCardRes = getCardById(nextPlayer, operation.cardId)
+
+          const fromRotation = prevCardRes?.card.rotation ?? 0
+          const toRotation = nextCardRes?.card.rotation ?? (operation.metadata.angle as number)
+
+          // Get card element rect (位置は prevState 時点で取得)
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+          }
+
+          // Get card image URL (優先的に prev → next の順で取得)
+          let cardImageUrl: string | undefined
+          const cardForImage = prevCardRes?.card ?? nextCardRes?.card
+          if (cardForImage) {
+            cardImageUrl = cardForImage.name === "token" ? TOKEN_IMAGE_DATA_URL : cardForImage.imageUrl
+          }
+
           animations.push({
             id: uuidv4(),
             type: "rotate",
             cardId: operation.cardId,
-            fromRotation: isReverse ? angle : 0,
-            toRotation: isReverse ? 0 : angle,
+            cardImageUrl,
+            cardRect,
+            fromRotation,
+            toRotation,
             startTime: Date.now(),
             duration: animationDuration / 2,
           })
@@ -1796,11 +1906,36 @@ function createAnimationsFromOperations(
             },
             cardId: operation.cardId,
           }
+
+          // Card rect
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardEl = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardEl) {
+            const r = cardEl.getBoundingClientRect()
+            cardRect = { x: r.x, y: r.y, width: r.width, height: r.height }
+          }
+
+          // Rotation & image
+          let cardRotation: number | undefined = 0
+          let cardImageUrl: string | undefined
+          if (operation.cardId) {
+            const state = isReverse ? prevState : nextState
+            const player = state.players[operation.to.player]
+            const res = getCardById(player, operation.cardId)
+            if (res) {
+              cardRotation = res.card.rotation
+              cardImageUrl = res.card.imageUrl
+            }
+          }
+
           animations.push({
             id: uuidv4(),
             type: "highlight",
             cardId: operation.cardId,
+            cardImageUrl,
             position,
+            cardRect,
+            cardRotation,
             startTime: Date.now(),
             duration: animationDuration / 2,
           })
@@ -1841,10 +1976,16 @@ function createAnimationsFromOperations(
             cardId: operation.cardId,
           }
           
+          let cardImageUrl: string | undefined
+          if (result) {
+            cardImageUrl = result.card.imageUrl
+          }
+          
           animations.push({
             id: uuidv4(),
             type: "activate",
             cardId: operation.cardId,
+            cardImageUrl,
             position,
             cardRect,
             cardRotation,
@@ -1888,10 +2029,16 @@ function createAnimationsFromOperations(
             cardId: operation.cardId,
           }
           
+          let cardImageUrl: string | undefined
+          if (result) {
+            cardImageUrl = result.card.imageUrl
+          }
+          
           animations.push({
             id: uuidv4(),
             type: "target",
             cardId: operation.cardId,
+            cardImageUrl,
             position,
             cardRect,
             cardRotation,
@@ -1969,8 +2116,11 @@ async function playOperationAnimations(
     })
   } catch (e) {
     if (e instanceof DOMException && e.message === 'Animation cancelled') {
-      // Clear animations immediately when cancelled
-      set(cardAnimationsAtom, [])
+      // アニメーションキャンセル時に即座にオーバーレイを消すと
+      // 次のアニメーションがセットされるまでの間に空白フレームが発生し
+      // チラつきの原因になるため何もしない。
+      // 次の playOperationAnimations 呼び出しで cardAnimationsAtom が
+      // 上書きされるので自然に置き換わる。
     } else {
       throw e
     }
@@ -2044,6 +2194,15 @@ export const moveCardAtom = atom(
 // Card rotation action
 export const rotateCardAtom = atom(null, (get, set, position: Position, angle: number) => {
   const state = get(gameStateAtom)
+
+  // Get previous rotation before updating
+  let prevRotation = 0
+  {
+    const player = state.players[position.zone.player]
+    const res = getCardById(player, position.cardId)
+    if (res) prevRotation = res.card.rotation
+  }
+
   const newState = performCardRotation(state, position, angle)
 
   if (newState !== state) {
@@ -2073,6 +2232,40 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
     if (get(replayRecordingAtom)) {
       set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
     }
+
+    // Create rotate animation for immediate feedback
+    // Delay slightly to ensure DOM has updated rotation state
+    setTimeout(() => {
+      const cardElement = document.querySelector(`[data-card-id="${position.cardId}"]`)
+      if (!cardElement) return
+
+      const rect = cardElement.getBoundingClientRect()
+
+      // Retrieve card image URL from new state
+      const player = newState.players[position.zone.player]
+      const res = getCardById(player, position.cardId)
+
+      const cardImageUrl = res
+        ? res.card.name === "token"
+          ? TOKEN_IMAGE_DATA_URL
+          : res.card.imageUrl
+        : undefined
+
+      const animation: CardAnimation = {
+        id: uuidv4(),
+        type: "rotate",
+        cardId: position.cardId,
+        cardImageUrl,
+        cardRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        fromRotation: prevRotation,
+        toRotation: angle,
+        startTime: Date.now(),
+        duration: ANIMATION_DURATIONS.CARD_ROTATION,
+      }
+
+      const existingAnims = get(cardAnimationsAtom)
+      set(cardAnimationsAtom, [...existingAnims, animation])
+    }, 0)
   }
 })
 
@@ -2131,6 +2324,7 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
     }
 
     // Update operations BEFORE history
+    console.log("toggleCardHighlightAtom: push operation", operation)
     set(operationsAtom, [...get(operationsAtom), operation])
 
     // Then update game state and add to history
@@ -2155,6 +2349,7 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
           id: animationId,
           type: "highlight",
           cardId: position.cardId,
+          cardImageUrl: result.card.imageUrl,
           position,
           cardRect: {
             x: rect.x,
@@ -2166,18 +2361,9 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
           duration: ANIMATION_DURATIONS.HIGHLIGHT,
         }
         
-        // Check if highlight animation already exists for this card
+        // Add animation without checking for duplicates (like target/activate)
         const existingAnimations = get(cardAnimationsAtom)
-        const hasExistingHighlight = existingAnimations.some(
-          anim => anim.type === "highlight" && anim.cardId === position.cardId
-        )
-        
-        if (!hasExistingHighlight) {
-          console.log(`Creating highlight animation for card ${position.cardId}, animation ID: ${animationId}`)
-          set(cardAnimationsAtom, [...existingAnimations, animation])
-        } else {
-          console.log(`Highlight animation already exists for card ${position.cardId}, skipping`)
-        }
+        set(cardAnimationsAtom, [...existingAnimations, animation])
       }
     }
   }
@@ -2245,7 +2431,9 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     const newAnimation = {
       id: animationId,
       type: "activate" as const,
+      cardId: card?.id,
       position: positionWithCardId,
+      cardImageUrl: card?.name === "token" ? TOKEN_IMAGE_DATA_URL : card?.imageUrl,
       cardRect: cardRect
         ? {
             x: cardRect.x,
@@ -2324,6 +2512,7 @@ export const targetSelectAtom = atom(null, (get, set, position: Position, cardEl
       id: animationId,
       type: "target" as const,
       cardId: card?.id,
+      cardImageUrl: card?.imageUrl,
       position: positionWithCardId,
       cardRect: cardRect
         ? {

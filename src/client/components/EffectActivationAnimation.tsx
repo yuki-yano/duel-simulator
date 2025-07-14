@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
 import { ANIMATION_DURATIONS } from "@/client/atoms/boardAtoms"
 import type { Position } from "@/shared/types/game"
@@ -7,6 +7,7 @@ interface EffectActivationAnimationProps {
   position: Position
   cardRect?: { x: number; y: number; width: number; height: number }
   cardRotation?: number
+  cardImageUrl?: string
   onComplete: () => void
 }
 
@@ -14,157 +15,127 @@ export function EffectActivationAnimation({
   position,
   cardRect,
   cardRotation = 0,
+  cardImageUrl,
   onComplete,
 }: EffectActivationAnimationProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [effectPosition, setEffectPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(
-    null,
-  )
+  const [animationState, setAnimationState] =
+    useState<"initial" | "expanding" | "shrinking">("initial")
+  const onCompleteCalled = useRef(false)
+
+  // Calculate effect position on mount
+  const effectPosition = useRef<{ x: number; y: number; width: number; height: number } | null>(null)
+  if (effectPosition.current == null) {
+    if (cardRect) {
+      effectPosition.current = cardRect
+    } else {
+      // fallback query same as before but simplified to card id
+      const el = position.cardId ? document.querySelector(`[data-card-id="${position.cardId}"]`) : null
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        effectPosition.current = { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+      }
+    }
+  }
 
   useEffect(() => {
-    // If cardRect is provided, use it directly
-    if (cardRect) {
-      setEffectPosition(cardRect)
-      setIsVisible(true)
+    const D = ANIMATION_DURATIONS.EFFECT_ACTIVATION
 
-      // Hide and complete after animation
-      const timer = setTimeout(() => {
-        setIsVisible(false)
-        setTimeout(onComplete, ANIMATION_DURATIONS.FADE_OUT) // Wait for fade out
-      }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
+    const startId = requestAnimationFrame(() => setAnimationState("expanding"))
 
-      return () => clearTimeout(timer)
-    }
+    // Start shrink at halfway point so total expand+shrink fits in D
+    const shrinkTimer = setTimeout(() => setAnimationState("shrinking"), D / 2)
 
-    // Otherwise, try to find element by selector (fallback)
-    const getElementSelector = () => {
-      const { zone } = position
-      if (zone === undefined) return null
-
-      if (zone.type === "monsterZone") {
-        return `[data-zone-type="monsterZone"][data-zone-player="${zone.player}"][data-zone-index="${zone.index}"] [draggable="true"]`
-      } else if (zone.type === "spellTrapZone") {
-        return `[data-zone-type="spellTrapZone"][data-zone-player="${zone.player}"][data-zone-index="${zone.index}"] [draggable="true"]`
-      } else if (zone.type === "extraMonsterZone") {
-        return `[data-zone-type="extraMonsterZone"][data-zone-player="${zone.player}"][data-zone-index="${zone.index}"] [draggable="true"]`
-      } else if (zone.type === "graveyard") {
-        if (zone.cardId !== undefined) {
-          return `[data-card-id="${zone.cardId}"]`
-        }
-        // Fallback to first child if no cardId (shouldn't happen with the fix)
-        return `[data-zone-type="graveyard"][data-zone-player="${zone.player}"] [draggable="true"]:first-child`
-      } else if (zone.type === "hand") {
-        if (zone.cardId !== undefined) {
-          return `[data-card-id="${zone.cardId}"]`
-        }
-        // Fallback using index
-        return `[data-zone-type="hand"][data-zone-player="${zone.player}"] [draggable="true"]:nth-child(${(zone.index ?? 0) + 1})`
+    // Call onComplete after animation completes (hide immediately)
+    const completeTimer = setTimeout(() => {
+      if (!onCompleteCalled.current) {
+        onCompleteCalled.current = true
+        onComplete()
       }
+    }, D)
 
-      return null
+    return () => {
+      cancelAnimationFrame(startId)
+      clearTimeout(shrinkTimer)
+      clearTimeout(completeTimer)
     }
+  }, [onComplete])
 
-    const selector = getElementSelector()
-    if (selector === null) {
-      onComplete()
-      return
-    }
+  if (!effectPosition.current) return null
 
-    const element = document.querySelector(selector)
-    if (element === null) {
-      onComplete()
-      return
-    }
-
-    // Get element position and dimensions
-    const rect = element.getBoundingClientRect()
-    setEffectPosition({
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-    })
-
-    // Show effect
-    setIsVisible(true)
-
-    // Hide and complete after animation
-    const timer = setTimeout(() => {
-      setIsVisible(false)
-      setTimeout(onComplete, 200) // Wait for fade out
-    }, ANIMATION_DURATIONS.EFFECT_ACTIVATION)
-
-    return () => clearTimeout(timer)
-  }, [position, cardRect, onComplete])
-
-  if (!effectPosition) return null
-
-  // Check if card is rotated
+  // 拡大率を旧演出に合わせる
+  const scale = animationState === "expanding" ? 1.1 : 1
   const isRotated = cardRotation === -90 || cardRotation === 90
+
+  const pos = effectPosition.current
+
+  // Common style calc
+  const left = isRotated ? pos.x + (pos.width - pos.height) / 2 : pos.x
+  const top = isRotated ? pos.y - (pos.width - pos.height) / 2 : pos.y
+  const width = isRotated ? pos.height : pos.width
+  const height = isRotated ? pos.width : pos.height
 
   return (
     <>
-      {/* Card zoom effect - カード自体の拡大 */}
-      <style>
-        {`
-          [data-card-id="${position.zone?.cardId ?? position.cardId ?? ""}"] {
-            transform: ${isVisible ? "scale(1.05)" : "scale(1)"} !important;
-            transition: transform ${ANIMATION_DURATIONS.EFFECT_ACTIVATION}ms ease-out !important;
-            z-index: ${isVisible ? "9997" : "auto"} !important;
-          }
-        `}
-      </style>
-
-      {/* White flash overlay - 最初の一瞬だけ */}
+      {/* Card zoom */}
       <div
-        className={cn(
-          "fixed pointer-events-none",
-          "transition-opacity duration-100",
-          isVisible ? "opacity-100" : "opacity-0",
-        )}
+        className="fixed pointer-events-none"
         style={{
-          // 守備表示の場合、カードの中心に合わせて位置調整
-          left: isRotated
-            ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
-            : `${effectPosition.x - 2}px`,
-          top: isRotated
-            ? `${effectPosition.y - (effectPosition.width - effectPosition.height) / 2 - 2}px`
-            : `${effectPosition.y - 2}px`,
-          // 守備表示の場合、幅と高さを入れ替え
-          width: isRotated ? `${effectPosition.height + 4}px` : `${effectPosition.width + 4}px`,
-          height: isRotated ? `${effectPosition.width + 4}px` : `${effectPosition.height + 4}px`,
-          zIndex: 9999,
+          left: `${left}px`,
+          top: `${top}px`,
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `rotate(${cardRotation}deg) scale(${scale})`,
+          transformOrigin: "center",
+          transition: `transform ${ANIMATION_DURATIONS.EFFECT_ACTIVATION}ms ease-out`,
+          zIndex: 9997,
         }}
       >
-        <div
-          className={cn("absolute inset-0 rounded-lg bg-white/50", isVisible && "animate-[whiteFlash_0.3s_ease-out]")}
+        <img
+          src={cardImageUrl}
+          alt="Effect card"
+          className="absolute inset-0 w-full h-full object-cover rounded"
+          draggable={false}
         />
       </div>
 
-      {/* Blue mist overlay */}
+      {/* flash / mist overlays similar logic, reuse previous but depends on animationState */}
       <div
         className={cn(
-          "fixed pointer-events-none",
-          "transition-opacity duration-200",
-          isVisible ? "opacity-100" : "opacity-0",
+          "fixed pointer-events-none transition-opacity duration-200",
+          animationState === "initial" ? "opacity-0" : "opacity-100",
         )}
         style={{
-          // 守備表示の場合、カードの中心に合わせて位置調整
-          left: isRotated
-            ? `${effectPosition.x + (effectPosition.width - effectPosition.height) / 2 - 2}px`
-            : `${effectPosition.x - 2}px`,
-          top: isRotated
-            ? `${effectPosition.y - (effectPosition.width - effectPosition.height) / 2 - 2}px`
-            : `${effectPosition.y - 2}px`,
-          // 守備表示の場合、幅と高さを入れ替え
-          width: isRotated ? `${effectPosition.height + 4}px` : `${effectPosition.width + 4}px`,
-          height: isRotated ? `${effectPosition.width + 4}px` : `${effectPosition.height + 4}px`,
+          left: `${left - 2}px`,
+          top: `${top - 2}px`,
+          width: `${width + 4}px`,
+          height: `${height + 4}px`,
           zIndex: 9998,
         }}
       >
-        {/* Blue glowing mist */}
+        {/* white flash */}
         <div
-          className={cn("absolute inset-0 rounded-lg", isVisible && "animate-[blueMist_0.5s_ease-out]")}
+          className={cn(
+            "absolute inset-0 rounded-lg bg-white/50",
+            animationState === "expanding" && "animate-[whiteFlash_0.3s_ease-out]",
+          )}
+        />
+        {/* inner blue glow */}
+        <div
+          className={cn(
+            "absolute inset-0 rounded-lg bg-blue-400/20",
+            animationState === "expanding" && "animate-[pulseGlow_0.5s_ease-out]",
+          )}
+          style={{
+            boxShadow: "inset 0 0 20px rgba(96, 165, 250, 0.5), 0 0 30px rgba(147, 197, 253, 0.4)",
+          }}
+        />
+
+        {/* blue mist / bubble effect */}
+        <div
+          className={cn(
+            "absolute inset-0 rounded-lg",
+            animationState === "expanding" && "animate-[blueMist_0.5s_ease-out]",
+          )}
           style={{
             background:
               "radial-gradient(circle at center, rgba(147, 197, 253, 0.3) 0%, rgba(59, 130, 246, 0.2) 40%, transparent 70%)",
@@ -172,42 +143,27 @@ export function EffectActivationAnimation({
           }}
         />
 
-        {/* Inner blue glow */}
-        <div
-          className={cn(
-            "absolute inset-0 rounded-lg",
-            "bg-blue-400/20",
-            isVisible && "animate-[pulseGlow_0.5s_ease-out]",
-          )}
-          style={{
-            boxShadow: "inset 0 0 20px rgba(96, 165, 250, 0.5), 0 0 30px rgba(147, 197, 253, 0.4)",
-          }}
-        />
-
-        {/* Sparkling particles */}
-        <div className="absolute inset-0 overflow-hidden rounded-lg">
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "absolute w-1 h-1 bg-blue-200 rounded-full",
-                isVisible && "animate-[sparkle_0.6s_ease-out]",
-              )}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.08}s`,
-              }}
-            />
-          ))}
-        </div>
+        {/* sparkles - size 0.25rem (w-1 h-1) */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "absolute w-1 h-1 bg-blue-200 rounded-full",
+              animationState === "expanding" && "animate-[sparkle_0.6s_ease-out]",
+            )}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${i * 0.08}s`,
+            }}
+          />
+        ))}
 
         {/* Edge highlight */}
         <div
           className={cn(
-            "absolute inset-0 rounded-lg",
-            "border border-blue-300/50",
-            isVisible && "animate-[edgeGlow_0.4s_ease-out]",
+            "absolute inset-0 rounded-lg border border-blue-300/50",
+            animationState === "expanding" && "animate-[edgeGlow_0.4s_ease-out]",
           )}
         />
       </div>
