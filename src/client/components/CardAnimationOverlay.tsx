@@ -4,6 +4,7 @@ import { cardAnimationsAtom, type CardAnimation } from "@/client/atoms/boardAtom
 import { cn } from "@/client/lib/utils"
 import { EffectActivationAnimation } from "./EffectActivationAnimation"
 import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
+import { HighlightAnimation } from "./HighlightAnimation"
 
 interface AnimatedCardProps {
   animation: CardAnimation
@@ -91,6 +92,28 @@ export function CardAnimationOverlay() {
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )
+        } else if (animation.type === "highlight" && animation.position) {
+          // Use HighlightAnimation for highlight effect (red border + scale)
+          const cardElement = document.querySelector(`[data-card-id="${animation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            return (
+              <HighlightAnimation
+                key={animation.id}
+                cardRect={{
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                }}
+                cardRotation={0}
+                onComplete={() => handleAnimationComplete(animation.id)}
+              />
+            )
+          }
+          // Fallback to onComplete if element not found
+          setTimeout(() => handleAnimationComplete(animation.id), 100)
+          return null
         } else {
           return (
             <AnimatedCard

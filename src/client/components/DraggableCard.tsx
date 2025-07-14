@@ -40,8 +40,6 @@ export function DraggableCard({
   const cardAnimations = useAtomValue(cardAnimationsAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
-  const [prevHighlighted, setPrevHighlighted] = useState(card.highlighted)
-  const [highlightAnimating, setHighlightAnimating] = useState(false)
   const [targetAnimating, setTargetAnimating] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -55,18 +53,10 @@ export function DraggableCard({
 
   // Check if this card is currently animating (only for move animations)
   const isAnimating = cardAnimations.some((anim) => anim.type === "move" && anim.cardId === card.id)
+  
+  // Check if this card has a highlight animation
+  const highlightAnimating = cardAnimations.some((anim) => anim.type === "highlight" && anim.cardId === card.id)
 
-  // Detect highlight state changes and trigger animation
-  useEffect(() => {
-    if (card.highlighted !== prevHighlighted && card.highlighted === true) {
-      // Highlight was just turned on
-      setHighlightAnimating(true)
-      setTimeout(() => {
-        setHighlightAnimating(false)
-      }, ANIMATION_DURATIONS.HIGHLIGHT)
-    }
-    setPrevHighlighted(card.highlighted)
-  }, [card.highlighted, prevHighlighted])
 
   // Detect target animation and trigger scale effect
   useEffect(() => {

@@ -1749,44 +1749,156 @@ function createAnimationsFromOperations(
         break
         
       case "changePosition":
-        // Need to get actual card positions from states
-        animations.push({
-          id: uuidv4(),
-          type: "changePosition",
-          cardId: operation.cardId,
-          startTime: Date.now(),
-          duration: animationDuration / 2,
-        })
+        if (operation.to) {
+          // Get card element position
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          }
+          
+          const position: Position = {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          }
+          
+          animations.push({
+            id: uuidv4(),
+            type: "changePosition",
+            cardId: operation.cardId,
+            position,
+            cardRect,
+            startTime: Date.now(),
+            duration: animationDuration / 2,
+          })
+        }
         break
         
       case "toggleHighlight":
-        animations.push({
-          id: uuidv4(),
-          type: "highlight",
-          cardId: operation.cardId,
-          startTime: Date.now(),
-          duration: animationDuration / 2,
-        })
+        if (operation.to) {
+          const position: Position = {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          }
+          animations.push({
+            id: uuidv4(),
+            type: "highlight",
+            cardId: operation.cardId,
+            position,
+            startTime: Date.now(),
+            duration: animationDuration / 2,
+          })
+        }
         break
         
       case "activate":
-        animations.push({
-          id: uuidv4(),
-          type: "activate",
-          cardId: operation.cardId,
-          startTime: Date.now(),
-          duration: animationDuration,
-        })
+        if (operation.to) {
+          // Get card element position
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          }
+          
+          // Get card rotation from state
+          let cardRotation: number | undefined = 0
+          const state = isReverse ? prevState : nextState
+          const player = state.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result) {
+            cardRotation = result.card.rotation
+          }
+          
+          const position: Position = {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          }
+          
+          animations.push({
+            id: uuidv4(),
+            type: "activate",
+            cardId: operation.cardId,
+            position,
+            cardRect,
+            cardRotation,
+            startTime: Date.now(),
+            duration: animationDuration,
+          })
+        }
         break
         
       case "target":
-        animations.push({
-          id: uuidv4(),
-          type: "target",
-          cardId: operation.cardId,
-          startTime: Date.now(),
-          duration: animationDuration,
-        })
+        if (operation.to) {
+          // Get card element position
+          let cardRect: { x: number; y: number; width: number; height: number } | undefined
+          const cardElement = document.querySelector(`[data-card-id="${operation.cardId}"]`)
+          if (cardElement) {
+            const rect = cardElement.getBoundingClientRect()
+            cardRect = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          }
+          
+          // Get card rotation from state
+          let cardRotation: number | undefined = 0
+          const state = isReverse ? prevState : nextState
+          const player = state.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result) {
+            cardRotation = result.card.rotation
+          }
+          
+          const position: Position = {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          }
+          
+          animations.push({
+            id: uuidv4(),
+            type: "target",
+            cardId: operation.cardId,
+            position,
+            cardRect,
+            cardRotation,
+            startTime: Date.now(),
+            duration: animationDuration,
+          })
+        }
         break
     }
   }
