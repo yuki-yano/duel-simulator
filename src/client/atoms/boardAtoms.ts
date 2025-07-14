@@ -2141,6 +2141,32 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
     if (get(replayRecordingAtom)) {
       set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
     }
+    
+    // Create highlight animation for immediate feedback
+    const player = newState.players[position.zone.player]
+    const result = getCardById(player, position.cardId)
+    if (result && result.card.highlighted === true) {
+      // Only create animation when turning highlight ON
+      const cardElement = document.querySelector(`[data-card-id="${position.cardId}"]`)
+      if (cardElement) {
+        const rect = cardElement.getBoundingClientRect()
+        const animation: CardAnimation = {
+          id: uuidv4(),
+          type: "highlight",
+          cardId: position.cardId,
+          position,
+          cardRect: {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          },
+          startTime: Date.now(),
+          duration: ANIMATION_DURATIONS.HIGHLIGHT,
+        }
+        set(cardAnimationsAtom, [...get(cardAnimationsAtom), animation])
+      }
+    }
   }
 })
 
