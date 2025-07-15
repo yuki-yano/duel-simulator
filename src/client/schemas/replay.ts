@@ -9,6 +9,7 @@ export const CardSchema = z.object({
   rotation: z.number().default(0),
   faceDown: z.boolean().optional(),
   highlighted: z.boolean().optional(),
+  counter: z.number().optional(),
   // Optional fields from Card interface
   attack: z.number().optional(),
   defense: z.number().optional(),
@@ -82,6 +83,7 @@ export const GameOperationSchema = z.object({
     "rotate",
     "changePosition",
     "toggleHighlight",
+    "updateCounter",
   ]),
   cardId: z.string(),
   from: OperationZoneSchema.optional(),
@@ -91,6 +93,7 @@ export const GameOperationSchema = z.object({
     .union([
       z.object({ angle: z.number() }), // rotate操作時
       z.object({ flip: z.boolean() }), // changePosition操作時
+      z.object({ counter: z.number() }), // updateCounter操作時
       z.record(z.string(), z.unknown()), // その他の任意のメタデータ
     ])
     .optional(),

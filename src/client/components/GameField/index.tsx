@@ -43,6 +43,7 @@ import {
   targetSelectAtom,
   flipCardAtom,
   toggleCardHighlightAtom,
+  updateCounterAtom,
   resetToInitialStateAtom,
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
@@ -116,6 +117,7 @@ export function GameFieldContent() {
   const [, targetSelect] = useAtom(targetSelectAtom)
   const [, flipCard] = useAtom(flipCardAtom)
   const [, toggleCardHighlight] = useAtom(toggleCardHighlightAtom)
+  const [, updateCounter] = useAtom(updateCounterAtom)
   const [, resetToInitialState] = useAtom(resetToInitialStateAtom)
   const initialStateAfterDeckLoad = useAtomValue(initialStateAfterDeckLoadAtom)
   const [contextMenu, setContextMenu] = useState<{
@@ -259,6 +261,16 @@ export function GameFieldContent() {
         } else if (action === "highlight" && contextMenu) {
           // Toggle highlight state
           toggleCardHighlight({ zone: contextMenu.zone, cardId: card.id })
+        } else if (action === "addCounter" && contextMenu) {
+          // Add counter
+          const currentCounter = card.counter ?? 0
+          updateCounter({ zone: contextMenu.zone, cardId: card.id }, currentCounter + 1)
+        } else if (action === "removeCounter" && contextMenu) {
+          // Remove counter
+          const currentCounter = card.counter ?? 0
+          if (currentCounter > 0) {
+            updateCounter({ zone: contextMenu.zone, cardId: card.id }, currentCounter - 1)
+          }
         }
       } catch (error) {
         // Show error on mobile for debugging
@@ -266,7 +278,7 @@ export function GameFieldContent() {
         console.error(`Error in handleContextMenuAction (${action}):`, error)
       }
     },
-    [rotateCard, activateEffect, targetSelect, flipCard, toggleCardHighlight, contextMenu],
+    [rotateCard, activateEffect, targetSelect, flipCard, toggleCardHighlight, updateCounter, contextMenu],
   )
 
   // Handle token generation

@@ -52,6 +52,9 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
 
   const isMonsterZone = zone.type === "monsterZone" || zone.type === "extraMonsterZone"
 
+  const isCounterZone =
+    zone.type === "monsterZone" || zone.type === "spellTrapZone" || zone.type === "extraMonsterZone" || zone.type === "fieldZone"
+
   const menuItems = [
     {
       id: "activate",
@@ -77,6 +80,16 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
       id: "flip",
       label: card.faceDown === true ? "表側表示にする" : "裏側表示にする",
       enabled: isMonsterSpellTrapZone && isReplayActive === false,
+    },
+    {
+      id: "addCounter",
+      label: "カウンターの追加",
+      enabled: isCounterZone && isReplayActive === false,
+    },
+    {
+      id: "removeCounter",
+      label: "カウンターの削除",
+      enabled: isCounterZone && isReplayActive === false && (card.counter ?? 0) > 0,
     },
   ]
 

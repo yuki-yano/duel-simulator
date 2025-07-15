@@ -1259,6 +1259,21 @@ function applyOperation(state: GameState, operation: GameOperation): GameState {
         return newState
       }
       break
+    case "updateCounter":
+      if (operation.to && operation.cardId && operation.metadata && "counter" in operation.metadata) {
+        // Reconstruct Position object
+        const position: Position = {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.zoneIndex,
+          },
+          cardId: operation.cardId,
+        }
+        newState = performUpdateCounter(state, position, operation.metadata.counter as number)
+        return newState
+      }
+      break
     case "shuffle":
       if (
         operation.from &&
@@ -2494,6 +2509,40 @@ export const toggleCardHighlightAtom = atom(null, (get, set, position: Position)
   }
 })
 
+export const updateCounterAtom = atom(null, (get, set, position: Position, counterValue: number) => {
+  const state = get(gameStateAtom)
+  const newState = performUpdateCounter(state, position, counterValue)
+
+  if (newState !== state) {
+    // Create operation BEFORE adding to history
+    const operation: GameOperation = {
+      id: uuidv4(),
+      timestamp: Date.now(),
+      type: "updateCounter",
+      cardId: position.cardId,
+      to: {
+        player: position.zone.player,
+        zoneType: position.zone.type,
+        zoneIndex: position.zone.index,
+      },
+      player: position.zone.player,
+      metadata: { counter: counterValue },
+    }
+
+    // Update operations BEFORE history
+    set(operationsAtom, [...get(operationsAtom), operation])
+
+    // Then update game state and add to history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
+
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+    }
+  }
+})
+
 // Card effect activation action
 export const activateEffectAtom = atom(null, (get, set, position: Position, cardElement?: HTMLElement) => {
   try {
@@ -2998,6 +3047,36 @@ function performCardHighlightToggle(state: GameState, position: Position): GameS
   }
 }
 
+function performUpdateCounter(state: GameState, position: Position, counterValue: number): GameState {
+  const player = state.players[position.zone.player]
+
+  // Get card by ID (cardId is now required)
+  let card: Card | null = null
+  let actualZone: ZoneId = position.zone
+
+  // ID-based approach
+  const result = getCardById(player, position.cardId)
+  if (result) {
+    card = result.card
+    actualZone = { ...result.zone, player: position.zone.player }
+  }
+
+  if (!card) return state
+
+  const updatedCard = produce(card, (draft) => {
+    draft.counter = counterValue > 0 ? counterValue : undefined
+  })
+  const newPlayer = updateCardInZone(player, actualZone, updatedCard)
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [position.zone.player]: newPlayer,
+    },
+  }
+}
+
 // Helper function: Get card by ID (searches all zones)
 function getCardById(player: PlayerBoard, cardId: string): { card: Card; zone: ZoneId } | null {
   // Search monster zones
@@ -3221,9 +3300,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.monsterZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
-          // Reset rotation for all cards except the top card (index 0)
+          // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
             cards[i].rotation = 0
+            cards[i].counter = undefined
           }
         } else {
           // Find first empty zone
@@ -3243,9 +3323,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.spellTrapZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
-          // Reset rotation for all cards except the top card (index 0)
+          // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
             cards[i].rotation = 0
+            cards[i].counter = undefined
           }
         } else {
           // Find first empty zone
@@ -3272,9 +3353,10 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           const cards = draft.extraMonsterZones[zone.index]
           const insertIndex = zone.cardIndex ?? 0
           cards.splice(insertIndex, 0, card)
-          // Reset rotation for all cards except the top card (index 0)
+          // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
             cards[i].rotation = 0
+            cards[i].counter = undefined
           }
         } else {
           // Find first empty zone
@@ -3289,83 +3371,111 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
         break
       }
       case "hand": {
+        // Reset counter when moving to hand
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // If index is specified, insert at that position
         if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.hand.length) {
           // Insert card at specified position
-          draft.hand.splice(zone.index, 0, card)
+          draft.hand.splice(zone.index, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.hand.push(card)
+          draft.hand.push(cardWithResetCounter)
         }
         break
       }
       case "deck": {
+        // Reset counter when moving to deck
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // If index is specified, insert at that position
         if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.deck.length) {
           // Insert card at specified position
-          draft.deck.splice(zone.index, 0, card)
+          draft.deck.splice(zone.index, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.deck.push(card)
+          draft.deck.push(cardWithResetCounter)
         }
         break
       }
       case "graveyard": {
+        // Reset counter when moving to graveyard
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // If index is specified, insert at that position
         if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.graveyard.length) {
           // Insert card at specified position
-          draft.graveyard.splice(zone.index, 0, card)
+          draft.graveyard.splice(zone.index, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.graveyard.push(card)
+          draft.graveyard.push(cardWithResetCounter)
         }
         break
       }
       case "banished": {
+        // Reset counter when moving to banished
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // If index is specified, insert at that position
         if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.banished.length) {
           // Insert card at specified position
-          draft.banished.splice(zone.index, 0, card)
+          draft.banished.splice(zone.index, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.banished.push(card)
+          draft.banished.push(cardWithResetCounter)
         }
         break
       }
       case "extraDeck": {
+        // Reset counter when moving to extra deck
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // If index is specified, insert at that position
         if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.extraDeck.length) {
           // Insert card at specified position
-          draft.extraDeck.splice(zone.index, 0, card)
+          draft.extraDeck.splice(zone.index, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.extraDeck.push(card)
+          draft.extraDeck.push(cardWithResetCounter)
         }
         break
       }
       case "freeZone": {
         if (!draft.freeZone) draft.freeZone = []
+        // Reset counter when moving to free zone
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.freeZone.length) {
           // Insert card at specified position
-          draft.freeZone.splice(insertIndex, 0, card)
+          draft.freeZone.splice(insertIndex, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.freeZone.push(card)
+          draft.freeZone.push(cardWithResetCounter)
         }
         break
       }
       case "sideFreeZone": {
         if (!draft.sideFreeZone) draft.sideFreeZone = []
+        // Reset counter when moving to side free zone
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.sideFreeZone.length) {
           // Insert card at specified position
-          draft.sideFreeZone.splice(insertIndex, 0, card)
+          draft.sideFreeZone.splice(insertIndex, 0, cardWithResetCounter)
         } else {
           // Otherwise append to end
-          draft.sideFreeZone.push(card)
+          draft.sideFreeZone.push(cardWithResetCounter)
         }
         break
       }
