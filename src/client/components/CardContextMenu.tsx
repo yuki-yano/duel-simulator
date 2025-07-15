@@ -99,7 +99,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
       className={cn(
         "fixed z-[10000] bg-white dark:bg-gray-800",
         "border border-gray-200 dark:border-gray-700",
-        "rounded-lg shadow-lg py-1 min-w-[180px]",
+        "rounded-lg shadow-lg py-1 w-auto",
         "animate-in fade-in-0 zoom-in-95 duration-200",
       )}
       style={{
@@ -115,7 +115,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
         <button
           key={item.id}
           className={cn(
-            "w-full px-4 py-2 text-left",
+            "block w-full px-4 py-2 text-left whitespace-nowrap",
             "text-sm",
             "transition-colors duration-150",
             item.enabled
