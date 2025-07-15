@@ -189,6 +189,12 @@ export function GameFieldContent() {
   const [playerGraveHeight, setPlayerGraveHeight] = useState<number | null>(null)
   const [playerGraveMarginTop, setPlayerGraveMarginTop] = useState<number | null>(null)
   const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
+  
+  // 操作ヒントの最小化状態
+  const [isHintMinimized, setIsHintMinimized] = useState(() => {
+    const saved = localStorage.getItem("duel-simulator-hint-minimized")
+    return saved === "true"
+  })
 
   const handleCardDrop = (from: ZoneId, to: ZoneId, shiftKey?: boolean) => {
     if (!draggedCard) {
@@ -1200,9 +1206,28 @@ export function GameFieldContent() {
           isTouchDevice && "md:hidden lg:hidden", // Hide on touch devices regardless of screen size
         )}
       >
-        <div className="bg-gray-800/90 text-white rounded-lg p-3 text-xs">
-          <div className="font-semibold mb-1">操作ヒント</div>
-          <div className="space-y-1 text-gray-300">
+        <div className="bg-gray-800/90 text-white rounded-lg text-xs">
+          <div className={cn(
+            "px-3 pt-3 flex items-center justify-between",
+            isHintMinimized ? "pb-3" : "pb-1"
+          )}>
+            <div className="font-semibold">操作ヒント</div>
+            <button
+              onClick={() => {
+                const newState = !isHintMinimized
+                setIsHintMinimized(newState)
+                localStorage.setItem("duel-simulator-hint-minimized", String(newState))
+              }}
+              className="bg-gray-600 hover:bg-gray-500 text-white transition-colors p-1 rounded"
+              aria-label={isHintMinimized ? "展開" : "最小化"}
+            >
+              {isHintMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          </div>
+          <div className={cn(
+            "space-y-1 text-gray-300 px-3 transition-all duration-200",
+            isHintMinimized ? "h-0 overflow-hidden pb-0" : "pb-3"
+          )}>
             <div>
               • <span className="text-yellow-400">Shift + ドラッグ</span>:
             </div>
