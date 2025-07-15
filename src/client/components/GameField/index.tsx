@@ -504,7 +504,7 @@ export function GameFieldContent() {
 
   return (
     <>
-      <div className="w-full max-w-6xl mx-auto p-2 sm:p-4">
+      <div className="game-board w-full max-w-6xl mx-auto p-2 sm:p-4">
         {/* Replay recording controls - Show in normal mode or in replay mode after first play */}
         {(!isReplayMode || hasEverPlayedInReplayMode) && (
           <ReplayControls
@@ -557,7 +557,7 @@ export function GameFieldContent() {
 
         {/* Opponent's Area */}
         <div className="mb-2">
-          <div className="flex items-center justify-start gap-2 mb-1">
+          <div className="flex items-center justify-start gap-2 mb-1" data-html2canvas-ignore="true">
             <button
               onClick={() => setIsExtraActionsOpen(!isExtraActionsOpen)}
               className={cn(
@@ -593,7 +593,7 @@ export function GameFieldContent() {
             </button>
           </div>
           {isExtraActionsOpen && (
-            <div className="flex flex-wrap items-center justify-start gap-2 mb-1">
+            <div className="flex flex-wrap items-center justify-start gap-2 mb-1" data-html2canvas-ignore="true">
               <button
                 onClick={handleShuffleDeck}
                 disabled={!isDeckLoaded || isPlaying}

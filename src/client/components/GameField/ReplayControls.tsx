@@ -53,7 +53,7 @@ export function ReplayControls({
   onShareReplay,
 }: ReplayControlsProps) {
   return (
-    <div className="mb-2 flex justify-start gap-2 flex-wrap">
+    <div className="mb-2 flex justify-start gap-2 flex-wrap" data-html2canvas-ignore="true">
       {!isPlaying && (
         <>
           {!isRecording ? (
