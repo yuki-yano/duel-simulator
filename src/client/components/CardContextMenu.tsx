@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 import { produce } from "immer"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 
 interface CardContextMenuProps {
   card: GameCard
@@ -14,6 +15,7 @@ interface CardContextMenuProps {
 
 export function CardContextMenu({ card, zone, position, onClose, onAction, isReplayActive }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const { width: screenWidth } = useScreenSize()
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -35,7 +37,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
   const adjustedPosition = produce(position, (draft) => {
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect()
-      const viewportWidth = window.innerWidth
+      const viewportWidth = screenWidth
       const viewportHeight = window.innerHeight
 
       if (rect.right > viewportWidth) {

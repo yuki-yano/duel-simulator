@@ -6,6 +6,7 @@ import { EffectActivationAnimation } from "./EffectActivationAnimation"
 import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 import { HighlightAnimation } from "./HighlightAnimation"
 import { RotateAnimation } from "./RotateAnimation"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 
 interface AnimatedCardProps {
   animation: CardAnimation
@@ -15,6 +16,7 @@ interface AnimatedCardProps {
 function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
   const [position, setPosition] = useState(animation.fromPosition!)
   const [rotation, setRotation] = useState(animation.fromRotation ?? 0)
+  const { isMediumScreen, isSmallScreen } = useScreenSize()
 
   useEffect(() => {
     if (animation.type !== "move") {
@@ -52,8 +54,8 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
         left: `${position.x}px`,
         top: `${position.y}px`,
         transition: `all ${animation.duration ?? 300}ms ease-in-out`,
-        width: window.innerWidth >= 768 ? "66px" : window.innerWidth >= 640 ? "55px" : "40px",
-        height: window.innerWidth >= 768 ? "96px" : window.innerWidth >= 640 ? "80px" : "56px",
+        width: isMediumScreen ? "66px" : isSmallScreen ? "55px" : "40px",
+        height: isMediumScreen ? "96px" : isSmallScreen ? "80px" : "56px",
         transform: `rotate(${rotation}deg)`,
         transformOrigin: "center",
       }}

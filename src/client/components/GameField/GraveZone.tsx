@@ -4,6 +4,7 @@ import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 import type { GraveZoneProps } from "./types"
 
 export function GraveZone({
@@ -22,22 +23,23 @@ export function GraveZone({
 }: GraveZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
+  const { isMediumScreen, isSmallScreen } = useScreenSize()
   const containerRef = useRef<HTMLDivElement>(null)
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   // Initialize with estimated height based on rows to prevent animation
   const getInitialHeight = useCallback(() => {
     if (isOpponent) {
       // 2 rows for opponent
-      if (window.innerWidth >= 768) return 200 // md: h-24 * 2 + gap
-      if (window.innerWidth >= 640) return 168 // sm: h-20 * 2 + gap
+      if (isMediumScreen) return 200 // md: h-24 * 2 + gap
+      if (isSmallScreen) return 168 // sm: h-20 * 2 + gap
       return 116 // mobile: h-14 * 2 + gap
     } else {
       // 3 rows for player
-      if (window.innerWidth >= 768) return 300 // md: h-24 * 3 + gap
-      if (window.innerWidth >= 640) return 252 // sm: h-20 * 3 + gap
+      if (isMediumScreen) return 300 // md: h-24 * 3 + gap
+      if (isSmallScreen) return 252 // sm: h-20 * 3 + gap
       return 174 // mobile: h-14 * 3 + gap
     }
-  }, [isOpponent])
+  }, [isOpponent, isMediumScreen, isSmallScreen])
   const [containerHeight, setContainerHeight] = useState(getInitialHeight())
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null)
 
@@ -49,14 +51,14 @@ export function GraveZone({
   const orderedDisplayCards = type === "grave" ? [...displayCards].reverse() : displayCards
 
   // Card dimensions based on height (maintaining 59:86 ratio)
-  const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+  const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
   const spacing = 4 // gap between cards when not overlapping
 
   // Calculate available height for cards
   // Container has padding applied via className, so we need to subtract it
   // Also reserve space for the label at the bottom (20px)
-  const containerPaddingY = window.innerWidth >= 768 ? 8 : window.innerWidth >= 640 ? 6 : 4 // py-2, py-1.5, py-1 in pixels
+  const containerPaddingY = isMediumScreen ? 8 : isSmallScreen ? 6 : 4 // py-2, py-1.5, py-1 in pixels
   const labelHeight = 20 // Height reserved for label
   const availableHeight = containerHeight - containerPaddingY * 2 - labelHeight
 
@@ -197,9 +199,9 @@ export function GraveZone({
         typeStyles[type],
         isHovered && "border-2 border-blue-400/70",
         isDisabled && "opacity-50",
-        window.innerWidth >= 768
+        isMediumScreen
           ? "px-2 pt-2 pb-6"
-          : window.innerWidth >= 640
+          : isSmallScreen
             ? "px-1.5 pt-1.5 pb-5"
             : "px-1 pt-1 pb-5",
         className,

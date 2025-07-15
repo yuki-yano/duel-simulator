@@ -4,6 +4,7 @@ import { cn } from "@client/lib/utils"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { useAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, hoveredZoneAtom } from "@/client/atoms/boardAtoms"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 
 interface ZoneExpandModalProps {
@@ -36,6 +37,7 @@ export function ZoneExpandModal({
   const contentRef = useRef<HTMLDivElement>(null)
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
+  const { isMediumScreen, isSmallScreen } = useScreenSize()
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null)
 
@@ -44,12 +46,12 @@ export function ZoneExpandModal({
   const modalHeight = modalBounds.bottom - modalBounds.top
 
   // Card dimensions (same as graveyard)
-  const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+  const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
 
   // Calculate layout for 2 columns
-  const padding = window.innerWidth >= 640 ? 16 : 12
-  const columnGap = window.innerWidth >= 640 ? 12 : 8
+  const padding = isSmallScreen ? 16 : 12
+  const columnGap = isSmallScreen ? 12 : 8
   const rowGap = 8
   const headerHeight = 28 // Height for close button (reduced)
 

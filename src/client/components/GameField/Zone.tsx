@@ -3,6 +3,7 @@ import { cn } from "@client/lib/utils"
 import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import { DraggableCard } from "@/client/components/DraggableCard"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 import type { ZoneProps } from "./types"
 
 export function Zone({
@@ -20,6 +21,7 @@ export function Zone({
 }: ZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
+  const { isMediumScreen, isSmallScreen } = useScreenSize()
   const typeStyles = {
     monster: "bg-blue-500/5 border-blue-500/30 hover:border-blue-500/50",
     spell: "bg-green-500/5 border-green-500/30 hover:border-green-500/50",
@@ -88,11 +90,11 @@ export function Zone({
             let cardWidth: string
             let cardHeight: string
 
-            if (window.innerWidth >= 768) {
+            if (isMediumScreen) {
               offsetPx = 13 // Tablet and Desktop: 13px offset
               cardHeight = "96px" // md:h-24
               cardWidth = `${Math.round((96 * 59) / 86)}px` // Maintain aspect ratio
-            } else if (window.innerWidth >= 640) {
+            } else if (isSmallScreen) {
               offsetPx = 10 // Small tablet: 10px offset
               cardHeight = "80px" // sm:h-20
               cardWidth = `${Math.round((80 * 59) / 86)}px` // Maintain aspect ratio

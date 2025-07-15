@@ -4,6 +4,7 @@ import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 import type { DeckZoneProps } from "./types"
 
 export function DeckZone({
@@ -21,6 +22,7 @@ export function DeckZone({
 }: DeckZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
+  const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
   const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null)
@@ -28,8 +30,8 @@ export function DeckZone({
 
   // Calculate cards per row limit based on screen size
   const getCardsPerRowLimit = () => {
-    if (window.innerWidth < 640) return 20 // Mobile: max 20 cards per row
-    if (window.innerWidth <= 1024) return 27 // Tablet: max 27 cards per row
+    if (!isSmallScreen) return 20 // Mobile: max 20 cards per row
+    if (!isLargeScreen) return 27 // Tablet: max 27 cards per row
     return 29 // Desktop: max 29 cards per row (30+ cards will use 2 rows)
   }
 
@@ -73,9 +75,9 @@ export function DeckZone({
         const relativeX = e.clientX - rect.left
 
         // Get card dimensions
-        const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+        const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
         const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
-        const padding = window.innerWidth >= 640 ? 16 : 8
+        const padding = isSmallScreen ? 16 : 8
         const availableWidth = containerWidth - padding * 2
 
         // Calculate which row we're in
@@ -198,9 +200,9 @@ export function DeckZone({
 
   if (orientation === "horizontal") {
     // Card dimensions for horizontal layout (maintaining aspect ratio)
-    const cardHeightPx = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+    const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
     const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
-    const padding = window.innerWidth >= 640 ? 16 : 8 // Container padding (smaller on mobile)
+    const padding = isSmallScreen ? 16 : 8 // Container padding (smaller on mobile)
 
     // Calculate available width for cards
     const availableWidth = containerWidth - padding * 2
@@ -220,9 +222,9 @@ export function DeckZone({
         return "h-[244px] sm:h-[308px] md:h-[344px]"
       } else {
         // For 4+ rows, calculate dynamically with tighter spacing
-        const cardHeight = window.innerWidth >= 768 ? 96 : window.innerWidth >= 640 ? 80 : 56
+        const cardHeight = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
         const gap = 4 // gap between rows
-        const paddingY = window.innerWidth >= 640 ? 12 : 8 // total vertical padding
+        const paddingY = isSmallScreen ? 12 : 8 // total vertical padding
         const totalHeight = cardHeight * rowCount + gap * (rowCount - 1) + paddingY
         return `h-[${totalHeight}px]`
       }
@@ -273,7 +275,7 @@ export function DeckZone({
                   const rowCardCount = rowCards.length
 
                   // Calculate card placement for each row
-                  const cardSpacing = window.innerWidth >= 768 ? 15 : 10 // Fixed spacing between cards
+                  const cardSpacing = isMediumScreen ? 15 : 10 // Fixed spacing between cards
                   const totalWidth = (rowCardCount - 1) * cardSpacing + rowCardCount * cardWidthPx
                   const needsOverlap = totalWidth > availableWidth
 

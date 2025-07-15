@@ -12,6 +12,7 @@ import {
 import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 
 const LONG_PRESS_DURATION_MS = 600
 const TOUCH_MOVE_THRESHOLD = 5
@@ -48,6 +49,7 @@ export function DraggableCard({
   const updateCardRef = useSetAtom(updateCardRefAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
   const targetSelect = useSetAtom(targetSelectAtom)
+  const { isMediumScreen, isSmallScreen } = useScreenSize()
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -549,9 +551,9 @@ export function DraggableCard({
           (() => {
             // Use responsive size for drag image based on screen size
             let baseHeight: number
-            if (window.innerWidth >= 768) {
+            if (isMediumScreen) {
               baseHeight = 96
-            } else if (window.innerWidth >= 640) {
+            } else if (isSmallScreen) {
               baseHeight = 80
             } else {
               baseHeight = 56

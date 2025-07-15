@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown } from "lucide-react"
+import { useScreenSize } from "@client/hooks/useScreenSize"
 import { useAtom, useAtomValue } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
@@ -98,7 +99,7 @@ export function GameFieldContent() {
   const [mobileStackBottom, setMobileStackBottom] = useState(false)
   const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
   const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
-  const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024)
+  const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, generateToken] = useAtom(generateTokenAtom)
@@ -442,14 +443,6 @@ export function GameFieldContent() {
     }
   }, [])
 
-  // Update isLargeScreen on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      setIsLargeScreen(window.innerWidth >= 1024)
-    }
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
 
   // Calculate grave zone positions dynamically
   useEffect(() => {
@@ -726,9 +719,9 @@ export function GameFieldContent() {
                   marginTop:
                     playerGraveMarginTop != null
                       ? `${playerGraveMarginTop}px`
-                      : window.innerWidth >= 768
+                      : isMediumScreen
                         ? "-116px"
-                        : window.innerWidth >= 640
+                        : isSmallScreen
                           ? "-84px"
                           : "-58px",
                   zIndex: 10,
@@ -747,9 +740,9 @@ export function GameFieldContent() {
                     height:
                       playerGraveHeight != null
                         ? `${playerGraveHeight}px`
-                        : window.innerWidth >= 768
+                        : isMediumScreen
                           ? "348px"
-                          : window.innerWidth >= 640
+                          : isSmallScreen
                             ? "252px"
                             : "174px",
                     width: "93px",
@@ -788,12 +781,12 @@ export function GameFieldContent() {
                       height:
                         opponentGraveHeight != null
                           ? `${opponentGraveHeight}px`
-                          : window.innerWidth >= 768
+                          : isMediumScreen
                             ? "200px"
-                            : window.innerWidth >= 640
+                            : isSmallScreen
                               ? "168px"
                               : "116px",
-                      width: window.innerWidth >= 768 ? "82px" : window.innerWidth >= 640 ? "70px" : "56px",
+                      width: isMediumScreen ? "82px" : isSmallScreen ? "70px" : "56px",
                     }}
                   />
                   <GraveZone
@@ -809,12 +802,12 @@ export function GameFieldContent() {
                       height:
                         opponentGraveHeight != null
                           ? `${opponentGraveHeight}px`
-                          : window.innerWidth >= 768
+                          : isMediumScreen
                             ? "200px"
-                            : window.innerWidth >= 640
+                            : isSmallScreen
                               ? "168px"
                               : "116px",
-                      width: window.innerWidth >= 768 ? "82px" : window.innerWidth >= 640 ? "70px" : "56px",
+                      width: isMediumScreen ? "82px" : isSmallScreen ? "70px" : "56px",
                     }}
                   />
                 </div>
@@ -903,9 +896,9 @@ export function GameFieldContent() {
                   marginTop:
                     playerGraveMarginTop != null
                       ? `${playerGraveMarginTop}px`
-                      : window.innerWidth >= 768
+                      : isMediumScreen
                         ? "-116px"
-                        : window.innerWidth >= 640
+                        : isSmallScreen
                           ? "-84px"
                           : "-58px",
                   zIndex: 10,
@@ -927,17 +920,17 @@ export function GameFieldContent() {
                     height:
                       playerGraveHeight != null
                         ? `${playerGraveHeight}px`
-                        : window.innerWidth >= 768
+                        : isMediumScreen
                           ? "348px"
-                          : window.innerWidth >= 640
+                          : isSmallScreen
                             ? "252px"
                             : "174px",
                     width:
-                      window.innerWidth >= 1024
+                      isLargeScreen
                         ? "93px"
-                        : window.innerWidth >= 768
+                        : isMediumScreen
                           ? "82px"
-                          : window.innerWidth >= 640
+                          : isSmallScreen
                             ? "70px"
                             : "56px",
                   }}
@@ -957,17 +950,17 @@ export function GameFieldContent() {
                     height:
                       playerGraveHeight != null
                         ? `${playerGraveHeight}px`
-                        : window.innerWidth >= 768
+                        : isMediumScreen
                           ? "348px"
-                          : window.innerWidth >= 640
+                          : isSmallScreen
                             ? "252px"
                             : "174px",
                     width:
-                      window.innerWidth >= 1024
+                      isLargeScreen
                         ? "93px"
-                        : window.innerWidth >= 768
+                        : isMediumScreen
                           ? "82px"
-                          : window.innerWidth >= 640
+                          : isSmallScreen
                             ? "70px"
                             : "56px",
                   }}
