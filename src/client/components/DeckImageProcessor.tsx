@@ -63,6 +63,34 @@ export function DeckImageProcessor({
   
   // 解析済みフラグを追加して重複実行を防ぐ
   const analyzedRef = useRef(false)
+  // Tesseract workerのインスタンスを保持
+  const workerRef = useRef<Awaited<ReturnType<typeof createWorker>> | null>(null)
+
+  // Workerの初期化関数
+  const initializeWorker = useCallback(async () => {
+    if (!workerRef.current) {
+      const worker = await createWorker("jpn")
+      
+      // Tesseract.jsの設定
+      await worker.setParameters({
+        tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
+        tessedit_char_whitelist: "0123456789枚",
+      })
+      
+      workerRef.current = worker
+    }
+    return workerRef.current
+  }, [])
+
+  // コンポーネントのクリーンアップ時にworkerを終了
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) {
+        void workerRef.current.terminate()
+        workerRef.current = null
+      }
+    }
+  }, [])
 
   const drawPreview = useCallback(() => {
     const img = new Image()
@@ -85,7 +113,7 @@ export function DeckImageProcessor({
     img.src = imageDataUrl
   }, [imageDataUrl])
 
-  const extractTextFromRegion = async (
+  const extractTextFromRegion = useCallback(async (
     img: HTMLImageElement,
     x: number,
     y: number,
@@ -166,24 +194,19 @@ export function DeckImageProcessor({
       )
     }
 
-    // Perform OCR on this region
-    const worker = await createWorker("jpn")
-
-    // Tesseract.jsの設定
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
-      tessedit_char_whitelist: "0123456789枚",
-    })
-
+    // Perform OCR on this region using shared worker
+    const worker = await initializeWorker()
     const result = await worker.recognize(regionCanvas)
-    await worker.terminate()
 
     return result.data.text
-  }
+  }, [showDebug, setOcrProcessedCanvases, initializeWorker])
 
   const analyzeDeckStructure = useCallback(async () => {
     // 既に解析済みの場合はスキップ
     if (analyzedRef.current) return
+    
+    // 解析開始前にフラグを立てて、重複実行を防ぐ
+    analyzedRef.current = true
     
     setIsAnalyzing(true)
     setOcrDebugCanvases({}) // Clear previous debug canvases
@@ -352,24 +375,30 @@ export function DeckImageProcessor({
       } catch (error) {
         console.error("Failed to analyze deck structure:", error)
         setErrorDialog({ open: true, message: "デッキ構造の解析に失敗しました。画像の品質を確認してください。" })
+        // エラー時は解析済みフラグをリセット
+        analyzedRef.current = false
       }
 
       setIsAnalyzing(false)
     }
 
     img.src = imageDataUrl
-  }, [imageDataUrl, showDebug])
+  }, [imageDataUrl, showDebug, extractTextFromRegion])
 
   useEffect(() => {
     if (imageDataUrl) {
+      // 新しい画像が選択されたときにフラグとworkerをリセット
+      analyzedRef.current = false
+      
+      // 前のworkerがある場合は終了
+      if (workerRef.current) {
+        void workerRef.current.terminate()
+        workerRef.current = null
+      }
+      
       drawPreview()
       // 画像が読み込まれたら自動的にデッキ構造を解析
       void analyzeDeckStructure()
-    }
-    
-    // クリーンアップ関数で解析済みフラグをリセット
-    return () => {
-      analyzedRef.current = false
     }
   }, [imageDataUrl, drawPreview, analyzeDeckStructure])
 

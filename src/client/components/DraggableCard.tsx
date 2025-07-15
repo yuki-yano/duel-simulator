@@ -536,7 +536,7 @@ export function DraggableCard({
             />
           )}
           {card.counter !== undefined && card.counter !== null && card.counter > 0 && (
-            <div className="absolute top-1 right-1 bg-blue-500 text-white text-[8px] sm:text-[10px] min-w-[16px] h-[16px] sm:min-w-[20px] sm:h-[20px] rounded-full flex items-center justify-center font-bold pointer-events-none z-50">
+            <div className="absolute top-1 right-1 bg-white text-blue-500 text-[8px] sm:text-[10px] min-w-[16px] h-[16px] sm:min-w-[20px] sm:h-[20px] rounded-full flex items-center justify-center font-bold pointer-events-none z-50 border-2 border-blue-500">
               {card.counter}
             </div>
           )}
