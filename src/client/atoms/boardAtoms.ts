@@ -606,8 +606,7 @@ export const redoAtom = atom(null, async (get, set) => {
           const animationId = uuidv4()
           const animations = get(cardAnimationsAtom)
 
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
 
           let cardRotation: number | undefined = 0
           if (operation.to != null && operation.cardId != null) {
@@ -1613,8 +1612,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         const animations = get(cardAnimationsAtom)
 
         // Try to get card element position for replay
-        let cardRect: { x: number; y: number; width: number; height: number } | undefined
-        cardRect = getCardRect(operation.cardId, get)
+        const cardRect = getCardRect(operation.cardId, get)
 
         // Get card rotation from current state
         let cardRotation: number | undefined = 0
@@ -1701,8 +1699,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         const animations = get(cardAnimationsAtom)
 
         // Try to get card element position for replay
-        let cardRect: { x: number; y: number; width: number; height: number } | undefined
-        cardRect = getCardRect(operation.cardId, get)
+        const cardRect = getCardRect(operation.cardId, get)
 
         // Get card rotation from current state
         let cardRotation: number | undefined = 0
@@ -1764,8 +1761,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
         const animations = get(cardAnimationsAtom)
 
         // Card position
-        let cardRect: { x: number; y: number; width: number; height: number } | undefined
-        cardRect = getCardRect(operation.cardId, get)
+        const cardRect = getCardRect(operation.cardId, get)
 
         // Rotation & image
         let cardRotation: number | undefined = 0
@@ -2011,8 +2007,7 @@ function createAnimationsFromOperations(
           const toRotation = nextCardRes?.card.rotation ?? (operation.metadata.angle as number)
 
           // Get card element rect (位置は prevState 時点で取得)
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
 
           // Get card image URL (優先的に prev → next の順で取得)
           let cardImageUrl: string | undefined
@@ -2038,8 +2033,7 @@ function createAnimationsFromOperations(
       case "changePosition":
         if (operation.to) {
           // Get card element position
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
           
           const position: Position = {
             zone: {
@@ -2076,8 +2070,7 @@ function createAnimationsFromOperations(
           }
 
           // Card rect
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
 
           // Rotation & image
           let cardRotation: number | undefined = 0
@@ -2109,8 +2102,7 @@ function createAnimationsFromOperations(
       case "activate":
         if (operation.to) {
           // Get card element position
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
           
           // Get card rotation from state
           let cardRotation: number | undefined = 0
@@ -2153,8 +2145,7 @@ function createAnimationsFromOperations(
       case "target":
         if (operation.to) {
           // Get card element position
-          let cardRect: { x: number; y: number; width: number; height: number } | undefined
-          cardRect = getCardRect(operation.cardId, get)
+          const cardRect = getCardRect(operation.cardId, get)
           
           // Get card rotation from state
           let cardRotation: number | undefined = 0
@@ -2593,10 +2584,7 @@ export const activateEffectAtom = atom(null, (get, set, position: Position, card
     }
 
     // Get card position if element is provided
-    let cardRect: DOMRect | null = null
-    if (cardElement) {
-      cardRect = cardElement.getBoundingClientRect()
-    }
+    const cardRect = cardElement ? cardElement.getBoundingClientRect() : null
 
     // Trigger visual effect animation
     const animations = get(cardAnimationsAtom)
@@ -2675,10 +2663,7 @@ export const targetSelectAtom = atom(null, (get, set, position: Position, cardEl
       set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
     }
     // Get card position if element is provided
-    let cardRect: DOMRect | null = null
-    if (cardElement) {
-      cardRect = cardElement.getBoundingClientRect()
-    }
+    const cardRect = cardElement ? cardElement.getBoundingClientRect() : null
     // Trigger visual effect animation
     const animations = get(cardAnimationsAtom)
     const animationId = uuidv4()
