@@ -1,13 +1,21 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, updateCardRefAtom } from "@/client/atoms/boardAtoms"
-import type { Card as GameCard, ZoneId } from "@/shared/types/game"
+import { 
+  draggedCardAtom, 
+  replayPlayingAtom, 
+  cardAnimationsAtom, 
+  updateCardRefAtom,
+  activateEffectAtom,
+  targetSelectAtom,
+} from "@/client/atoms/boardAtoms"
+import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 const LONG_PRESS_DURATION_MS = 600
 const TOUCH_MOVE_THRESHOLD = 5
+const DOUBLE_CLICK_THRESHOLD_MS = 300
 
 // Create empty image once to avoid re-creating on every drag
 const EMPTY_DRAG_IMAGE = new Image()
@@ -38,6 +46,8 @@ export function DraggableCard({
   const isReplayPlaying = useAtomValue(replayPlayingAtom)
   const cardAnimations = useAtomValue(cardAnimationsAtom)
   const updateCardRef = useSetAtom(updateCardRefAtom)
+  const activateEffect = useSetAtom(activateEffectAtom)
+  const targetSelect = useSetAtom(targetSelectAtom)
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -45,6 +55,7 @@ export function DraggableCard({
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
   const suppressDragImageRef = useRef<boolean>(false)
+  const lastClickTimeRef = useRef<number>(0)
 
   // Unified drag state for PC and mobile
   const [isDragging, setIsDragging] = useState(false)
@@ -398,6 +409,45 @@ export function DraggableCard({
     }
   }
 
+  // Handle double click for PC only
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    // Disable during replay
+    if (isReplayPlaying) {
+      return
+    }
+
+    const position: Position = {
+      zone: stackIndex !== undefined ? { ...zone, cardIndex: stackIndex } : zone,
+      cardId: card.id,
+    }
+
+    if (e.shiftKey) {
+      // Shift + double click = target selection
+      targetSelect(position, cardRef.current || undefined)
+    } else {
+      // Double click = activate effect
+      activateEffect(position, cardRef.current || undefined)
+    }
+  }
+
+  // Handle click for double click detection
+  const handleClick = (e: React.MouseEvent) => {
+    // Disable during replay
+    if (isReplayPlaying) {
+      return
+    }
+
+    const currentTime = Date.now()
+    const timeSinceLastClick = currentTime - lastClickTimeRef.current
+
+    if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD_MS) {
+      // This is a double click
+      handleDoubleClick(e)
+    }
+
+    lastClickTimeRef.current = currentTime
+  }
+
   return (
     <>
       <div
@@ -414,6 +464,7 @@ export function DraggableCard({
         onDragEnd={handleDragEnd}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={handleClick}
         onContextMenu={(e) => {
           e.preventDefault()
           if (onContextMenu) {
@@ -484,7 +535,7 @@ export function DraggableCard({
               }}
             />
           )}
-          {card.counter && card.counter > 0 && (
+          {card.counter !== undefined && card.counter !== null && card.counter > 0 && (
             <div className="absolute top-1 right-1 bg-blue-500 text-white text-[8px] sm:text-[10px] min-w-[16px] h-[16px] sm:min-w-[20px] sm:h-[20px] rounded-full flex items-center justify-center font-bold pointer-events-none z-50">
               {card.counter}
             </div>

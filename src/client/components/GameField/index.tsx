@@ -1220,7 +1220,16 @@ export function GameFieldContent() {
               • <span className="text-gray-400">右クリック</span>: カードメニュー
             </div>
             <div>
-              • <span className="text-gray-400">Ctrl/Cmd + Z/Y</span>: 元に戻す/やり直し
+              • <span className="text-purple-400">ダブルクリック</span>: 効果発動
+            </div>
+            <div>
+              • <span className="text-purple-400">Shift + ダブルクリック</span>: 対象に取る
+            </div>
+            <div>
+              • <span className="text-gray-400">Ctrl/Cmd + Z</span>: 元に戻す
+            </div>
+            <div>
+              • <span className="text-gray-400">Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z</span>: やり直し
             </div>
           </div>
         </div>
