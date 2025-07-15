@@ -1949,29 +1949,44 @@ function createAnimationsFromOperations(
       case "summon":
       case "set":
       case "draw": {
-        // Get card data from the state
-        const fromState = isReverse ? nextState : prevState
-        const toState = isReverse ? prevState : nextState
-        
-        // Find card in from state to get imageUrl and rotation
         let cardImageUrl: string | undefined
         let fromRotation = 0
         let toRotation = 0
         
-        const fromPlayer = fromState.players[operation.player]
-        const cardResult = getCardById(fromPlayer, operation.cardId)
-        if (cardResult) {
-          const card = cardResult.card
-          cardImageUrl = card.name === "token" ? TOKEN_IMAGE_DATA_URL : card.imageUrl
-          fromRotation = card.rotation ?? 0
-        }
-        
-        // Get target rotation
-        if (operation.to) {
-          const toPlayer = toState.players[operation.to.player]
-          const toCardResult = getCardById(toPlayer, operation.cardId)
-          if (toCardResult) {
-            toRotation = toCardResult.card.rotation ?? 0
+        if (isReverse) {
+          // Undo animation: animate from current position (operation.to) back to original position (operation.from)
+          if (operation.to) {
+            const currentPlayer = prevState.players[operation.to.player]
+            const currentCard = getCardById(currentPlayer, operation.cardId)
+            if (currentCard) {
+              cardImageUrl = currentCard.card.name === "token" ? TOKEN_IMAGE_DATA_URL : currentCard.card.imageUrl
+              fromRotation = currentCard.card.rotation ?? 0
+            }
+          }
+          
+          if (operation.from) {
+            const targetPlayer = nextState.players[operation.from.player]
+            const targetCard = getCardById(targetPlayer, operation.cardId)
+            if (targetCard) {
+              toRotation = targetCard.card.rotation ?? 0
+            }
+          }
+        } else {
+          // Forward animation: animate from operation.from to operation.to
+          const fromPlayerKey = operation.from?.player ?? operation.player
+          const fromPlayer = prevState.players[fromPlayerKey]
+          const fromCard = getCardById(fromPlayer, operation.cardId)
+          if (fromCard) {
+            cardImageUrl = fromCard.card.name === "token" ? TOKEN_IMAGE_DATA_URL : fromCard.card.imageUrl
+            fromRotation = fromCard.card.rotation ?? 0
+          }
+          
+          if (operation.to) {
+            const toPlayer = nextState.players[operation.to.player]
+            const toCard = getCardById(toPlayer, operation.cardId)
+            if (toCard) {
+              toRotation = toCard.card.rotation ?? 0
+            }
           }
         }
         
