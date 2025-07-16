@@ -21,6 +21,7 @@ export const SaveGameStateRequestSchema = z.object({
   version: z.string().default("1.0"),
   deckConfig: DeckConfigurationSchema,
   deckCardIds: DeckCardIdsMappingSchema,
+  ogpImageData: z.string().optional(), // OGP画像データ（base64）
 })
 
 // レスポンススキーマ

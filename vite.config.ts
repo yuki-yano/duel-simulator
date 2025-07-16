@@ -39,11 +39,11 @@ export default defineConfig(({ mode }) => {
     return {
       plugins: [
         pages({
-          entry: "src/server/index.ts",
+          entry: "src/server/index.tsx",
         }),
         devServer({
           adapter,
-          entry: "src/server/index.ts",
+          entry: "src/server/index.tsx",
         }),
       ],
       resolve: {

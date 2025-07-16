@@ -7,7 +7,7 @@
     "preview": "wrangler pages dev",
     "deploy": "vite build --mode client && vite build && wrangler pages deploy dist",
     "dev:client": "vite --mode client",
-    "dev:server": "wrangler dev src/server/index.ts --ip 0.0.0.0",
+    "dev:server": "wrangler dev src/server/index.tsx --ip 0.0.0.0",
     "wrangler": "wrangler",
     "db:create": "wrangler d1 create duel-simulator",
     "db:generate": "drizzle-kit generate",

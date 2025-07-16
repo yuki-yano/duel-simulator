@@ -29,6 +29,7 @@ export async function saveReplayData(
   deckImageHash: string,
   deckConfig: DeckConfiguration,
   deckCardIds: DeckCardIdsMapping,
+  ogpImageData?: string,
 ): Promise<SaveGameStateResponse> {
   const response = await fetch(apiUrl("/save-states"), {
     method: "POST",
@@ -44,6 +45,7 @@ export async function saveReplayData(
       version: replayData.version,
       deckConfig,
       deckCardIds,
+      ogpImageData,
     }),
   })
 

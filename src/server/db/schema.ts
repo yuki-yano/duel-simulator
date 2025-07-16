@@ -37,6 +37,7 @@ export const savedStates = sqliteTable(
     version: text("version").notNull(), // データ形式バージョン
     deckConfig: text("deck_config").notNull(), // デッキ構成情報（JSON化）
     deckCardIds: text("deck_card_ids").notNull(), // デッキカードのIDマッピング（JSON化）
+    ogpImagePath: text("ogp_image_path"), // OGP画像のR2パス
 
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at"), // 将来の編集機能用

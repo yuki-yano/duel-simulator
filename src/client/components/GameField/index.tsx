@@ -63,6 +63,8 @@ import { ZoneExpandModal } from "@/client/components/ZoneExpandModal"
 import { saveReplayData } from "@/client/api/gameState"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 import type { ReplaySaveData } from "@/shared/types/game"
+import { generateOGPImage } from "@/client/utils/ogpScreenshot"
+import { useScreenshot } from "@/client/contexts/ScreenshotContext"
 import { Zone } from "./Zone"
 import { DeckZone } from "./DeckZone"
 import { GraveZone } from "./GraveZone"
@@ -100,7 +102,7 @@ export function GameFieldContent() {
   const [mobileStackBottom, setMobileStackBottom] = useState(false)
   const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
   const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
-  const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
+  const { isLargeScreen, isMediumScreen } = useScreenSize()
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, generateToken] = useAtom(generateTokenAtom)
@@ -156,6 +158,9 @@ export function GameFieldContent() {
 
   // 5-card draw warning dialog state
   const [showDrawWarningDialog, setShowDrawWarningDialog] = useState(false)
+  
+  // Screenshot context
+  const { setScreenshotWidth } = useScreenshot()
 
   // Replay atoms
   const [isRecording] = useAtom(replayRecordingAtom)
@@ -354,6 +359,18 @@ export function GameFieldContent() {
       }
 
       try {
+        // Generate OGP image
+        const ogpImageBlob = await generateOGPImage(setScreenshotWidth)
+        let ogpImageData: string | undefined
+        if (ogpImageBlob) {
+          // Convert blob to base64
+          const reader = new FileReader()
+          ogpImageData = await new Promise<string>((resolve) => {
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(ogpImageBlob)
+          })
+        }
+        
         // Calculate deck image hash
         const imageHash = await calculateImageHash(deckMetadata.imageDataUrl)
 
@@ -387,7 +404,7 @@ export function GameFieldContent() {
         }
 
         // Save replay
-        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds)
+        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds, ogpImageData)
 
         // Show share URL dialog
         setShareUrl(response.shareUrl)
@@ -402,7 +419,7 @@ export function GameFieldContent() {
         setIsSavingReplay(false)
       }
     },
-    [replayData, deckMetadata],
+    [replayData, deckMetadata, setScreenshotWidth],
   )
 
   // Function to open zone expand modal (only for self player)

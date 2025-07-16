@@ -1,0 +1,1 @@
+ALTER TABLE `saved_states` ADD `ogp_image_path` text;
