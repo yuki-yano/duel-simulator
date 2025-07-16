@@ -6,9 +6,10 @@ import { createDb, schema } from "./db"
 import { eq } from "drizzle-orm"
 import { customAlphabet } from "nanoid"
 import { z } from "zod"
-import { SaveDeckImageRequestSchema, SaveGameStateRequestSchema } from "@/shared/types/api"
+import { SaveDeckImageRequestSchema, SaveGameStateRequestSchema } from "../shared/types/api"
 import { serveStatic } from "hono/cloudflare-pages"
 import { ReplayHTML, DefaultHTML } from "./components/ReplayHTML"
+import type { D1Database, R2Bucket } from "@cloudflare/workers-types"
 
 type Bindings = {
   DB: D1Database
@@ -110,8 +111,18 @@ app.post("/api/save-states", async (c) => {
     // リクエストボディのバリデーション
     const body = await c.req.json()
     const validated = SaveGameStateRequestSchema.parse(body)
-    const { sessionId, stateJson, deckImageHash, title, description, type, version, deckConfig, deckCardIds, ogpImageData } =
-      validated
+    const {
+      sessionId,
+      stateJson,
+      deckImageHash,
+      title,
+      description,
+      type,
+      version,
+      deckConfig,
+      deckCardIds,
+      ogpImageData,
+    } = validated
     const db = createDb(c.env.DB)
     const id = generateReplayId() // Use 8-character ID for replays
     // Auto-generate sessionId if not provided
@@ -165,10 +176,10 @@ app.post("/api/save-states", async (c) => {
         }
 
         // Save to R2
-        ogpImagePath = `ogp-images/${id}.webp`
+        ogpImagePath = `ogp-images/${id}.jpg`
         await c.env.BUCKET.put(ogpImagePath, bytes.buffer, {
           httpMetadata: {
-            contentType: "image/webp",
+            contentType: "image/jpeg",
             cacheControl: "public, max-age=31536000, immutable",
           },
         })
@@ -323,7 +334,8 @@ app.get("/api/deck-images/:hash/image", async (c) => {
     c.header("Access-Control-Allow-Headers", "Content-Type")
 
     // Return the image directly
-    return c.body(object.body)
+    const arrayBuffer = await object.arrayBuffer()
+    return c.body(arrayBuffer)
   } catch (error) {
     console.error("Failed to get deck image file:", error)
     return c.json(
@@ -336,71 +348,13 @@ app.get("/api/deck-images/:hash/image", async (c) => {
   }
 })
 
-// Development: List all R2 images
-app.get("/api/dev/r2-images", async (c) => {
-  // ローカル開発環境では ENVIRONMENT が設定されていない可能性があるので、チェックを緩和
-  const isDev = c.env.ENVIRONMENT === "development" || c.req.url.includes("localhost")
-  if (!isDev) {
-    return c.json({ error: "This endpoint is only available in development" }, 403)
-  }
-
-  try {
-    const list = await c.env.BUCKET.list()
-    const images = list.objects.map(obj => ({
-      key: obj.key,
-      size: obj.size,
-      uploaded: obj.uploaded,
-      url: `/api/dev/r2-images/${obj.key}`
-    }))
-
-    return c.json({
-      total: images.length,
-      images: images.sort((a, b) => new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime())
-    })
-  } catch (error) {
-    return c.json({ error: "Failed to list images" }, 500)
-  }
-})
-
-// Development: Get specific R2 image
-app.get("/api/dev/r2-images/:path{.+}", async (c) => {
-  // ローカル開発環境では ENVIRONMENT が設定されていない可能性があるので、チェックを緩和
-  const isDev = c.env.ENVIRONMENT === "development" || c.req.url.includes("localhost")
-  if (!isDev) {
-    return c.json({ error: "This endpoint is only available in development" }, 403)
-  }
-
-  try {
-    const key = c.req.param("path") ?? ""
-    console.log("Requested key:", key)
-    
-    const object = await c.env.BUCKET.get(key)
-    
-    if (!object) {
-      console.log("Object not found in R2:", key)
-      return c.json({ error: "Image not found", key }, 404)
-    }
-
-    const contentType = key.endsWith('.webp') ? 'image/webp' : 
-                       key.endsWith('.png') ? 'image/png' : 
-                       'application/octet-stream'
-    
-    c.header("Content-Type", contentType)
-    c.header("Cache-Control", "no-cache")
-    
-    return c.body(object.body)
-  } catch (error) {
-    return c.json({ error: "Failed to get image" }, 500)
-  }
-})
-
-// Get OGP image file directly 
+// Get OGP image file directly
 app.get("/api/ogp-images/:id/image", async (c) => {
   try {
     const id = c.req.param("id")
 
     // Get image from R2
-    const object = await c.env.BUCKET.get(`ogp-images/${id}.webp`)
+    const object = await c.env.BUCKET.get(`ogp-images/${id}.jpg`)
 
     if (!object) {
       return c.json({ error: "OGP image not found" }, 404)
@@ -408,14 +362,15 @@ app.get("/api/ogp-images/:id/image", async (c) => {
 
     // Set cache headers for 1 year (images are immutable)
     c.header("Cache-Control", "public, max-age=31536000, immutable")
-    c.header("Content-Type", "image/webp")
+    c.header("Content-Type", "image/jpeg")
     // CORSヘッダーを追加
     c.header("Access-Control-Allow-Origin", "*")
     c.header("Access-Control-Allow-Methods", "GET, OPTIONS")
     c.header("Access-Control-Allow-Headers", "Content-Type")
 
     // Return the image directly
-    return c.body(object.body)
+    const arrayBuffer = await object.arrayBuffer()
+    return c.body(arrayBuffer)
   } catch (error) {
     console.error("Failed to get OGP image file:", error)
     return c.json(
@@ -433,32 +388,91 @@ app.get("/replay/:id", async (c) => {
   try {
     const id = c.req.param("id")
     const db = createDb(c.env.DB)
-    
+
     // Get replay data
     const result = await db.select().from(schema.savedStates).where(eq(schema.savedStates.id, id)).get()
-    
+
     if (!result) {
       // リプレイが見つからない場合は通常のHTMLを返す
       return c.html(<DefaultHTML />)
     }
 
     // OGP画像のURL
-    const ogImageUrl = result.ogpImagePath != null && result.ogpImagePath !== ""
-      ? `${c.req.url.replace(/\/replay\/[^/]+$/, "")}/api/ogp-images/${id}/image`
-      : undefined
+    const ogImageUrl =
+      result.ogpImagePath != null && result.ogpImagePath !== ""
+        ? `${c.req.url.replace(/\/replay\/[^/]+$/, "")}/api/ogp-images/${id}/image`
+        : undefined
 
     // OGPタグ付きHTMLを生成
     return c.html(
-      <ReplayHTML
-        title={result.title}
-        description={result.description ?? ""}
-        url={c.req.url}
-        imageUrl={ogImageUrl}
-      />
+      <ReplayHTML title={result.title} description={result.description ?? ""} url={c.req.url} imageUrl={ogImageUrl} />,
     )
   } catch (error) {
     console.error("Failed to generate replay page:", error)
     return c.html(<DefaultHTML />)
+  }
+})
+
+// Development: List all R2 images
+app.get("/api/dev/r2-images", async (c) => {
+  // ローカル開発環境では ENVIRONMENT が設定されていない可能性があるので、チェックを緩和
+  const isDev = c.env.ENVIRONMENT === "development" || c.req.url.includes("localhost")
+  if (!isDev) {
+    return c.json({ error: "This endpoint is only available in development" }, 403)
+  }
+
+  try {
+    const list = await c.env.BUCKET.list()
+    const images = list.objects.map((obj) => ({
+      key: obj.key,
+      size: obj.size,
+      uploaded: obj.uploaded,
+      url: `/api/dev/r2-images/${obj.key}`,
+    }))
+
+    return c.json({
+      total: images.length,
+      images: images.sort((a, b) => new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime()),
+    })
+  } catch (_error) {
+    return c.json({ error: "Failed to list images" }, 500)
+  }
+})
+
+// Development: Get specific R2 image
+app.get("/api/dev/r2-images/:path{.+}", async (c) => {
+  // ローカル開発環境では ENVIRONMENT が設定されていない可能性があるので、チェックを緩和
+  const isDev = c.env.ENVIRONMENT === "development" || c.req.url.includes("localhost")
+  if (!isDev) {
+    return c.json({ error: "This endpoint is only available in development" }, 403)
+  }
+
+  try {
+    const key = c.req.param("path") ?? ""
+    console.log("Requested key:", key)
+
+    const object = await c.env.BUCKET.get(key)
+
+    if (!object) {
+      console.log("Object not found in R2:", key)
+      return c.json({ error: "Image not found", key }, 404)
+    }
+
+    const contentType = key.endsWith(".webp")
+      ? "image/webp"
+      : key.endsWith(".jpg") || key.endsWith(".jpeg")
+        ? "image/jpeg"
+        : key.endsWith(".png")
+          ? "image/png"
+          : "application/octet-stream"
+
+    c.header("Content-Type", contentType)
+    c.header("Cache-Control", "no-cache")
+
+    const arrayBuffer = await object.arrayBuffer()
+    return c.body(arrayBuffer)
+  } catch (_error) {
+    return c.json({ error: "Failed to get image" }, 500)
   }
 })
 
