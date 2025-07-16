@@ -110,7 +110,7 @@ app.post("/api/save-states", async (c) => {
     // リクエストボディのバリデーション
     const body = await c.req.json()
     const validated = SaveGameStateRequestSchema.parse(body)
-    const { sessionId, stateJson, deckImageHash, title, description, type, version, deckConfig, deckCardIds, ogpImage } =
+    const { sessionId, stateJson, deckImageHash, title, description, type, version, deckConfig, deckCardIds, ogpImageData } =
       validated
     const db = createDb(c.env.DB)
     const id = generateReplayId() // Use 8-character ID for replays
@@ -155,10 +155,10 @@ app.post("/api/save-states", async (c) => {
 
     // Save OGP image to R2 if provided
     let ogpImagePath: string | undefined
-    if (ogpImage != null && ogpImage !== "") {
+    if (ogpImageData != null && ogpImageData !== "") {
       try {
         // Convert base64 to ArrayBuffer
-        const binaryString = atob(ogpImage.replace(/^data:image\/\w+;base64,/, ""))
+        const binaryString = atob(ogpImageData.replace(/^data:image\/\w+;base64,/, ""))
         const bytes = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i)
