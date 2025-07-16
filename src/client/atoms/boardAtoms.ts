@@ -2873,21 +2873,13 @@ function performCardMove(
     const cardIndex = from.zone.cardIndex ?? actualFromZone.cardIndex
     const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id, cardIndex)
 
-    // Determine if this is a cross-zone move
-    const isCrossZoneMove = actualFromZone.type !== to.zone.type
+    // Determine if this is a cross-zone move (different type OR different index)
+    const isCrossZoneMove = actualFromZone.type !== to.zone.type || actualFromZone.index !== to.zone.index
     
-    // Check if preventSameZoneReorder is enabled and this is a same-zone move
+    // Check if preventSameZoneReorder is enabled and this is the exact same zone (type AND index)
     if (options?.preventSameZoneReorder === true && !isCrossZoneMove && actualFromZone.player === to.zone.player) {
-      const hasIndex = actualFromZone.type === "monsterZone" || actualFromZone.type === "spellTrapZone" || actualFromZone.type === "extraMonsterZone"
-      
-      // For indexed zones, only prevent if it's the exact same slot
-      if (hasIndex && actualFromZone.index === to.zone.index) {
-        return state
-      }
-      // For non-indexed zones, prevent any reordering
-      if (!hasIndex) {
-        return state
-      }
+      // This is the exact same zone (same type, same index), so prevent reordering
+      return state
     }
 
     // For zone-specific moves, keep the index for certain zone types
@@ -2901,16 +2893,16 @@ function performCardMove(
 
     // Calculate cardIndex based on stackPosition for stackable zones
     if (shouldKeepIndex && targetZone.index !== undefined) {
-      const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
+      // Always use the original toPlayer state to get the correct card count
       let existingCards: Card[] = []
 
       // Get existing cards in the target zone
       if (to.zone.type === "monsterZone") {
-        existingCards = targetPlayer.monsterZones[targetZone.index] ?? []
+        existingCards = toPlayer.monsterZones[targetZone.index] ?? []
       } else if (to.zone.type === "spellTrapZone") {
-        existingCards = targetPlayer.spellTrapZones[targetZone.index] ?? []
+        existingCards = toPlayer.spellTrapZones[targetZone.index] ?? []
       } else if (to.zone.type === "extraMonsterZone") {
-        existingCards = targetPlayer.extraMonsterZones[targetZone.index] ?? []
+        existingCards = toPlayer.extraMonsterZones[targetZone.index] ?? []
       }
 
       // Set cardIndex based on stackPosition
@@ -2922,8 +2914,8 @@ function performCardMove(
       }
     } else if (to.zone.type === "freeZone") {
       // Also handle stackPosition for free zones
-      const targetPlayer = to.zone.player === from.zone.player ? newFromPlayer : toPlayer
-      const existingCards = targetPlayer.freeZone ?? []
+      // Always use the original toPlayer state to get the correct card count
+      const existingCards = toPlayer.freeZone ?? []
 
       if (options?.stackPosition === "bottom") {
         targetZone = { ...targetZone, cardIndex: existingCards.length }
@@ -3302,8 +3294,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           cards.splice(insertIndex, 0, card)
           // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
-            cards[i].rotation = 0
-            cards[i].counter = undefined
+            cards[i] = { ...cards[i], rotation: 0, counter: undefined }
           }
         } else {
           // Find first empty zone
@@ -3325,8 +3316,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           cards.splice(insertIndex, 0, card)
           // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
-            cards[i].rotation = 0
-            cards[i].counter = undefined
+            cards[i] = { ...cards[i], rotation: 0, counter: undefined }
           }
         } else {
           // Find first empty zone
@@ -3355,8 +3345,7 @@ function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): PlayerBoa
           cards.splice(insertIndex, 0, card)
           // Reset rotation and counter for all cards except the top card (index 0)
           for (let i = 1; i < cards.length; i++) {
-            cards[i].rotation = 0
-            cards[i].counter = undefined
+            cards[i] = { ...cards[i], rotation: 0, counter: undefined }
           }
         } else {
           // Find first empty zone
