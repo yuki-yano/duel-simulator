@@ -11,6 +11,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@client/components/ui/dialog"
 import { Button } from "@client/components/ui/button"
 import html2canvas from "html2canvas"
+import { useScreenshot } from "@client/contexts/ScreenshotContext"
+import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
 
 interface ActionButtonsProps {
   // Undo/Redo state
@@ -43,6 +45,24 @@ interface ActionButtonsProps {
   isTouchDevice: boolean
 }
 
+// スクリーンショット用のローディングオーバーレイコンポーネント
+function ScreenshotOverlay({ isVisible }: { isVisible: boolean }) {
+  if (!isVisible) return null
+
+  return (
+    <div
+      className="fixed inset-0 bg-white z-[19999] flex items-center justify-center screenshot-overlay"
+      style={{ pointerEvents: "all" }}
+      data-html2canvas-ignore="true"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-500" />
+        <p className="text-lg font-medium text-gray-700">スクリーンショットを生成中...</p>
+      </div>
+    </div>
+  )
+}
+
 export function ActionButtons({
   canUndo,
   canRedo,
@@ -67,125 +87,29 @@ export function ActionButtons({
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | "reset" | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [screenshotData, setScreenshotData] = useState<{ url: string; fileName: string } | null>(null)
+  const { setScreenshotWidth } = useScreenshot()
 
   const handleScreenshot = async (width: number) => {
     setIsCapturing(true)
 
-    // 元のスタイルを保存するためのMap
-    let originalStyles: Map<HTMLElement, { height: string; marginTop: string }> | null = null
+    // オーバーレイの表示を待つ
+    await new Promise((r) => setTimeout(r, 50))
 
-    // --- Viewport 擬装でレイアウト再計算 --------------------
-    const originalWidth = window.innerWidth
-    const originalHeight = window.innerHeight
+    // スクリーンショット幅を設定してReactの再レンダリングをトリガー
+    setScreenshotWidth(width)
 
-    // より強力なアプローチ：viewport meta tagを一時的に変更
-    const viewportMeta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement
-    const originalViewport = viewportMeta?.content || ""
+    // Reactの再レンダリングとレイアウトの安定を待つ
+    await new Promise((r) => setTimeout(r, 150))
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-    // 元のmatchMediaを保存
-    const originalMatchMedia = window.matchMedia
-
-    const overrideViewport = () => {
-      try {
-        // 1. viewport metaタグを変更
-        if (viewportMeta !== null) {
-          viewportMeta.content = `width=${width}, initial-scale=1.0, maximum-scale=1.0, user-scalable=no`
-        }
-
-        // 2. window.innerWidth/Heightを上書き（getter/setterを定義）
-        Object.defineProperty(window, "innerWidth", {
-          configurable: true,
-          get: () => width,
-          set: () => {},
-        })
-        Object.defineProperty(window, "innerHeight", {
-          configurable: true,
-          get: () => originalHeight,
-          set: () => {},
-        })
-
-        // 3. document.documentElementのクライアント幅も変更
-        Object.defineProperty(document.documentElement, "clientWidth", {
-          configurable: true,
-          get: () => width,
-        })
-        Object.defineProperty(document.documentElement, "clientHeight", {
-          configurable: true,
-          get: () => document.documentElement.scrollHeight,
-        })
-
-        // 4. window.matchMediaもオーバーライド
-        window.matchMedia = (query: string) => {
-          // メディアクエリを解析して適切な結果を返す
-          const matches = (() => {
-            if (query.includes("min-width: 1024px")) return width >= 1024
-            if (query.includes("min-width: 768px")) return width >= 768
-            if (query.includes("min-width: 640px")) return width >= 640
-            return originalMatchMedia(query).matches
-          })()
-
-          return {
-            matches,
-            media: query,
-            onchange: null,
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            addListener: () => {},
-            removeListener: () => {},
-            dispatchEvent: () => true,
-          }
-        }
-
-        // 5. 複数のイベントを発火
-        window.dispatchEvent(new Event("resize"))
-        window.dispatchEvent(new Event("orientationchange"))
-      } catch (e) {
-        console.warn("Failed to override viewport:", e)
-      }
-    }
-
-    const restoreViewport = () => {
-      try {
-        if (viewportMeta !== null) {
-          viewportMeta.content = originalViewport
-        }
-        Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth })
-        Object.defineProperty(window, "innerHeight", { configurable: true, value: originalHeight })
-        Object.defineProperty(document.documentElement, "clientWidth", {
-          configurable: true,
-          value: document.documentElement.scrollWidth,
-        })
-        Object.defineProperty(document.documentElement, "clientHeight", {
-          configurable: true,
-          value: document.documentElement.scrollHeight,
-        })
-        // matchMediaを元に戻す
-        window.matchMedia = originalMatchMedia
-        window.dispatchEvent(new Event("resize"))
-        window.dispatchEvent(new Event("orientationchange"))
-      } catch {
-        // ignore
-      }
-    }
-
-    // 1. viewport を上書き
-    overrideViewport()
-
-    // 2. React & ResizeObserver が反映するまで待機
-    await new Promise((r) => setTimeout(r, 100))
-
-    // 3. ボード要素取得（再計算後）
+    // ボード要素取得
     const boardElement = document.querySelector(".game-board") as HTMLElement | null
     if (!boardElement) {
       console.error("ゲームボードが見つかりません")
-      restoreViewport()
+      setScreenshotWidth(undefined)
       setIsCapturing(false)
       return
     }
-
-    // boardElement 内の動的要素Readiness待ち
-    // 追加のレイアウト安定待機（2フレーム）
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
     // board の幅を一時的に撮影解像度に合わせる
     const originalBoardWidth = boardElement.style.width
@@ -193,8 +117,8 @@ export function ActionButtons({
     boardElement.style.width = `${width}px`
     boardElement.style.maxWidth = `${width}px`
 
-    // 幅変更に伴うレイアウト再計算を待機（ResizeObserver + React 再レンダリング）
-    await new Promise((res) => setTimeout(res, 300))
+    // 幅変更に伴うレイアウト再計算を待機
+    await new Promise((res) => setTimeout(res, 100))
 
     // ラベル(墓地・除外・手札など)を少し上に移動
     const labelSpans = boardElement.querySelectorAll("span")
@@ -222,120 +146,124 @@ export function ActionButtons({
     // レイアウト安定待ち
     await new Promise((r) => setTimeout(r, 100))
 
-    // 墓地・除外ゾーンの高さを強制的に再計算
-    // PCからスマホサイズへの変換時の問題を修正
-    const graveZones = boardElement.querySelectorAll<HTMLElement>(".grave-zone")
-    const isSmallScreen = width < 640
-    const isMediumScreen = width >= 640 && width < 768
-    const isOriginalLarge = originalWidth >= 1024
-
-    // 元のスタイルを保存
-    originalStyles = new Map<HTMLElement, { height: string; marginTop: string }>()
-
-    // 自分側の墓地・除外ゾーンのマージントップを調整
-    const playerGraveContainers = boardElement.querySelectorAll<HTMLElement>(".player-grave-container > div, .side-free-zone-self")
-    playerGraveContainers.forEach((container) => {
-      originalStyles.set(container, {
-        height: container.style.height || "",
-        marginTop: container.style.marginTop || ""
-      })
-
-      // 元がPCサイズで、ターゲットがタブレット以上の場合はマージン調整を行わない
-      if (isOriginalLarge && width >= 768) {
-        // マージンを変更しない（現在の値を維持）
-      } else {
-        if (isSmallScreen) {
-          container.style.marginTop = "-58px"
-        } else if (isMediumScreen) {
-          container.style.marginTop = "-84px"
-        } else {
-          container.style.marginTop = "-116px"
-        }
-      }
-    })
-
-    graveZones.forEach((zone) => {
-      originalStyles.set(zone, {
-        height: zone.style.height || "",
-        marginTop: zone.style.marginTop || ""
-      })
-
-      // 自分側か相手側かを判定
-      const isSelfZone = zone.classList.contains("grave-zone-self") || 
-                        zone.classList.contains("banish-zone-self") ||
-                        zone.classList.contains("side-free-zone-self")
-
-      if (isSelfZone) {
-        // 自分側: 3行分の高さ
-        if (isSmallScreen) {
-          zone.style.height = "174px" // h-14 * 3 + gap
-        } else if (isMediumScreen) {
-          zone.style.height = "252px" // h-20 * 3 + gap
-        } else {
-          zone.style.height = "348px" // h-24 * 3 + gap
-        }
-      } else {
-        // 相手側: 2行分の高さ
-        if (isSmallScreen) {
-          zone.style.height = "116px" // h-14 * 2 + gap
-        } else if (isMediumScreen) {
-          zone.style.height = "168px" // h-20 * 2 + gap  
-        } else {
-          zone.style.height = "200px" // h-24 * 2 + gap
-        }
-      }
-    })
-
-    // 墓地・除外ゾーンの高さ変更を反映させるため追加の待機
-    await new Promise((r) => setTimeout(r, 100))
-
     // 高さを自動計算（デッキゾーンまで含める）
     const height = boardElement.scrollHeight
 
     try {
-      // html2canvasでキャプチャ（実際のDOMを直接キャプチャ）
       const canvas = await html2canvas(boardElement, {
+        y: -20,
+        height: height + 20,
+        scrollY: -window.scrollY - 20,
         width: width,
-        height: height,
-        scale: 2, // 高解像度でキャプチャ
-        useCORS: true, // クロスオリジン画像の対応
-        allowTaint: false, // tainted canvasを防ぐ
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
         windowWidth: width,
         windowHeight: height,
-        backgroundColor: "#ffffff", // 背景を白に設定
-        logging: false, // デバッグログを無効化
+        backgroundColor: "#ffffff",
+        logging: false,
         ignoreElements: (element) => {
-          // スクリーンショットから除外する要素
           return (
-            element.classList.contains("no-screenshot") || element.getAttribute("data-html2canvas-ignore") === "true"
+            element.classList.contains("no-screenshot") || 
+            element.classList.contains("screenshot-overlay") ||
+            element.getAttribute("data-html2canvas-ignore") === "true"
           )
         },
       })
 
-      // モーダル表示でダウンロード処理
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          const fileName = `duel-simulator-w${width}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.png`
+      // 下部の余白をカットする処理
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        // 下から上に向かってスキャンして、最後の非白色ピクセルを探す
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const data = imageData.data
+        let bottomY = canvas.height
 
-          // データURLに変換（10MB以下の場合）
-          if (blob.size < 10 * 1024 * 1024) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              const dataUrl = reader.result as string
-              setScreenshotData({ url: dataUrl, fileName })
+        // 下から上にスキャン
+        outer: for (let y = canvas.height - 1; y >= 0; y--) {
+          for (let x = 0; x < canvas.width; x++) {
+            const idx = (y * canvas.width + x) * 4
+            const r = data[idx]
+            const g = data[idx + 1]
+            const b = data[idx + 2]
+            const a = data[idx + 3]
+            
+            // 白色でないピクセル（または透明でないピクセル）を見つけたら
+            if (a > 0 && (r !== 255 || g !== 255 || b !== 255)) {
+              bottomY = y + 1
+              break outer
             }
-            reader.readAsDataURL(blob)
-          } else {
-            // 10MB以上の場合は直接ダウンロード
-            const a = document.createElement("a")
-            a.href = url
-            a.download = fileName
-            a.click()
-            setTimeout(() => URL.revokeObjectURL(url), 100)
           }
         }
-      })
+
+        // 余白を考慮（コンテンツの下に20px程度の余白を残す）
+        const finalHeight = Math.min(bottomY + 40, canvas.height) // 40pxの余白
+
+        // 新しいキャンバスを作成して必要な部分だけをコピー
+        const trimmedCanvas = document.createElement("canvas")
+        trimmedCanvas.width = canvas.width
+        trimmedCanvas.height = finalHeight
+        const trimmedCtx = trimmedCanvas.getContext("2d")
+        
+        if (trimmedCtx) {
+          // 背景を白で塗りつぶす
+          trimmedCtx.fillStyle = "#ffffff"
+          trimmedCtx.fillRect(0, 0, trimmedCanvas.width, trimmedCanvas.height)
+          
+          // 元のキャンバスから必要な部分をコピー
+          trimmedCtx.drawImage(canvas, 0, 0, canvas.width, finalHeight, 0, 0, canvas.width, finalHeight)
+          
+          // トリミングされたキャンバスを使用
+          trimmedCanvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob)
+              const fileName = `duel-simulator-w${width}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.png`
+
+              // データURLに変換（10MB以下の場合）
+              if (blob.size < 10 * 1024 * 1024) {
+                const reader = new FileReader()
+                reader.onloadend = () => {
+                  const dataUrl = reader.result as string
+                  setScreenshotData({ url: dataUrl, fileName })
+                }
+                reader.readAsDataURL(blob)
+              } else {
+                // 10MB以上の場合は直接ダウンロード
+                const a = document.createElement("a")
+                a.href = url
+                a.download = fileName
+                a.click()
+                setTimeout(() => URL.revokeObjectURL(url), 100)
+              }
+            }
+          })
+        }
+      } else {
+        // コンテキストが取得できない場合は元のキャンバスを使用
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob)
+            const fileName = `duel-simulator-w${width}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.png`
+
+            // データURLに変換（10MB以下の場合）
+            if (blob.size < 10 * 1024 * 1024) {
+              const reader = new FileReader()
+              reader.onloadend = () => {
+                const dataUrl = reader.result as string
+                setScreenshotData({ url: dataUrl, fileName })
+              }
+              reader.readAsDataURL(blob)
+            } else {
+              // 10MB以上の場合は直接ダウンロード
+              const a = document.createElement("a")
+              a.href = url
+              a.download = fileName
+              a.click()
+              setTimeout(() => URL.revokeObjectURL(url), 100)
+            }
+          }
+        })
+      }
     } catch (error) {
       console.error("スクリーンショットの生成に失敗しました:", error)
     } finally {
@@ -343,22 +271,6 @@ export function ActionButtons({
       // boardElement の幅を戻す
       boardElement.style.width = originalBoardWidth
       boardElement.style.maxWidth = originalBoardMaxWidth
-
-      // 墓地・除外ゾーンのスタイルをリセット（元のスタイルに戻す）
-      if (originalStyles !== null) {
-        originalStyles.forEach((style, element) => {
-          if (style.height) {
-            element.style.height = style.height
-          } else {
-            element.style.removeProperty("height")
-          }
-          if (style.marginTop) {
-            element.style.marginTop = style.marginTop
-          } else {
-            element.style.removeProperty("margin-top")
-          }
-        })
-      }
 
       // ラベルのスタイルをリセット
       const labelSpans = boardElement.querySelectorAll("span")
@@ -377,13 +289,16 @@ export function ActionButtons({
         element.style.removeProperty("transform")
       })
 
-      restoreViewport()
+      // スクリーンショットモードを解除
+      setScreenshotWidth(undefined)
       setIsCapturing(false)
     }
   }
 
   return (
-    <div className="mb-2 flex flex-col gap-2" data-html2canvas-ignore="true">
+    <>
+      <ScreenshotOverlay isVisible={isCapturing} />
+      <div className="mb-2 flex flex-col gap-2" data-html2canvas-ignore="true">
       {/* Screenshot button row */}
       <div className="flex flex-row justify-start gap-2">
         <DropdownMenu>
@@ -403,20 +318,11 @@ export function ActionButtons({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => handleScreenshot(640)}>横幅 640px (モバイル)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleScreenshot(768)}>横幅 768px (タブレット)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleScreenshot(1024)}>横幅 1024px (PC)</DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                // 現在のサイズでキャプチャ
-                const boardElement = document.querySelector(".game-board") as HTMLElement
-                if (boardElement !== null) {
-                  void handleScreenshot(boardElement.offsetWidth)
-                }
-              }}
-            >
-              現在の横幅
+            <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.SP)}>スマホ</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.TABLET)}>
+              タブレット
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.PC)}>PC</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -613,7 +519,6 @@ export function ActionButtons({
                         newWindow.document.close()
                       }
                     } else {
-                      // iOS以外は通常のダウンロード
                       const a = document.createElement("a")
                       a.href = screenshotData.url
                       a.download = screenshotData.fileName
@@ -637,5 +542,6 @@ export function ActionButtons({
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }

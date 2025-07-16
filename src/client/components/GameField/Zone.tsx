@@ -21,7 +21,7 @@ export function Zone({
 }: ZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
-  const { isMediumScreen, isSmallScreen } = useScreenSize()
+  const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
   const typeStyles = {
     monster: "bg-blue-500/5 border-blue-500/30 hover:border-blue-500/50",
     spell: "bg-green-500/5 border-green-500/30 hover:border-green-500/50",
@@ -90,14 +90,18 @@ export function Zone({
             let cardWidth: string
             let cardHeight: string
 
-            if (isMediumScreen) {
+            if (isLargeScreen) {
               offsetPx = 13 // Tablet and Desktop: 13px offset
               cardHeight = "96px" // md:h-24
               cardWidth = `${Math.round((96 * 59) / 86)}px` // Maintain aspect ratio
-            } else if (isSmallScreen) {
+            } else if (isMediumScreen) {
               offsetPx = 10 // Small tablet: 10px offset
               cardHeight = "80px" // sm:h-20
               cardWidth = `${Math.round((80 * 59) / 86)}px` // Maintain aspect ratio
+            } else if (isSmallScreen) {
+              offsetPx = 8 // Mobile: 8px offset
+              cardHeight = "56px" // h-14
+              cardWidth = `${Math.round((56 * 59) / 86)}px` // Maintain aspect ratio
             } else {
               offsetPx = 8 // Mobile: 8px offset
               cardHeight = "56px" // h-14

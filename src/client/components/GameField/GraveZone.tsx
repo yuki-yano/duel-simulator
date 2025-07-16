@@ -199,11 +199,7 @@ export function GraveZone({
         typeStyles[type],
         isHovered && "border-2 border-blue-400/70",
         isDisabled && "opacity-50",
-        isMediumScreen
-          ? "px-2 pt-2 pb-6"
-          : isSmallScreen
-            ? "px-1.5 pt-1.5 pb-5"
-            : "px-1 pt-1 pb-5",
+        isMediumScreen ? "px-2 pt-2 pb-6" : isSmallScreen ? "px-1.5 pt-1.5 pb-5" : "px-1 pt-1 pb-5",
         className,
       )}
       style={style}

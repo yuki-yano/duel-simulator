@@ -78,6 +78,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/client/components/ui/alert-dialog"
+import { GRAVE_ZONE_SIZE } from "@/client/constants/screen"
 
 export function GameField() {
   return (
@@ -187,10 +188,7 @@ export function GameFieldContent() {
 
   // Refs for dynamic height calculation
   const gridRef = useRef<HTMLDivElement>(null)
-  const [playerGraveHeight, setPlayerGraveHeight] = useState<number | null>(null)
-  const [playerGraveMarginTop, setPlayerGraveMarginTop] = useState<number | null>(null)
-  const [opponentGraveHeight, setOpponentGraveHeight] = useState<number | null>(null)
-  
+
   // 操作ヒントの最小化状態
   const [isHintMinimized, setIsHintMinimized] = useState(() => {
     const saved = localStorage.getItem("duel-simulator-hint-minimized")
@@ -225,7 +223,6 @@ export function GameFieldContent() {
       stackPosition: (shiftKey === true && hasExistingCards) || mobileStackBottom ? ("bottom" as const) : undefined, // Stack at bottom when shift+drop on existing cards or mobile toggle is on
       preventSameZoneReorder: !preventSameZoneReorder,
     }
-    
 
     if (draggedCard.zone != null && "cardIndex" in draggedCard.zone && draggedCard.zone.cardIndex !== undefined) {
       // draggedCardのzone情報にindexを含める
@@ -443,64 +440,6 @@ export function GameFieldContent() {
     }
   }, [])
 
-
-  // Calculate grave zone positions dynamically
-  useEffect(() => {
-    const calculatePositions = () => {
-      if (!gridRef.current) return
-
-      // Get all zone elements
-      const emzElement = gridRef.current.querySelector(".emz-zone-self")
-      const spellTrapElement = gridRef.current.querySelector(".spell-trap-zone-self")
-      const opponentSpellTrapElement = gridRef.current.querySelector(".spell-trap-zone-opponent")
-      const opponentMonsterElement = gridRef.current.querySelector(".monster-zone-opponent")
-
-      if (emzElement && spellTrapElement) {
-        const emzRect = emzElement.getBoundingClientRect()
-        const spellTrapRect = spellTrapElement.getBoundingClientRect()
-
-        // Calculate player grave zone height
-        const height = spellTrapRect.bottom - emzRect.top
-        setPlayerGraveHeight(height)
-
-        // Calculate margin top to align with EMZ top
-        // Get the parent container of grave zones
-        const graveContainer = gridRef.current.querySelector(".player-grave-container")
-        if (graveContainer) {
-          const containerRect = graveContainer.getBoundingClientRect()
-          const marginTop = emzRect.top - containerRect.top
-          setPlayerGraveMarginTop(marginTop)
-        }
-      }
-
-      if (isOpponentFieldOpen && opponentSpellTrapElement && opponentMonsterElement) {
-        const spellTrapRect = opponentSpellTrapElement.getBoundingClientRect()
-        const monsterRect = opponentMonsterElement.getBoundingClientRect()
-
-        // Calculate opponent grave zone height (2 rows: spell/trap to monster)
-        const height = monsterRect.bottom - spellTrapRect.top
-        setOpponentGraveHeight(height)
-      }
-    }
-
-    // Initial calculation
-    calculatePositions()
-
-    // Recalculate on window resize
-    window.addEventListener("resize", calculatePositions)
-
-    // Observe grid changes
-    const resizeObserver = new ResizeObserver(calculatePositions)
-    if (gridRef.current) {
-      resizeObserver.observe(gridRef.current)
-    }
-
-    return () => {
-      window.removeEventListener("resize", calculatePositions)
-      resizeObserver.disconnect()
-    }
-  }, [isOpponentFieldOpen])
-
   return (
     <>
       <div className="game-board w-full max-w-6xl mx-auto p-2 sm:p-4">
@@ -708,7 +647,6 @@ export function GameFieldContent() {
                 : "grid-cols-[38px_repeat(5,38px)_auto] sm:grid-cols-[55px_repeat(5,55px)_auto] md:grid-cols-[66px_repeat(5,66px)_auto]",
             )}
           >
-            {/* Side Free Zone (1024px and above) */}
             {isLargeScreen && (
               <div
                 className={cn(
@@ -716,14 +654,7 @@ export function GameFieldContent() {
                   isOpponentFieldOpen ? "row-start-4" : "row-start-2",
                 )}
                 style={{
-                  marginTop:
-                    playerGraveMarginTop != null
-                      ? `${playerGraveMarginTop}px`
-                      : isMediumScreen
-                        ? "-116px"
-                        : isSmallScreen
-                          ? "-84px"
-                          : "-58px",
+                  marginTop: "-105px",
                   zIndex: 10,
                   position: "relative",
                 }}
@@ -737,15 +668,16 @@ export function GameFieldContent() {
                   onContextMenu={handleCardContextMenu}
                   onContextMenuClose={() => setContextMenu(null)}
                   style={{
-                    height:
-                      playerGraveHeight != null
-                        ? `${playerGraveHeight}px`
-                        : isMediumScreen
-                          ? "348px"
-                          : isSmallScreen
-                            ? "252px"
-                            : "174px",
-                    width: "93px",
+                    height: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.HEIGHT
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.HEIGHT
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT,
+                    width: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.WIDTH
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.WIDTH
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH,
                   }}
                 />
               </div>
@@ -778,15 +710,16 @@ export function GameFieldContent() {
                     onContextMenu={handleCardContextMenu}
                     onContextMenuClose={() => setContextMenu(null)}
                     style={{
-                      height:
-                        opponentGraveHeight != null
-                          ? `${opponentGraveHeight}px`
-                          : isMediumScreen
-                            ? "200px"
-                            : isSmallScreen
-                              ? "168px"
-                              : "116px",
-                      width: isMediumScreen ? "82px" : isSmallScreen ? "70px" : "56px",
+                      height: isLargeScreen
+                        ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.HEIGHT
+                        : isMediumScreen
+                          ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.HEIGHT
+                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT,
+                      width: isLargeScreen
+                        ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.WIDTH
+                        : isMediumScreen
+                          ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.WIDTH
+                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH,
                     }}
                   />
                   <GraveZone
@@ -799,15 +732,16 @@ export function GameFieldContent() {
                     onContextMenu={handleCardContextMenu}
                     onContextMenuClose={() => setContextMenu(null)}
                     style={{
-                      height:
-                        opponentGraveHeight != null
-                          ? `${opponentGraveHeight}px`
-                          : isMediumScreen
-                            ? "200px"
-                            : isSmallScreen
-                              ? "168px"
-                              : "116px",
-                      width: isMediumScreen ? "82px" : isSmallScreen ? "70px" : "56px",
+                      height: isLargeScreen
+                        ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.HEIGHT
+                        : isMediumScreen
+                          ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.HEIGHT
+                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT,
+                      width: isLargeScreen
+                        ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.WIDTH
+                        : isMediumScreen
+                          ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.WIDTH
+                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH,
                     }}
                   />
                 </div>
@@ -824,7 +758,7 @@ export function GameFieldContent() {
                 {[0, 1, 2, 3, 4].map((index) => (
                   <Zone
                     key={`opponent-monster-${index}`}
-                    className={cn("row-start-2", index === 0 ? "monster-zone-opponent" : "")}
+                    className={cn("row-start-2", isLargeScreen ? `col-start-${index + 3}` : `col-start-${index + 2}`)}
                     type="monster"
                     zone={{ player: "opponent", type: "monsterZone", index }}
                     cards={opponentBoard.monsterZones[index]}
@@ -893,14 +827,11 @@ export function GameFieldContent() {
               <div
                 className="flex gap-1 sm:gap-2"
                 style={{
-                  marginTop:
-                    playerGraveMarginTop != null
-                      ? `${playerGraveMarginTop}px`
-                      : isMediumScreen
-                        ? "-116px"
-                        : isSmallScreen
-                          ? "-84px"
-                          : "-58px",
+                  marginTop: isLargeScreen
+                    ? GRAVE_ZONE_SIZE.SELF.LARGE.MARGIN_TOP
+                    : isMediumScreen
+                      ? GRAVE_ZONE_SIZE.SELF.MEDIUM.MARGIN_TOP
+                      : GRAVE_ZONE_SIZE.SELF.SMALL.MARGIN_TOP,
                   zIndex: 10,
                   position: "relative",
                 }}
@@ -917,22 +848,16 @@ export function GameFieldContent() {
                   isDisabled={expandedZone?.type === "graveyard"}
                   className="grave-zone-self"
                   style={{
-                    height:
-                      playerGraveHeight != null
-                        ? `${playerGraveHeight}px`
-                        : isMediumScreen
-                          ? "348px"
-                          : isSmallScreen
-                            ? "252px"
-                            : "174px",
-                    width:
-                      isLargeScreen
-                        ? "93px"
-                        : isMediumScreen
-                          ? "82px"
-                          : isSmallScreen
-                            ? "70px"
-                            : "56px",
+                    height: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.HEIGHT
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.HEIGHT
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT,
+                    width: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.WIDTH
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.WIDTH
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH,
                   }}
                 />
                 <GraveZone
@@ -947,22 +872,16 @@ export function GameFieldContent() {
                   isDisabled={expandedZone?.type === "banished"}
                   className="banish-zone-self"
                   style={{
-                    height:
-                      playerGraveHeight != null
-                        ? `${playerGraveHeight}px`
-                        : isMediumScreen
-                          ? "348px"
-                          : isSmallScreen
-                            ? "252px"
-                            : "174px",
-                    width:
-                      isLargeScreen
-                        ? "93px"
-                        : isMediumScreen
-                          ? "82px"
-                          : isSmallScreen
-                            ? "70px"
-                            : "56px",
+                    height: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.HEIGHT
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.HEIGHT
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT,
+                    width: isLargeScreen
+                      ? GRAVE_ZONE_SIZE.SELF.LARGE.WIDTH
+                      : isMediumScreen
+                        ? GRAVE_ZONE_SIZE.SELF.MEDIUM.WIDTH
+                        : GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH,
                   }}
                 />
               </div>
@@ -1200,10 +1119,7 @@ export function GameFieldContent() {
         )}
       >
         <div className="bg-gray-800/90 text-white rounded-lg text-xs">
-          <div className={cn(
-            "px-3 pt-3 flex items-center justify-between",
-            isHintMinimized ? "pb-3" : "pb-1"
-          )}>
+          <div className={cn("px-3 pt-3 flex items-center justify-between", isHintMinimized ? "pb-3" : "pb-1")}>
             <div className="font-semibold">操作ヒント</div>
             <button
               onClick={() => {
@@ -1217,10 +1133,12 @@ export function GameFieldContent() {
               {isHintMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           </div>
-          <div className={cn(
-            "space-y-1 text-gray-300 px-3 transition-all duration-200",
-            isHintMinimized ? "h-0 overflow-hidden pb-0" : "pb-3"
-          )}>
+          <div
+            className={cn(
+              "space-y-1 text-gray-300 px-3 transition-all duration-200",
+              isHintMinimized ? "h-0 overflow-hidden pb-0" : "pb-3",
+            )}
+          >
             <div>
               • <span className="text-yellow-400">Shift + ドラッグ</span>:
             </div>

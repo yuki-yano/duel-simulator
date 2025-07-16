@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import { 
-  draggedCardAtom, 
-  replayPlayingAtom, 
-  cardAnimationsAtom, 
+import {
+  draggedCardAtom,
+  replayPlayingAtom,
+  cardAnimationsAtom,
   updateCardRefAtom,
   activateEffectAtom,
   targetSelectAtom,
@@ -80,7 +80,7 @@ export function DraggableCard({
     if (cardRef.current) {
       updateCardRef(card.id, cardRef.current)
     }
-    
+
     return () => {
       // Clean up ref when unmounting
       updateCardRef(card.id, null)
