@@ -128,7 +128,7 @@ app.post("/api/save-states", async (c) => {
       return c.json(
         {
           error: "Validation error",
-          details: error.flatten(),
+          details: error.issues,
         },
         400,
       )
