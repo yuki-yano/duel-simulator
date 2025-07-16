@@ -3,6 +3,8 @@ import { z } from "zod"
 import { eq } from "drizzle-orm"
 import { createDb, schema } from "../db"
 import { SaveDeckImageRequestSchema } from "../../shared/types/api"
+import { arrayBufferToBase64 } from "../utils/base64"
+import { saveBase64ToR2, getImageFromR2 } from "../utils/r2-storage"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -16,18 +18,10 @@ app.post("/api/deck-images", async (c) => {
     const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } = validated
     const db = createDb(c.env.DB)
 
-    // Save image to R2 (convert base64 to ArrayBuffer)
-    const binaryString = atob(imageData.replace(/^data:image\/\w+;base64,/, ""))
-    const bytes = new Uint8Array(binaryString.length)
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
-    }
-
-    await c.env.BUCKET.put(`deck-images/${hash}`, bytes.buffer, {
-      httpMetadata: {
-        contentType: "image/png",
-        cacheControl: "public, max-age=31536000, immutable",
-      },
+    // Save image to R2
+    await saveBase64ToR2(c.env.BUCKET, `deck-images/${hash}`, imageData, {
+      contentType: "image/png",
+      cacheControl: "public, max-age=31536000, immutable",
     })
 
     // Save metadata to DB (using Drizzle ORM)
@@ -83,21 +77,14 @@ app.get("/api/deck-images/:hash", async (c) => {
     }
 
     // Get image from R2
-    const object = await c.env.BUCKET.get(`deck-images/${hash}`)
+    const arrayBuffer = await getImageFromR2(c.env.BUCKET, `deck-images/${hash}`)
 
-    if (!object) {
+    if (!arrayBuffer) {
       return c.json({ error: "Deck image file not found" }, 404)
     }
 
     // Convert ArrayBuffer to base64
-    const arrayBuffer = await object.arrayBuffer()
-    const bytes = new Uint8Array(arrayBuffer)
-    let binary = ""
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    const base64 = btoa(binary)
-    const imageDataUrl = `data:image/png;base64,${base64}`
+    const imageDataUrl = arrayBufferToBase64(arrayBuffer, "image/png")
 
     return c.json({
       ...metadata,
@@ -129,9 +116,9 @@ app.get("/api/deck-images/:hash/image", async (c) => {
     const hash = c.req.param("hash")
 
     // Get image from R2
-    const object = await c.env.BUCKET.get(`deck-images/${hash}`)
+    const arrayBuffer = await getImageFromR2(c.env.BUCKET, `deck-images/${hash}`)
 
-    if (!object) {
+    if (!arrayBuffer) {
       return c.json({ error: "Deck image not found" }, 404)
     }
 
@@ -144,7 +131,6 @@ app.get("/api/deck-images/:hash/image", async (c) => {
     c.header("Access-Control-Allow-Headers", "Content-Type")
 
     // Return the image directly
-    const arrayBuffer = await object.arrayBuffer()
     return c.body(arrayBuffer)
   } catch (error) {
     console.error("Failed to get deck image file:", error)

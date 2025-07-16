@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { getImageFromR2, getContentTypeFromFilename } from "../utils/r2-storage"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -41,25 +42,18 @@ app.get("/api/dev/r2-images/:path{.+}", async (c) => {
     const key = c.req.param("path") ?? ""
     console.log("Requested key:", key)
 
-    const object = await c.env.BUCKET.get(key)
+    const arrayBuffer = await getImageFromR2(c.env.BUCKET, key)
 
-    if (!object) {
+    if (!arrayBuffer) {
       console.log("Object not found in R2:", key)
       return c.json({ error: "Image not found", key }, 404)
     }
 
-    const contentType = key.endsWith(".webp")
-      ? "image/webp"
-      : key.endsWith(".jpg") || key.endsWith(".jpeg")
-        ? "image/jpeg"
-        : key.endsWith(".png")
-          ? "image/png"
-          : "application/octet-stream"
+    const contentType = getContentTypeFromFilename(key)
 
     c.header("Content-Type", contentType)
     c.header("Cache-Control", "no-cache")
 
-    const arrayBuffer = await object.arrayBuffer()
     return c.body(arrayBuffer)
   } catch (_error) {
     return c.json({ error: "Failed to get image" }, 500)

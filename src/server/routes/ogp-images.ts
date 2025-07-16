@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { getImageFromR2 } from "../utils/r2-storage"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -17,9 +18,9 @@ app.get("/api/ogp-images/:id/image", async (c) => {
     const id = c.req.param("id")
 
     // Get image from R2
-    const object = await c.env.BUCKET.get(`ogp-images/${id}.jpg`)
+    const arrayBuffer = await getImageFromR2(c.env.BUCKET, `ogp-images/${id}.jpg`)
 
-    if (!object) {
+    if (!arrayBuffer) {
       return c.json({ error: "OGP image not found" }, 404)
     }
 
@@ -32,7 +33,6 @@ app.get("/api/ogp-images/:id/image", async (c) => {
     c.header("Access-Control-Allow-Headers", "Content-Type")
 
     // Return the image directly
-    const arrayBuffer = await object.arrayBuffer()
     return c.body(arrayBuffer)
   } catch (error) {
     console.error("Failed to get OGP image file:", error)

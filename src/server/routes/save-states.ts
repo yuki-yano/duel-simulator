@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 import { createDb, schema } from "../db"
 import { SaveGameStateRequestSchema } from "../../shared/types/api"
 import { generateUUID, generateReplayId } from "../utils/id-generator"
+import { saveBase64ToR2 } from "../utils/r2-storage"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -71,20 +72,11 @@ app.post("/api/save-states", async (c) => {
     let ogpImagePath: string | undefined
     if (ogpImageData != null && ogpImageData !== "") {
       try {
-        // Convert base64 to ArrayBuffer
-        const binaryString = atob(ogpImageData.replace(/^data:image\/\w+;base64,/, ""))
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
-
         // Save to R2
         ogpImagePath = `ogp-images/${id}.jpg`
-        await c.env.BUCKET.put(ogpImagePath, bytes.buffer, {
-          httpMetadata: {
-            contentType: "image/jpeg",
-            cacheControl: "public, max-age=31536000, immutable",
-          },
+        await saveBase64ToR2(c.env.BUCKET, ogpImagePath, ogpImageData, {
+          contentType: "image/jpeg",
+          cacheControl: "public, max-age=31536000, immutable",
         })
         console.log(`OGP image saved to R2: ${ogpImagePath}`)
       } catch (error) {
