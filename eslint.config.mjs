@@ -18,9 +18,7 @@ export default [
         ...globals.node,
       },
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["src/server/*.tsx"],
-        },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: { jsx: true },
       },
