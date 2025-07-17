@@ -4,7 +4,11 @@ export function getApiBaseUrl(): string {
   const port = window.location.port
 
   // 本番環境
-  if (hostname === "duel-simulator.pages.dev" || (hostname === "localhost" && port === "")) {
+  if (
+    hostname === "duel-simulator.pages.dev" ||
+    hostname === "duel-simulator.miyauchidp.dev" ||
+    (hostname === "localhost" && port === "")
+  ) {
     return ""
   }
 

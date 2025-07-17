@@ -15,6 +15,15 @@ import devRoutes from "./routes/dev"
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// Redirect middleware - pages.devドメインからカスタムドメインへ
+app.use("*", async (c, next) => {
+  const url = new URL(c.req.url)
+  if (url.hostname === "duel-simulator.pages.dev") {
+    return c.redirect(`https://duel-simulator.miyauchidp.dev${url.pathname}${url.search}`, 301)
+  }
+  await next()
+})
+
 // Middleware
 app.use("*", logger())
 app.use("/api/*", cors())

@@ -13,7 +13,6 @@ export const ReplayHTML: FC<ReplayHTMLProps> = ({ title, description, url, image
     <html lang="ja">
       <head>
         <meta charSet="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
         <title>{title} - Duel Simulator</title>
 
@@ -22,13 +21,18 @@ export const ReplayHTML: FC<ReplayHTMLProps> = ({ title, description, url, image
         <meta property="og:description" content={description} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={url} />
-        {imageUrl !== undefined && <meta property="og:image" content={imageUrl} />}
+        <meta property="og:locale" content="ja_JP" />
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image" content={imageUrl} />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:secure_url" content={imageUrl} />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:type" content="image/jpeg" />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:width" content="1220" />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:height" content="630" />}
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${title} - Duel Simulator`} />
         <meta name="twitter:description" content={description} />
-        {imageUrl !== undefined && <meta name="twitter:image" content={imageUrl} />}
+        {imageUrl != null && imageUrl !== "" && <meta name="twitter:image" content={imageUrl} />}
 
         {/* Note.com support */}
         <meta name="note:card" content="summary_large_image" />
