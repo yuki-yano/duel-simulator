@@ -12,6 +12,7 @@ import saveStatesRoutes from "./routes/save-states"
 import ogpImagesRoutes from "./routes/ogp-images"
 import replayRoutes from "./routes/replay"
 import devRoutes from "./routes/dev"
+import { Root } from "./components/Root"
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -35,6 +36,11 @@ app.route("/", saveStatesRoutes)
 app.route("/", ogpImagesRoutes)
 app.route("/", replayRoutes)
 app.route("/", devRoutes)
+
+// Serve root HTML with OGP tags
+app.get("/", (c) => {
+  return c.html(<Root />)
+})
 
 // Serve static files for all other routes
 app.get("/*", serveStatic())

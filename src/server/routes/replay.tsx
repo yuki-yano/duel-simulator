@@ -2,7 +2,8 @@
 import { Hono } from "hono"
 import { eq } from "drizzle-orm"
 import { createDb, schema } from "../db"
-import { ReplayHTML, DefaultHTML } from "../components/ReplayHTML"
+import { Replay } from "../components/Replay"
+import { Root } from "../components/Root"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -21,7 +22,7 @@ app.get("/replay/:id", async (c) => {
 
     if (!result) {
       // リプレイが見つからない場合は通常のHTMLを返す
-      return c.html(<DefaultHTML />)
+      return c.html(<Root />)
     }
 
     // Generate OGP image URL
@@ -31,11 +32,11 @@ app.get("/replay/:id", async (c) => {
 
     // OGPタグ付きHTMLを生成
     return c.html(
-      <ReplayHTML title={result.title} description={result.description ?? ""} url={c.req.url} imageUrl={ogImageUrl} />,
+      <Replay title={result.title} description={result.description ?? ""} url={c.req.url} imageUrl={ogImageUrl} />,
     )
   } catch (error) {
     console.error("Failed to generate replay page:", error)
-    return c.html(<DefaultHTML />)
+    return c.html(<Root />)
   }
 })
 
