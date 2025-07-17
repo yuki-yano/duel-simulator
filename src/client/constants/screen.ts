@@ -11,7 +11,7 @@ export const SCREENSHOT_SCREEN_WIDTH = {
 } as const
 
 export const OGP_IMAGE = {
-  WIDTH: 1220,
+  WIDTH: 1200,
   HEIGHT: 630,
   CONTENT_WIDTH: 974,
   QUALITY: 0.85,
