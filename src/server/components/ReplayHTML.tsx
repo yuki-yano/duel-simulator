@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from "hono/jsx"
+import { OGP_IMAGE } from "@/shared/constants/ogp"
 
 interface ReplayHTMLProps {
   title: string
@@ -25,8 +26,8 @@ export const ReplayHTML: FC<ReplayHTMLProps> = ({ title, description, url, image
         {imageUrl != null && imageUrl !== "" && <meta property="og:image" content={imageUrl} />}
         {imageUrl != null && imageUrl !== "" && <meta property="og:image:secure_url" content={imageUrl} />}
         {imageUrl != null && imageUrl !== "" && <meta property="og:image:type" content="image/jpeg" />}
-        {imageUrl != null && imageUrl !== "" && <meta property="og:image:width" content="1220" />}
-        {imageUrl != null && imageUrl !== "" && <meta property="og:image:height" content="630" />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:width" content={String(OGP_IMAGE.WIDTH)} />}
+        {imageUrl != null && imageUrl !== "" && <meta property="og:image:height" content={String(OGP_IMAGE.HEIGHT)} />}
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />

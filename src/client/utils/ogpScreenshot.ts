@@ -1,4 +1,5 @@
-import { OGP_IMAGE, SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
+import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
+import { OGP_IMAGE } from "@/shared/constants/ogp"
 import { captureGameBoard, canvasToBlob } from "@/client/utils/screenshotUtils"
 
 export async function generateOGPImage(setScreenshotWidth: (width: number | undefined) => void): Promise<Blob | null> {

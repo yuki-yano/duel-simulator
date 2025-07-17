@@ -10,13 +10,6 @@ export const SCREENSHOT_SCREEN_WIDTH = {
   SP: 430,
 } as const
 
-export const OGP_IMAGE = {
-  WIDTH: 1200,
-  HEIGHT: 630,
-  CONTENT_WIDTH: 974,
-  QUALITY: 0.85,
-} as const
-
 export const GRAVE_ZONE_SIZE = {
   SELF: {
     LARGE: {
