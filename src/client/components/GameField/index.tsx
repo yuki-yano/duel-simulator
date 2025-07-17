@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown } from "lucide-react"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { useDeviceType } from "@client/hooks/useDeviceType"
 import { useAtom, useAtomValue } from "jotai"
 import { useLocation } from "react-router-dom"
 import {
@@ -101,7 +102,8 @@ export function GameFieldContent() {
   const [mobileFaceDownMode, setMobileFaceDownMode] = useState(false)
   const [mobileStackBottom, setMobileStackBottom] = useState(false)
   const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
-  const [isTouchDevice] = useState(() => "ontouchstart" in window || navigator.maxTouchPoints > 0)
+  const { isMobile, isTablet, isPc } = useDeviceType()
+  const isTouchDevice = isMobile || isTablet
   const { isLargeScreen, isMediumScreen } = useScreenSize()
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
@@ -1128,13 +1130,9 @@ export function GameFieldContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Help Text for PC/Tablet - Show on medium and larger screens for non-touch devices */}
-      <div
-        className={cn(
-          "hidden md:block fixed bottom-4 right-4 max-w-xs",
-          isTouchDevice && "md:hidden lg:hidden", // Hide on touch devices regardless of screen size
-        )}
-      >
+      {/* Help Text for PC - Always show on PC devices */}
+      {isPc && (
+        <div className="hidden md:block fixed bottom-4 right-4 max-w-xs">
         <div className="bg-gray-800/90 text-white rounded-lg text-xs">
           <div className={cn("px-3 pt-3 flex items-center justify-between", isHintMinimized ? "pb-3" : "pb-1")}>
             <div className="font-semibold">操作ヒント</div>
@@ -1186,7 +1184,8 @@ export function GameFieldContent() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </>
   )
 }
