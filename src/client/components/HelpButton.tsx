@@ -3,9 +3,14 @@ import { cn } from "@client/lib/utils"
 import { HelpCircle } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@client/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@client/components/ui/tabs"
+import { useDeviceType } from "@client/hooks/useDeviceType"
 
 export function HelpButton() {
   const [open, setOpen] = useState(false)
+  const { isMobile, isTablet } = useDeviceType()
+
+  // Only show on mobile and tablet devices
+  if (!isMobile && !isTablet) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -17,7 +22,7 @@ export function HelpButton() {
             "bg-gray-400/40 hover:bg-gray-500/50 transition-colors",
             "flex items-center justify-center",
             "shadow-md",
-            "md:hidden", // Only show on touch devices
+            // Device type based visibility is handled above
           )}
           aria-label="ヘルプ"
         >

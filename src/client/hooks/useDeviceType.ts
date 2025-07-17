@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { SCREEN_WIDTH } from "@client/constants/screen"
 
 // User-Agent Client Hints API types
 interface NavigatorUAData {
@@ -37,7 +38,7 @@ export const useDeviceType = (): UseDeviceTypeReturn => {
 
     if (isMobileLike) {
       // 2. 画面サイズでタブレットとモバイルを区別
-      const isTabletSize = window.matchMedia("(min-width: 768px)").matches
+      const isTabletSize = window.matchMedia(`(min-width: ${SCREEN_WIDTH.MEDIUM}px)`).matches
       if (isTabletSize) {
         return "tablet"
       }
@@ -48,7 +49,7 @@ export const useDeviceType = (): UseDeviceTypeReturn => {
     if ("userAgentData" in navigator) {
       const uaData = navigator.userAgentData
       if (uaData && uaData.mobile === true) {
-        const isTabletSize = window.matchMedia("(min-width: 768px)").matches
+        const isTabletSize = window.matchMedia(`(min-width: ${SCREEN_WIDTH.MEDIUM}px)`).matches
         return isTabletSize ? "tablet" : "mobile"
       }
       return "pc"
@@ -76,7 +77,7 @@ export const useDeviceType = (): UseDeviceTypeReturn => {
     const mediaQueries = [
       window.matchMedia("(hover: hover) and (pointer: fine)"),
       window.matchMedia("(hover: none) and (pointer: coarse)"),
-      window.matchMedia("(min-width: 768px)"),
+      window.matchMedia(`(min-width: ${SCREEN_WIDTH.MEDIUM}px)`),
     ]
 
     mediaQueries.forEach((mq) => {

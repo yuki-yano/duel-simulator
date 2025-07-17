@@ -5,6 +5,7 @@ import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { SCREEN_WIDTH } from "@client/constants/screen"
 import type { DeckZoneProps } from "./types"
 
 export function DeckZone({
@@ -100,7 +101,7 @@ export function DeckZone({
         }
 
         // Calculate card positions for the current row
-        const cardSpacing = window.innerWidth >= 768 ? 15 : 10
+        const cardSpacing = window.innerWidth >= SCREEN_WIDTH.MEDIUM ? 15 : 10
         const totalWidth = (rowCardCount - 1) * cardSpacing + rowCardCount * cardWidthPx
         const needsOverlap = totalWidth > availableWidth
         let insertIndex = rowStartIdx
