@@ -60,7 +60,7 @@ export function DeckImageProcessor({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const setExtractedCards = useSetAtom(extractedCardsAtom)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
-  
+
   // 解析済みフラグを追加して重複実行を防ぐ
   const analyzedRef = useRef(false)
   // Tesseract workerのインスタンスを保持
@@ -70,13 +70,13 @@ export function DeckImageProcessor({
   const initializeWorker = useCallback(async () => {
     if (!workerRef.current) {
       const worker = await createWorker("jpn")
-      
+
       // Tesseract.jsの設定
       await worker.setParameters({
         tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
         tessedit_char_whitelist: "0123456789枚",
       })
-      
+
       workerRef.current = worker
     }
     return workerRef.current
@@ -113,101 +113,104 @@ export function DeckImageProcessor({
     img.src = imageDataUrl
   }, [imageDataUrl])
 
-  const extractTextFromRegion = useCallback(async (
-    img: HTMLImageElement,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    debugKey?: "main" | "extra" | "side",
-  ): Promise<string> => {
-    // Create a canvas for the specific region
-    const regionCanvas = document.createElement("canvas")
-    const scale = 4 // Upscale more for better OCR
-    regionCanvas.width = width * scale
-    regionCanvas.height = height * scale
+  const extractTextFromRegion = useCallback(
+    async (
+      img: HTMLImageElement,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      debugKey?: "main" | "extra" | "side",
+    ): Promise<string> => {
+      // Create a canvas for the specific region
+      const regionCanvas = document.createElement("canvas")
+      const scale = 4 // Upscale more for better OCR
+      regionCanvas.width = width * scale
+      regionCanvas.height = height * scale
 
-    const ctx = regionCanvas.getContext("2d")
-    if (!ctx) return ""
+      const ctx = regionCanvas.getContext("2d")
+      if (!ctx) return ""
 
-    // Enable better image interpolation
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = "high"
+      // Enable better image interpolation
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
 
-    // Draw the specific region with scaling
-    ctx.drawImage(img, x, y, width, height, 0, 0, regionCanvas.width, regionCanvas.height)
+      // Draw the specific region with scaling
+      ctx.drawImage(img, x, y, width, height, 0, 0, regionCanvas.width, regionCanvas.height)
 
-    // Apply preprocessing for better OCR
-    const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height)
-    const data = imageData.data
+      // Apply preprocessing for better OCR
+      const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height)
+      const data = imageData.data
 
-    // First pass: Detect background color (most common color)
-    const colorCounts = new Map<string, number>()
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114)
-      const key = Math.round(gray / 10) * 10 // Group similar colors
-      colorCounts.set(key.toString(), (colorCounts.get(key.toString()) ?? 0) + 1)
-    }
-
-    // Find the most common color (likely background)
-    let bgColor = 255
-    let maxCount = 0
-    for (const [color, count] of colorCounts) {
-      if (count > maxCount) {
-        maxCount = count
-        bgColor = parseInt(color)
-      }
-    }
-
-    // Second pass: Adaptive thresholding based on background
-    const threshold = bgColor > 128 ? bgColor - 40 : bgColor + 40
-
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-
-      // Invert if dark background
-      let value: number
-      if (bgColor < 128) {
-        // Dark background, light text
-        value = gray > threshold ? 255 : 0
-      } else {
-        // Light background, dark text
-        value = gray < threshold ? 0 : 255
+      // First pass: Detect background color (most common color)
+      const colorCounts = new Map<string, number>()
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114)
+        const key = Math.round(gray / 10) * 10 // Group similar colors
+        colorCounts.set(key.toString(), (colorCounts.get(key.toString()) ?? 0) + 1)
       }
 
-      data[i] = value
-      data[i + 1] = value
-      data[i + 2] = value
-    }
+      // Find the most common color (likely background)
+      let bgColor = 255
+      let maxCount = 0
+      for (const [color, count] of colorCounts) {
+        if (count > maxCount) {
+          maxCount = count
+          bgColor = parseInt(color)
+        }
+      }
 
-    ctx.putImageData(imageData, 0, 0)
+      // Second pass: Adaptive thresholding based on background
+      const threshold = bgColor > 128 ? bgColor - 40 : bgColor + 40
 
-    // Store processed image for debug
-    const processedDataUrl = regionCanvas.toDataURL()
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
 
-    // Save processed canvas for debug display if debugKey provided
-    if (debugKey && showDebug) {
-      setOcrProcessedCanvases((prev) =>
-        produce(prev, (draft) => {
-          draft[debugKey] = processedDataUrl
-        }),
-      )
-    }
+        // Invert if dark background
+        let value: number
+        if (bgColor < 128) {
+          // Dark background, light text
+          value = gray > threshold ? 255 : 0
+        } else {
+          // Light background, dark text
+          value = gray < threshold ? 0 : 255
+        }
 
-    // Perform OCR on this region using shared worker
-    const worker = await initializeWorker()
-    const result = await worker.recognize(regionCanvas)
+        data[i] = value
+        data[i + 1] = value
+        data[i + 2] = value
+      }
 
-    return result.data.text
-  }, [showDebug, setOcrProcessedCanvases, initializeWorker])
+      ctx.putImageData(imageData, 0, 0)
+
+      // Store processed image for debug
+      const processedDataUrl = regionCanvas.toDataURL()
+
+      // Save processed canvas for debug display if debugKey provided
+      if (debugKey && showDebug) {
+        setOcrProcessedCanvases((prev) =>
+          produce(prev, (draft) => {
+            draft[debugKey] = processedDataUrl
+          }),
+        )
+      }
+
+      // Perform OCR on this region using shared worker
+      const worker = await initializeWorker()
+      const result = await worker.recognize(regionCanvas)
+
+      return result.data.text
+    },
+    [showDebug, setOcrProcessedCanvases, initializeWorker],
+  )
 
   const analyzeDeckStructure = useCallback(async () => {
     // 既に解析済みの場合はスキップ
     if (analyzedRef.current) return
-    
+
     // 解析開始前にフラグを立てて、重複実行を防ぐ
     analyzedRef.current = true
-    
+
     setIsAnalyzing(true)
     setOcrDebugCanvases({}) // Clear previous debug canvases
     setOcrProcessedCanvases({}) // Clear previous processed canvases
@@ -389,13 +392,13 @@ export function DeckImageProcessor({
     if (imageDataUrl) {
       // 新しい画像が選択されたときにフラグとworkerをリセット
       analyzedRef.current = false
-      
+
       // 前のworkerがある場合は終了
       if (workerRef.current) {
         void workerRef.current.terminate()
         workerRef.current = null
       }
-      
+
       drawPreview()
       // 画像が読み込まれたら自動的にデッキ構造を解析
       void analyzeDeckStructure()

@@ -18,8 +18,7 @@ export function EffectActivationAnimation({
   cardImageUrl,
   onComplete,
 }: EffectActivationAnimationProps) {
-  const [animationState, setAnimationState] =
-    useState<"initial" | "expanding" | "shrinking">("initial")
+  const [animationState, setAnimationState] = useState<"initial" | "expanding" | "shrinking">("initial")
   const onCompleteCalled = useRef(false)
 
   // Calculate effect position on mount

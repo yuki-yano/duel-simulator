@@ -55,7 +55,10 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
   const isMonsterZone = zone.type === "monsterZone" || zone.type === "extraMonsterZone"
 
   const isCounterZone =
-    zone.type === "monsterZone" || zone.type === "spellTrapZone" || zone.type === "extraMonsterZone" || zone.type === "fieldZone"
+    zone.type === "monsterZone" ||
+    zone.type === "spellTrapZone" ||
+    zone.type === "extraMonsterZone" ||
+    zone.type === "fieldZone"
 
   const menuItems = [
     {

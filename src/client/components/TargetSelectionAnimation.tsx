@@ -14,8 +14,7 @@ export function TargetSelectionAnimation({
   cardImageUrl,
   onComplete,
 }: TargetSelectionAnimationProps) {
-  const [animationState, setAnimationState] =
-    useState<"initial" | "expanding" | "shrinking">("initial")
+  const [animationState, setAnimationState] = useState<"initial" | "expanding" | "shrinking">("initial")
   const onCompleteCalledRef = useRef(false)
 
   useEffect(() => {

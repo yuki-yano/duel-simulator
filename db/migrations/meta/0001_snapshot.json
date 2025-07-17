@@ -60,9 +60,7 @@
       "indexes": {
         "idx_deck_images_created_at": {
           "name": "idx_deck_images_created_at",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -169,16 +167,12 @@
       "indexes": {
         "idx_saved_states_session_id": {
           "name": "idx_saved_states_session_id",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         },
         "idx_saved_states_created_at": {
           "name": "idx_saved_states_created_at",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -187,12 +181,8 @@
           "name": "saved_states_deck_image_hash_deck_images_hash_fk",
           "tableFrom": "saved_states",
           "tableTo": "deck_images",
-          "columnsFrom": [
-            "deck_image_hash"
-          ],
-          "columnsTo": [
-            "hash"
-          ],
+          "columnsFrom": ["deck_image_hash"],
+          "columnsTo": ["hash"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

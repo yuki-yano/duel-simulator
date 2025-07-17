@@ -20,7 +20,7 @@ export async function saveBase64ToR2(
   bucket: R2Bucket,
   key: string,
   dataUrl: string,
-  options: R2PutOptions
+  options: R2PutOptions,
 ): Promise<void> {
   const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "")
   const binaryString = atob(base64)

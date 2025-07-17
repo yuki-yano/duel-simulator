@@ -160,7 +160,7 @@ export function GameFieldContent() {
 
   // 5-card draw warning dialog state
   const [showDrawWarningDialog, setShowDrawWarningDialog] = useState(false)
-  
+
   // Screenshot context
   const { setScreenshotWidth } = useScreenshot()
 
@@ -372,7 +372,7 @@ export function GameFieldContent() {
             reader.readAsDataURL(ogpImageBlob)
           })
         }
-        
+
         // Calculate deck image hash
         const imageHash = await calculateImageHash(deckMetadata.imageDataUrl)
 
@@ -406,7 +406,13 @@ export function GameFieldContent() {
         }
 
         // Save replay
-        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds, ogpImageData)
+        const response = await saveReplayData(
+          saveData,
+          imageHash,
+          deckMetadata.deckConfig,
+          deckMetadata.deckCardIds,
+          ogpImageData,
+        )
 
         // Show share URL dialog
         setShareUrl(response.shareUrl)
@@ -1133,57 +1139,57 @@ export function GameFieldContent() {
       {/* Help Text for PC - Always show on PC devices */}
       {isPc && (
         <div className="hidden md:block fixed bottom-4 right-4 max-w-xs">
-        <div className="bg-gray-800/90 text-white rounded-lg text-xs">
-          <div className={cn("px-3 pt-3 flex items-center justify-between", isHintMinimized ? "pb-3" : "pb-1")}>
-            <div className="font-semibold">操作ヒント</div>
-            <button
-              onClick={() => {
-                const newState = !isHintMinimized
-                setIsHintMinimized(newState)
-                localStorage.setItem("duel-simulator-hint-minimized", String(newState))
-              }}
-              className="bg-gray-600 hover:bg-gray-500 text-white transition-colors p-1 rounded"
-              aria-label={isHintMinimized ? "展開" : "最小化"}
+          <div className="bg-gray-800/90 text-white rounded-lg text-xs">
+            <div className={cn("px-3 pt-3 flex items-center justify-between", isHintMinimized ? "pb-3" : "pb-1")}>
+              <div className="font-semibold">操作ヒント</div>
+              <button
+                onClick={() => {
+                  const newState = !isHintMinimized
+                  setIsHintMinimized(newState)
+                  localStorage.setItem("duel-simulator-hint-minimized", String(newState))
+                }}
+                className="bg-gray-600 hover:bg-gray-500 text-white transition-colors p-1 rounded"
+                aria-label={isHintMinimized ? "展開" : "最小化"}
+              >
+                {isHintMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            </div>
+            <div
+              className={cn(
+                "space-y-1 text-gray-300 px-3 transition-all duration-200",
+                isHintMinimized ? "h-0 overflow-hidden pb-0" : "pb-3",
+              )}
             >
-              {isHintMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-          </div>
-          <div
-            className={cn(
-              "space-y-1 text-gray-300 px-3 transition-all duration-200",
-              isHintMinimized ? "h-0 overflow-hidden pb-0" : "pb-3",
-            )}
-          >
-            <div>
-              • <span className="text-yellow-400">Shift + ドラッグ</span>:
-            </div>
-            <div className="ml-4 text-xs">- 空きゾーン: 守備表示/セット</div>
-            <div className="ml-4 text-xs">- カードがあるゾーン: 下に重ねる</div>
-            <div>
-              • <span className="text-blue-400">カードがあるゾーンにドロップ</span>:
-            </div>
-            <div className="ml-4 text-xs">- 通常: 上に重ねる</div>
-            <div className="ml-4 text-xs">- Shift押下: 下に重ねる</div>
-            <div>
-              • <span className="text-green-400">墓地/除外ラベルクリック</span>: ゾーン拡大
-            </div>
-            <div>
-              • <span className="text-gray-400">右クリック</span>: カードメニュー
-            </div>
-            <div>
-              • <span className="text-purple-400">ダブルクリック</span>: 効果発動
-            </div>
-            <div>
-              • <span className="text-purple-400">Shift + ダブルクリック</span>: 対象に取る
-            </div>
-            <div>
-              • <span className="text-gray-400">Ctrl/Cmd + Z</span>: 元に戻す
-            </div>
-            <div>
-              • <span className="text-gray-400">Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z</span>: やり直し
+              <div>
+                • <span className="text-yellow-400">Shift + ドラッグ</span>:
+              </div>
+              <div className="ml-4 text-xs">- 空きゾーン: 守備表示/セット</div>
+              <div className="ml-4 text-xs">- カードがあるゾーン: 下に重ねる</div>
+              <div>
+                • <span className="text-blue-400">カードがあるゾーンにドロップ</span>:
+              </div>
+              <div className="ml-4 text-xs">- 通常: 上に重ねる</div>
+              <div className="ml-4 text-xs">- Shift押下: 下に重ねる</div>
+              <div>
+                • <span className="text-green-400">墓地/除外ラベルクリック</span>: ゾーン拡大
+              </div>
+              <div>
+                • <span className="text-gray-400">右クリック</span>: カードメニュー
+              </div>
+              <div>
+                • <span className="text-purple-400">ダブルクリック</span>: 効果発動
+              </div>
+              <div>
+                • <span className="text-purple-400">Shift + ダブルクリック</span>: 対象に取る
+              </div>
+              <div>
+                • <span className="text-gray-400">Ctrl/Cmd + Z</span>: 元に戻す
+              </div>
+              <div>
+                • <span className="text-gray-400">Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z</span>: やり直し
+              </div>
             </div>
           </div>
-        </div>
         </div>
       )}
     </>

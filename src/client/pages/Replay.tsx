@@ -605,7 +605,9 @@ export default function Replay() {
         {/* Replay Info */}
         <div className="max-w-2xl mx-auto mb-4 text-center">
           {title !== "" && <h2 className="text-base md:text-lg mb-2">{title}</h2>}
-          {description !== "" && <p className="text-xs md:text-sm text-gray-600 mb-2 whitespace-pre-line">{description}</p>}
+          {description !== "" && (
+            <p className="text-xs md:text-sm text-gray-600 mb-2 whitespace-pre-line">{description}</p>
+          )}
           <p className="text-xs md:text-sm text-gray-500">
             リプレイID:{" "}
             <span className="relative inline-flex items-center">

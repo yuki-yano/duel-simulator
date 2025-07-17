@@ -70,7 +70,7 @@ export function resetLabelsAfterScreenshot(boardElement: HTMLElement): void {
  */
 export async function captureGameBoard(
   boardElement: HTMLElement,
-  options: ScreenshotOptions
+  options: ScreenshotOptions,
 ): Promise<HTMLCanvasElement> {
   const { width, scale = 1, topPadding = 20, bottomPadding = 20 } = options
 
@@ -114,7 +114,7 @@ export async function captureGameBoard(
           // Radix UIのダイアログを除外
           element.getAttribute("data-radix-portal") !== null ||
           element.classList.contains("radix-portal") ||
-          // 保存中のローディング表示を除外  
+          // 保存中のローディング表示を除外
           element.classList.contains("animate-spin")
         )
       },
@@ -140,7 +140,7 @@ export async function captureGameBoard(
 export function canvasToBlob(
   canvas: HTMLCanvasElement,
   format: "image/png" | "image/jpeg" = "image/png",
-  quality: number = 0.9
+  quality: number = 0.9,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob(
@@ -148,7 +148,7 @@ export function canvasToBlob(
         resolve(blob)
       },
       format,
-      quality
+      quality,
     )
   })
 }

@@ -5,7 +5,8 @@ import { OGP_IMAGE } from "@/shared/constants/ogp"
 export const Root: FC = () => {
   const baseUrl = "https://duel-simulator.miyauchidp.dev"
   const title = "Duel Simulator"
-  const description = "Yu-Gi-Oh! カードゲームのシミュレーター。ニューロンの画像からデッキを自動認識し、操作・リプレイ保存・URL共有が可能"
+  const description =
+    "Yu-Gi-Oh! カードゲームのシミュレーター。ニューロンの画像からデッキを自動認識し、操作・リプレイ保存・URL共有が可能"
   const imageUrl = `${baseUrl}/ogp.jpg`
 
   return (

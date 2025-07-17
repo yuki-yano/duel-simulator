@@ -12,14 +12,8 @@ interface HighlightAnimationProps {
 // Remove the global tracking since it's not solving the root issue
 // const activeAnimations = new Set<string>()
 
-export function HighlightAnimation({
-  cardRect,
-  cardRotation = 0,
-  cardImageUrl,
-  onComplete,
-}: HighlightAnimationProps) {
-  const [animationState, setAnimationState] =
-    useState<"initial" | "expanding" | "shrinking">("initial")
+export function HighlightAnimation({ cardRect, cardRotation = 0, cardImageUrl, onComplete }: HighlightAnimationProps) {
+  const [animationState, setAnimationState] = useState<"initial" | "expanding" | "shrinking">("initial")
   const onCompleteCalledRef = useRef(false)
 
   useEffect(() => {

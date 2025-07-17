@@ -16,7 +16,7 @@ app.get("/replay/:id", async (c) => {
 
     // Get replay data from DB
     const result = await db.select().from(schema.savedStates).where(eq(schema.savedStates.id, id)).get()
-    
+
     // デバッグ用ログ
     console.log(`Replay request for ID: ${id}, User-Agent: ${c.req.header("user-agent")}`)
 
@@ -26,9 +26,10 @@ app.get("/replay/:id", async (c) => {
     }
 
     // Generate OGP image URL
-    const ogImageUrl = result.ogpImagePath != null && result.ogpImagePath !== ""
-      ? `${c.req.url.replace(/\/replay\/[^/]+$/, "")}/api/ogp-images/${id}.jpg`
-      : undefined
+    const ogImageUrl =
+      result.ogpImagePath != null && result.ogpImagePath !== ""
+        ? `${c.req.url.replace(/\/replay\/[^/]+$/, "")}/api/ogp-images/${id}.jpg`
+        : undefined
 
     // OGPタグ付きHTMLを生成
     return c.html(

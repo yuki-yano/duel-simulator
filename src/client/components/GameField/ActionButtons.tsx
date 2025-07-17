@@ -120,7 +120,7 @@ export function ActionButtons({
 
       // PNG形式でBlobを生成
       const blob = await canvasToBlob(canvas, "image/png", 1.0)
-      
+
       if (blob) {
         const url = URL.createObjectURL(blob)
         const fileName = `duel-simulator-w${width}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.png`
