@@ -2842,12 +2842,17 @@ function performCardMove(
     const cardIndex = from.zone.cardIndex ?? actualFromZone.cardIndex
     const newFromPlayer = removeCardFromZoneById(fromPlayer, actualFromZone, card.id, cardIndex)
 
-    // Determine if this is a cross-zone move (different type OR different index)
-    const isCrossZoneMove = actualFromZone.type !== to.zone.type || actualFromZone.index !== to.zone.index
+    // Determine if this is a cross-zone move
+    // For zones with index (monster, spell/trap, EMZ), check both type and index
+    // For zones without index (hand, deck, etc), only check type
+    const hasIndex = actualFromZone.type === "monsterZone" || actualFromZone.type === "spellTrapZone" || actualFromZone.type === "extraMonsterZone"
+    const isCrossZoneMove = hasIndex
+      ? actualFromZone.type !== to.zone.type || actualFromZone.index !== to.zone.index
+      : actualFromZone.type !== to.zone.type
 
-    // Check if preventSameZoneReorder is enabled and this is the exact same zone (type AND index)
+    // Check if preventSameZoneReorder is enabled and this is the same zone
     if (options?.preventSameZoneReorder === true && !isCrossZoneMove && actualFromZone.player === to.zone.player) {
-      // This is the exact same zone (same type, same index), so prevent reordering
+      // Prevent reordering within the same zone
       return state
     }
 
