@@ -83,6 +83,14 @@ export function HelpButton() {
             </div>
 
             <div className="space-y-1">
+              <h3 className="font-semibold text-sm">EXデッキ</h3>
+              <p className="text-sm text-gray-600">
+                「EXデッキ」のラベルをタップすると、拡大表示してカードを見やすく配置できます。
+                拡大表示中も他のゾーンからカードを追加できます。
+              </p>
+            </div>
+
+            <div className="space-y-1">
               <h3 className="font-semibold text-sm">フリーゾーン</h3>
               <p className="text-sm text-gray-600">
                 左下のグレーのゾーンは自由に使えるフリーゾーンです。 一時的にカードを置いたり、整理したりできます。
