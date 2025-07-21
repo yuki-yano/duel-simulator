@@ -61,6 +61,7 @@ import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
 import { SaveReplayDialog } from "@/client/components/SaveReplayDialog"
 import { ShareUrlDisplay } from "@/client/components/ShareUrlDisplay"
 import { ZoneExpandModal } from "@/client/components/ZoneExpandModal"
+import { ExtraDeckExpandModal } from "@/client/components/ExtraDeckExpandModal"
 import { saveReplayData } from "@/client/api/gameState"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 import type { ReplaySaveData } from "@/shared/types/game"
@@ -104,7 +105,7 @@ export function GameFieldContent() {
   const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
   const { isMobile, isTablet, isPc } = useDeviceType()
   const isTouchDevice = isMobile || isTablet
-  const { isLargeScreen, isMediumScreen } = useScreenSize()
+  const { isLargeScreen, isMediumScreen, isSmallScreen, isSpScreen } = useScreenSize()
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, generateToken] = useAtom(generateTokenAtom)
@@ -141,6 +142,15 @@ export function GameFieldContent() {
     right: number
     bottom: number
   }>({ top: 0, left: 0, right: 0, bottom: 0 })
+
+  // Extra deck expand modal state
+  const [isExtraDeckExpanded, setIsExtraDeckExpanded] = useState(false)
+  const [extraDeckModalBounds, setExtraDeckModalBounds] = useState<{
+    top: number
+    left: number
+    width: number
+    bottom: number
+  }>({ top: 0, left: 0, width: 0, bottom: 0 })
 
   // Recording confirmation dialog state
   const [showRecordingConfirmDialog, setShowRecordingConfirmDialog] = useState(false)
@@ -465,6 +475,37 @@ export function GameFieldContent() {
     }
   }, [])
 
+  // Function to open extra deck expand modal
+  const openExtraDeckExpandModal = useCallback(() => {
+    // Calculate modal bounds based on current layout
+    const calculateModalBounds = () => {
+      // Get zone elements
+      const extraDeckElement = document.querySelector(".extra-zone-self")
+      const deckElement = document.querySelector(".deck-zone-self")
+
+      if (!extraDeckElement || !deckElement) {
+        console.error("Could not find required zone elements")
+        return null
+      }
+
+      const extraRect = extraDeckElement.getBoundingClientRect()
+      const deckRect = deckElement.getBoundingClientRect()
+
+      return {
+        top: extraRect.bottom + window.scrollY,
+        left: extraRect.left + window.scrollX,
+        width: extraRect.width,
+        bottom: deckRect.bottom + window.scrollY,
+      }
+    }
+
+    const bounds = calculateModalBounds()
+    if (bounds) {
+      setExtraDeckModalBounds(bounds)
+      setIsExtraDeckExpanded(true)
+    }
+  }, [])
+
   return (
     <>
       <div className="game-board w-full max-w-6xl mx-auto p-2 sm:p-4">
@@ -711,7 +752,9 @@ export function GameFieldContent() {
             {isOpponentFieldOpen && (
               <>
                 {/* Row 1: Opponent's Spell/Trap Zones + Grave/Banish */}
-                <div className={isLargeScreen ? "col-start-2" : ""} /> {/* Empty space above field zone */}
+                {
+                  isLargeScreen ? <div className="col-start-2" /> : <div /> // Empty space above spell/trap zones on large screens
+                }
                 {[0, 1, 2, 3, 4].map((index) => (
                   <Zone
                     key={`opponent-spell-${index}`}
@@ -739,12 +782,16 @@ export function GameFieldContent() {
                         ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.HEIGHT
                         : isMediumScreen
                           ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.HEIGHT
-                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT,
+                          : isSmallScreen
+                            ? GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT
+                            : GRAVE_ZONE_SIZE.OPPONENT.SP.HEIGHT,
                       width: isLargeScreen
                         ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.WIDTH
                         : isMediumScreen
                           ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.WIDTH
-                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH,
+                          : isSmallScreen
+                            ? GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH
+                            : GRAVE_ZONE_SIZE.OPPONENT.SP.WIDTH,
                     }}
                   />
                   <GraveZone
@@ -761,18 +808,24 @@ export function GameFieldContent() {
                         ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.HEIGHT
                         : isMediumScreen
                           ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.HEIGHT
-                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT,
+                          : isSmallScreen
+                            ? GRAVE_ZONE_SIZE.OPPONENT.SMALL.HEIGHT
+                            : GRAVE_ZONE_SIZE.OPPONENT.SP.HEIGHT,
                       width: isLargeScreen
                         ? GRAVE_ZONE_SIZE.OPPONENT.LARGE.WIDTH
                         : isMediumScreen
                           ? GRAVE_ZONE_SIZE.OPPONENT.MEDIUM.WIDTH
-                          : GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH,
+                          : isSmallScreen
+                            ? GRAVE_ZONE_SIZE.OPPONENT.SMALL.WIDTH
+                            : GRAVE_ZONE_SIZE.OPPONENT.SP.WIDTH,
                     }}
                   />
                 </div>
                 {/* Row 2: Opponent's Field + Monster Zones */}
+                {
+                  isLargeScreen && <div className="col-start-1" /> // Empty space above field zone on large screens
+                }
                 <Zone
-                  className={cn("row-start-2", isLargeScreen ? "col-start-2" : "")}
                   type="field"
                   zone={{ player: "opponent", type: "fieldZone" }}
                   card={opponentBoard.fieldZone}
@@ -783,7 +836,6 @@ export function GameFieldContent() {
                 {[0, 1, 2, 3, 4].map((index) => (
                   <Zone
                     key={`opponent-monster-${index}`}
-                    className={cn("row-start-2", isLargeScreen ? `col-start-${index + 3}` : `col-start-${index + 2}`)}
                     type="monster"
                     zone={{ player: "opponent", type: "monsterZone", index }}
                     cards={opponentBoard.monsterZones[index]}
@@ -856,7 +908,9 @@ export function GameFieldContent() {
                     ? GRAVE_ZONE_SIZE.SELF.LARGE.MARGIN_TOP
                     : isMediumScreen
                       ? GRAVE_ZONE_SIZE.SELF.MEDIUM.MARGIN_TOP
-                      : GRAVE_ZONE_SIZE.SELF.SMALL.MARGIN_TOP,
+                      : isSmallScreen
+                        ? GRAVE_ZONE_SIZE.SELF.SMALL.MARGIN_TOP
+                        : GRAVE_ZONE_SIZE.SELF.SP.MARGIN_TOP,
                   zIndex: 10,
                   position: "relative",
                 }}
@@ -877,12 +931,16 @@ export function GameFieldContent() {
                       ? GRAVE_ZONE_SIZE.SELF.LARGE.HEIGHT
                       : isMediumScreen
                         ? GRAVE_ZONE_SIZE.SELF.MEDIUM.HEIGHT
-                        : GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT,
+                        : isSmallScreen
+                          ? GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT
+                          : GRAVE_ZONE_SIZE.SELF.SP.HEIGHT,
                     width: isLargeScreen
                       ? GRAVE_ZONE_SIZE.SELF.LARGE.WIDTH
                       : isMediumScreen
                         ? GRAVE_ZONE_SIZE.SELF.MEDIUM.WIDTH
-                        : GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH,
+                        : isSmallScreen
+                          ? GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH
+                          : GRAVE_ZONE_SIZE.SELF.SP.WIDTH,
                   }}
                 />
                 <GraveZone
@@ -901,12 +959,16 @@ export function GameFieldContent() {
                       ? GRAVE_ZONE_SIZE.SELF.LARGE.HEIGHT
                       : isMediumScreen
                         ? GRAVE_ZONE_SIZE.SELF.MEDIUM.HEIGHT
-                        : GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT,
+                        : isSmallScreen
+                          ? GRAVE_ZONE_SIZE.SELF.SMALL.HEIGHT
+                          : GRAVE_ZONE_SIZE.SELF.SP.HEIGHT,
                     width: isLargeScreen
                       ? GRAVE_ZONE_SIZE.SELF.LARGE.WIDTH
                       : isMediumScreen
                         ? GRAVE_ZONE_SIZE.SELF.MEDIUM.WIDTH
-                        : GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH,
+                        : isSmallScreen
+                          ? GRAVE_ZONE_SIZE.SELF.SMALL.WIDTH
+                          : GRAVE_ZONE_SIZE.SELF.SP.WIDTH,
                   }}
                 />
               </div>
@@ -964,6 +1026,8 @@ export function GameFieldContent() {
               onContextMenuClose={() => setContextMenu(null)}
               className="extra-zone-self"
               style={{ width: "65%" }}
+              onLabelClick={!isPc ? openExtraDeckExpandModal : undefined}
+              isDisabled={isExtraDeckExpanded}
             />
           </div>
           <DeckZone
@@ -1088,6 +1152,19 @@ export function GameFieldContent() {
           onContextMenu={handleCardContextMenu}
           onContextMenuClose={() => setContextMenu(null)}
           modalBounds={modalBounds}
+        />
+      )}
+
+      {/* Extra Deck Expand Modal */}
+      {isExtraDeckExpanded && (
+        <ExtraDeckExpandModal
+          isOpen={true}
+          onClose={() => setIsExtraDeckExpanded(false)}
+          cards={playerBoard.extraDeck}
+          onDrop={handleCardDrop}
+          onContextMenu={handleCardContextMenu}
+          onContextMenuClose={() => setContextMenu(null)}
+          modalBounds={extraDeckModalBounds}
         />
       )}
 

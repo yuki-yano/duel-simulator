@@ -43,4 +43,6 @@ export interface DeckZoneProps {
   onContextMenuClose?: () => void
   className?: string
   style?: React.CSSProperties
+  onLabelClick?: () => void
+  isDisabled?: boolean
 }

@@ -18,11 +18,16 @@ export const GRAVE_ZONE_SIZE = {
       MARGIN_TOP: "-105px",
     },
     MEDIUM: {
-      HEIGHT: "252px",
-      WIDTH: "70px",
-      MARGIN_TOP: "-84px",
+      HEIGHT: "308px",
+      WIDTH: "82px",
+      MARGIN_TOP: "-105px",
     },
     SMALL: {
+      HEIGHT: "253px",
+      WIDTH: "70px",
+      MARGIN_TOP: "-86px",
+    },
+    SP: {
       HEIGHT: "174px",
       WIDTH: "56px",
       MARGIN_TOP: "-58px",
@@ -34,10 +39,14 @@ export const GRAVE_ZONE_SIZE = {
       WIDTH: "82px",
     },
     MEDIUM: {
+      HEIGHT: "200px",
+      WIDTH: "82px",
+    },
+    SMALL: {
       HEIGHT: "168px",
       WIDTH: "70px",
     },
-    SMALL: {
+    SP: {
       HEIGHT: "116px",
       WIDTH: "56px",
     },

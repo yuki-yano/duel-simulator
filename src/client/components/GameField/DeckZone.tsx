@@ -20,6 +20,8 @@ export function DeckZone({
   onContextMenuClose,
   className,
   style,
+  onLabelClick,
+  isDisabled = false,
 }: DeckZoneProps) {
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -241,6 +243,7 @@ export function DeckZone({
           containerHeight,
           zoneStyles[type],
           isHovered && "border-4 border-blue-500 bg-blue-500/20",
+          isDisabled && "opacity-50",
           className,
         )}
         onDragOver={handleDragOver}
@@ -248,7 +251,20 @@ export function DeckZone({
         onDrop={handleDrop}
         style={style}
       >
-        <span className="absolute top-1 left-1 text-[10px] sm:text-xs font-medium text-muted-foreground z-10">
+        <span 
+          className={cn(
+            "absolute top-1 left-1 text-[10px] sm:text-xs font-medium text-muted-foreground z-10",
+            onLabelClick && !isDisabled && type === "extra" && "cursor-pointer hover:bg-muted/50 rounded px-1 transition-colors",
+          )}
+          onClick={
+            onLabelClick && !isDisabled && type === "extra"
+              ? (e) => {
+                  e.stopPropagation()
+                  onLabelClick()
+                }
+              : undefined
+          }
+        >
           {type === "deck" ? "デッキ" : type === "extra" ? "EXデッキ" : "手札"} ({cardCount})
         </span>
         {cardCount > 0 ? (
@@ -322,6 +338,7 @@ export function DeckZone({
                                 className="w-full h-full"
                                 onContextMenu={onContextMenu}
                                 onContextMenuClose={onContextMenuClose}
+                                isDisabled={isDisabled}
                               />
                             </div>
                           )
@@ -363,6 +380,7 @@ export function DeckZone({
                         className="w-full h-full"
                         onContextMenu={onContextMenu}
                         onContextMenuClose={onContextMenuClose}
+                        isDisabled={isDisabled}
                       />
                     </div>
                   ) : (

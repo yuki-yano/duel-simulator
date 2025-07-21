@@ -31,6 +31,7 @@ interface DraggableCardProps {
   stackIndex?: number
   onContextMenu?: (e: React.MouseEvent | React.TouchEvent, card: GameCard, zone: ZoneId) => void
   onContextMenuClose?: () => void
+  isDisabled?: boolean
 }
 
 export function DraggableCard({
@@ -42,6 +43,7 @@ export function DraggableCard({
   stackIndex,
   onContextMenu,
   onContextMenuClose,
+  isDisabled = false,
 }: DraggableCardProps) {
   const setDraggedCard = useSetAtom(draggedCardAtom)
   const isReplayPlaying = useAtomValue(replayPlayingAtom)
@@ -97,8 +99,8 @@ export function DraggableCard({
       // Only handle touch events, not mouse events
       if (e.type !== "touchstart") return
 
-      // Disable touch dragging during replay
-      if (isReplayPlaying) {
+      // Disable touch dragging during replay or when disabled
+      if (isReplayPlaying || isDisabled) {
         e.preventDefault()
         return
       }
@@ -182,11 +184,11 @@ export function DraggableCard({
       element.removeEventListener("touchstart", handleTouchStart)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReplayPlaying, card, stackIndex, onContextMenu, setDraggedCard])
+  }, [isReplayPlaying, isDisabled, card, stackIndex, onContextMenu, setDraggedCard])
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Disable dragging during replay
-    if (isReplayPlaying) {
+    // Disable dragging during replay or when disabled
+    if (isReplayPlaying || isDisabled) {
       e.preventDefault()
       return
     }
@@ -434,8 +436,8 @@ export function DraggableCard({
 
   // Handle click for double click detection
   const handleClick = (e: React.MouseEvent) => {
-    // Disable during replay
-    if (isReplayPlaying) {
+    // Disable during replay or when disabled
+    if (isReplayPlaying || isDisabled) {
       return
     }
 
@@ -455,7 +457,7 @@ export function DraggableCard({
       <div
         ref={cardRef}
         className={cn("duration-200", className)}
-        draggable={!isReplayPlaying}
+        draggable={!isReplayPlaying && !isDisabled}
         data-card-id={card.id}
         onDragStart={handleDragStart}
         onDrag={(e) => {
@@ -469,14 +471,14 @@ export function DraggableCard({
         onClick={handleClick}
         onContextMenu={(e) => {
           e.preventDefault()
-          if (onContextMenu) {
+          if (onContextMenu && !isDisabled) {
             onContextMenu(e, card, zone)
           }
         }}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
         style={{
-          cursor: isReplayPlaying ? "not-allowed" : "grab",
+          cursor: isReplayPlaying || isDisabled ? "not-allowed" : "grab",
           // activate アニメーション中は薄くする程度に留め、完全に隠さない
           opacity: activateAnimating ? 0.25 : isTouching || isDragging ? 0.5 : 1,
           visibility: isAnimating || rotateAnimating ? "hidden" : "visible",
