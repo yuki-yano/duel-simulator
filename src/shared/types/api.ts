@@ -6,7 +6,7 @@ export const SaveDeckImageRequestSchema = z.object({
   hash: z.string().min(1),
   imageData: z.string().min(1),
   mainDeckCount: z.number().int().min(0).max(60),
-  extraDeckCount: z.number().int().min(0).max(15),
+  extraDeckCount: z.number().int().min(0).max(20),
   sourceWidth: z.number().int().positive(),
   sourceHeight: z.number().int().positive(),
 })
