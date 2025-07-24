@@ -5,8 +5,8 @@ import { DeckConfigurationSchema, DeckCardIdsMappingSchema } from "@/client/sche
 export const SaveDeckImageRequestSchema = z.object({
   hash: z.string().min(1),
   imageData: z.string().min(1),
-  mainDeckCount: z.number().int().min(0).max(60),
-  extraDeckCount: z.number().int().min(0).max(20),
+  mainDeckCount: z.number().int().min(0).max(80),
+  extraDeckCount: z.number().int().min(0).max(30),
   sourceWidth: z.number().int().positive(),
   sourceHeight: z.number().int().positive(),
 })
