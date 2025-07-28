@@ -738,17 +738,17 @@ export function DeckImageProcessor({
         {/* Process Button */}
         <button
           onClick={processImage}
-          disabled={!deckConfig || isProcessing}
+          disabled={!deckConfig || isProcessing || processedCards.length > 0}
           className={`
             w-full py-2 px-4 rounded-lg font-medium transition-colors
             ${
-              !deckConfig || isProcessing
+              !deckConfig || isProcessing || processedCards.length > 0
                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }
           `}
         >
-          {isProcessing ? "処理中..." : isReplayMode ? "再生を開始" : "カードを切り出す"}
+          {isProcessing ? "処理中..." : processedCards.length > 0 ? "切り出し済み" : isReplayMode ? "再生を開始" : "カードを切り出す"}
         </button>
 
         {/* Processed Cards Count */}

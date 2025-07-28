@@ -273,7 +273,7 @@ export default function DeckImageReplacer() {
         )}
 
         {/* Image Processing Section */}
-        {uploadedImage !== null && processedCards.length === 0 && (
+        {uploadedImage !== null && (
           <div className="max-w-2xl mx-auto mb-4">
             <DeckImageProcessor
               imageDataUrl={uploadedImage}
