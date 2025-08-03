@@ -105,7 +105,7 @@ export function GameFieldContent() {
   const [preventSameZoneReorder, setPreventSameZoneReorder] = useState(false)
   const { isMobile, isTablet, isPc } = useDeviceType()
   const isTouchDevice = isMobile || isTablet
-  const { isLargeScreen, isMediumScreen, isSmallScreen, isSpScreen } = useScreenSize()
+  const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
   const [gameState] = useAtom(gameStateAtom)
   const [, moveCard] = useAtom(moveCardAtom)
   const [, generateToken] = useAtom(generateTokenAtom)

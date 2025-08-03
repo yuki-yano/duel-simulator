@@ -20,7 +20,6 @@ type ReplacementImage = {
 
 export default function DeckImageReplacer() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [processedCards, setProcessedCards] = useState<string[]>([])
   const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [replacementImages, setReplacementImages] = useState<ReplacementImage[]>([])
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
@@ -35,8 +34,7 @@ export default function DeckImageReplacer() {
     setUploadedImage(imageDataUrl)
   }
 
-  const handleProcessComplete = (cards: string[], metadata: DeckProcessMetadata) => {
-    setProcessedCards(cards)
+  const handleProcessComplete = (_cards: string[], metadata: DeckProcessMetadata) => {
     setDeckMetadata(metadata)
   }
 

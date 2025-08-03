@@ -136,7 +136,7 @@ export function Zone({
           {/* Card count indicator for multiple cards */}
           {cards.length > 1 && (
             <div className="absolute bottom-0 right-0 bg-background/90 text-foreground text-[8px] sm:text-[10px] px-1 rounded-tl-md font-bold z-50">
-              {cards.length}
+              {cards.length - 1}
             </div>
           )}
         </div>
