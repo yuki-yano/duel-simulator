@@ -8,4 +8,7 @@ dist
 .wrangler
 .mf
 tmp
-.serena
+.pnpm-store
+
+# lsmcp cache
+.lsmcp/cache
