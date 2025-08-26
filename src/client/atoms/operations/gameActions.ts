@@ -8,7 +8,10 @@ import { produce } from "immer"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 import { addToHistory, resetHistoryAtom } from "../history/historyStack"
-import { replayRecordingAtom, replayOperationsAtom } from "../replay/recording"
+import { replayRecordingAtom, replayOperationsAtom, stopReplayRecordingAtom } from "../replay/recording"
+import { replayPlayingAtom, stopReplayAtom } from "../replay/playback"
+import { cardAnimationsAtom } from "../replay/animations"
+import { selectedCardAtom, draggedCardAtom, hoveredZoneAtom, highlightedZonesAtom } from "../ui/selection"
 import { initialStateAfterDeckLoadAtom } from "../deck/deckState"
 
 export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", count: number = 1) => {
@@ -279,3 +282,33 @@ export const drawMultipleCardsAtom = atom(
     }
   },
 )
+
+// Reset to initial state (deck loaded state)
+export const resetToInitialStateAtom = atom(null, (get, set) => {
+  const initialState = get(initialStateAfterDeckLoadAtom)
+
+  if (initialState) {
+    // Create a deep copy of the initial state
+    const resetState = produce(initialState, () => {})
+
+    // Reset game state and clear history
+    set(resetHistoryAtom, resetState)
+
+    // Clear any active animations or UI state
+    set(selectedCardAtom, null)
+    set(draggedCardAtom, null)
+    set(hoveredZoneAtom, null)
+    set(highlightedZonesAtom, [])
+    set(cardAnimationsAtom, [])
+
+    // Stop any active replay
+    if (get(replayPlayingAtom)) {
+      set(stopReplayAtom)
+    }
+
+    // Stop recording if active
+    if (get(replayRecordingAtom)) {
+      set(stopReplayRecordingAtom)
+    }
+  }
+})

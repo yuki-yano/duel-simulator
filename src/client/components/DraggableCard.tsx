@@ -6,9 +6,8 @@ import {
   replayPlayingAtom,
   cardAnimationsAtom,
   updateCardRefAtom,
-  activateEffectAtom,
-  targetSelectAtom,
 } from "@/client/atoms/boardAtoms"
+import { activateEffectAtom, targetSelectAtom } from "@/client/atoms/operations/effects"
 import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"

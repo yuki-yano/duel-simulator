@@ -40,12 +40,6 @@ import {
   stopReplayAtom,
   replayDataAtom,
   isDeckLoadedAtom,
-  rotateCardAtom,
-  activateEffectAtom,
-  targetSelectAtom,
-  flipCardAtom,
-  toggleCardHighlightAtom,
-  updateCounterAtom,
   resetToInitialStateAtom,
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
@@ -55,6 +49,8 @@ import {
   hasEverPlayedInReplayModeAtom,
   forceDraw5CardsAtom,
 } from "@/client/atoms/boardAtoms"
+import { rotateCardAtom, flipCardAtom, toggleCardHighlightAtom } from "@/client/atoms/operations/rotation"
+import { activateEffectAtom, targetSelectAtom, updateCounterAtom } from "@/client/atoms/operations/effects"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
 import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"

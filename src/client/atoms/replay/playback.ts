@@ -34,6 +34,9 @@ export const replayPausedAtom = atom<boolean>(false)
 export const replayCurrentIndexAtom = atom<number | null>(null)
 export const replayTotalOperationsAtom = atom<number>(0)
 
+// Track if replay has ever been played in replay mode
+export const hasEverPlayedInReplayModeAtom = atom<boolean>(false)
+
 // Helper: Build full history from initial state and operations
 const buildReplayHistory = (initialState: GameState, operations: GameOperation[]): HistoryEntry[] => {
   let tempState = initialState

@@ -9,6 +9,7 @@ import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import { applyOperation } from "../helpers/stateHelpers"
 import { findMovedCards } from "../helpers/cardHelpers"
 import { getCardById } from "../helpers/cardHelpers"
+import { getOperationDescription } from "../helpers/operationHelpers"
 
 import {
   replayPlayingAtom,
@@ -28,10 +29,9 @@ import {
   getCardElementPosition,
   getAnimationDuration,
   getCardRect,
+  animationController,
+  playOperationAnimations,
 } from "../replay/animations"
-// Import animationController and playOperationAnimations from boardAtoms temporarily
-// TODO: Move these to appropriate location
-import { animationController, playOperationAnimations } from "../boardAtoms"
 import { highlightedZonesAtom } from "../ui/selection"
 import type { CardAnimation, Position } from "../types"
 
@@ -494,4 +494,53 @@ export const canRedoAtom = atom((get) => {
 
   // Disable during active replay
   return false
+})
+
+// Get undo/redo operation description
+export const undoOperationDescriptionAtom = atom((get) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
+
+  if (currentIndex > 0) {
+    const prevEntry = history[currentIndex - 1]
+    const currentEntry = history[currentIndex]
+
+    // Check if only operations changed (same gameState = effect activation)
+    // Optimization: Check operation count first before expensive JSON comparison
+    if (currentEntry.operationCount > prevEntry.operationCount) {
+      const lastOperation = operations[currentEntry.operationCount - 1]
+      if (lastOperation?.type === "activate") {
+        return "効果発動"
+      }
+    }
+
+    return getOperationDescription(prevEntry.gameState, currentEntry.gameState)
+  }
+
+  return null
+})
+
+export const redoOperationDescriptionAtom = atom((get) => {
+  const history = get(gameHistoryAtom)
+  const currentIndex = get(gameHistoryIndexAtom)
+  const operations = get(operationsAtom)
+
+  if (currentIndex < history.length - 1) {
+    const currentEntry = history[currentIndex]
+    const nextEntry = history[currentIndex + 1]
+
+    // Check if only operations changed (same gameState = effect activation)
+    // Optimization: Check operation count first before expensive JSON comparison
+    if (nextEntry.operationCount > currentEntry.operationCount) {
+      const nextOperation = operations[nextEntry.operationCount - 1]
+      if (nextOperation?.type === "activate") {
+        return "効果発動"
+      }
+    }
+
+    return getOperationDescription(currentEntry.gameState, nextEntry.gameState)
+  }
+
+  return null
 })
