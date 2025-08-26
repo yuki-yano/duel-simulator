@@ -1,0 +1,30 @@
+{
+  "name": "Duel Simulator",
+  "short_name": "Duel Sim",
+  "description": "Yu-Gi-Oh! デュエルシミュレーター - カードゲームをブラウザで",
+  "theme_color": "#1e1e1e",
+  "background_color": "#1e1e1e",
+  "display": "fullscreen",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}
