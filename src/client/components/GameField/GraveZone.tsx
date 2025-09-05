@@ -47,8 +47,9 @@ export function GraveZone({
   const displayCount = Math.min(cardCount, maxDisplay)
   const displayCards = cards.length > 0 ? cards.slice(0, displayCount) : []
 
-  // Reverse display order for grave zone to show newest cards on top
-  const orderedDisplayCards = type === "grave" ? [...displayCards].reverse() : displayCards
+  // Reverse display order for grave/banish zones to show newest cards at the bottom (with column-reverse)
+  const orderedDisplayCards =
+    type === "grave" || type === "banish" ? [...displayCards].reverse() : displayCards
 
   // Card dimensions based on height (maintaining 59:86 ratio)
   const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
@@ -97,8 +98,8 @@ export function GraveZone({
             }
           }
 
-          // Convert display index to actual index (accounting for reverse order in grave)
-          if (type === "grave") {
+          // Convert display index to actual index (accounting for reverse order in grave/banish)
+          if (type === "grave" || type === "banish") {
             insertIndex = orderedDisplayCards.length - insertIndex
           }
 
@@ -109,8 +110,8 @@ export function GraveZone({
           let insertIndex = Math.floor((relativeY - containerPaddingY) / cardWithGap)
           insertIndex = Math.max(0, Math.min(insertIndex, orderedDisplayCards.length))
 
-          // Convert display index to actual index (accounting for reverse order in grave)
-          if (type === "grave") {
+          // Convert display index to actual index (accounting for reverse order in grave/banish)
+          if (type === "grave" || type === "banish") {
             insertIndex = orderedDisplayCards.length - insertIndex
           }
 
