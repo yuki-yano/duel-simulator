@@ -1,10 +1,21 @@
-const CACHE_NAME = 'duel-simulator-v1';
+const CACHE_NAME = 'duel-simulator-v2';
+
+// Tesseract.js v6のCDN URLs
+const TESSERACT_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@6/dist/';
+const TESSERACT_CORE_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/';
+
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  // Tesseract.js関連ファイルを事前キャッシュ
+  `${TESSERACT_CDN}worker.min.js`,
+  `${TESSERACT_CORE_CDN}tesseract-core-simd.wasm.js`,
+  `${TESSERACT_CORE_CDN}tesseract-core.wasm.js`,
+  // 日本語言語データファイル
+  'https://tessdata.projectnaptha.com/4.0.0/jpn.traineddata.gz',
 ];
 
 // インストール時にキャッシュ
@@ -45,6 +56,31 @@ self.addEventListener('fetch', (event) => {
   // APIリクエストはキャッシュしない（オフライン時は失敗させる）
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(request));
+    return;
+  }
+
+  // Tesseract.js関連のCDNリクエストはキャッシュ優先
+  if (url.hostname === 'cdn.jsdelivr.net' || 
+      url.hostname === 'tessdata.projectnaptha.com' ||
+      url.hostname === 'unpkg.com') {
+    event.respondWith(
+      caches.match(request).then((response) => {
+        if (response) {
+          return response;
+        }
+        return fetch(request).then((response) => {
+          // 成功したレスポンスのみキャッシュ
+          if (!response || response.status !== 200) {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+          return response;
+        });
+      })
+    );
     return;
   }
 
