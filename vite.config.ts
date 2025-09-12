@@ -3,12 +3,33 @@ import react from "@vitejs/plugin-react"
 import pages from "@hono/vite-cloudflare-pages"
 import devServer from "@hono/vite-dev-server"
 import adapter from "@hono/vite-dev-server/cloudflare"
+import { sentryVitePlugin } from "@sentry/vite-plugin"
 import path from "path"
 
 export default defineConfig(({ mode }) => {
   if (mode === "client") {
+    const isProduction = process.env.NODE_ENV === "production"
+
+    const plugins = [react()]
+
+    if (isProduction && process.env.SENTRY_AUTH_TOKEN) {
+      plugins.push(
+        sentryVitePlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          release: {
+            name: process.env.VITE_APP_VERSION || "unknown",
+          },
+          sourcemaps: {
+            filesToDeleteAfterUpload: "**/*.map",
+          },
+        }),
+      )
+    }
+
     return {
-      plugins: [react()],
+      plugins,
       resolve: {
         alias: {
           "@": path.resolve(__dirname, "./src"),
@@ -17,6 +38,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       build: {
+        sourcemap: isProduction && process.env.SENTRY_AUTH_TOKEN ? "hidden" : false,
         rollupOptions: {
           input: "./index.html",
           output: {
@@ -55,7 +77,7 @@ export default defineConfig(({ mode }) => {
       },
       server: {
         port: 5173,
-        host: true, // ネットワーク上の他のデバイスからアクセス可能にする
+        host: true,
       },
     }
   }

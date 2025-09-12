@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useTranslation } from "react-i18next"
+import i18n from "@client/i18n"
 import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { produce } from "immer"
 import { useSetAtom } from "jotai"
 import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
 import { ErrorDialog } from "@/client/components/ErrorDialog"
+import { DeckImageDebugPanel } from "@/client/components/DeckImageDebugPanel"
 import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
 
 interface DeckImageProcessorProps {
@@ -56,9 +58,25 @@ export function DeckImageProcessor({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [deckConfig, setDeckConfig] = useState<DeckConfiguration | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
-  const [showDebug, _setShowDebug] = useState(false)
+
+  // デバッグ機能を開発環境のローカルでのみ有効化
+  const isDev = import.meta.env.DEV && window.location.hostname === "localhost"
+  const [showDebug, setShowDebug] = useState(isDev)
+
   const [ocrDebugCanvases, setOcrDebugCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
   const [ocrProcessedCanvases, setOcrProcessedCanvases] = useState<{ main?: string; extra?: string; side?: string }>({})
+  const [ocrTexts, setOcrTexts] = useState<{ main?: string; extra?: string; side?: string }>({}) // OCRで認識したテキストを保存
+  const [debugExtractedCards, setDebugExtractedCards] = useState<
+    Array<{
+      index: number
+      x: number
+      y: number
+      width: number
+      height: number
+      imageUrl: string
+      zone: "main" | "extra" | "side"
+    }>
+  >([]) // デバッグ用のカード情報
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const setExtractedCards = useSetAtom(extractedCardsAtom)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
@@ -67,20 +85,65 @@ export function DeckImageProcessor({
   const analyzedRef = useRef(false)
   // Tesseract workerのインスタンスを保持
   const workerRef = useRef<Awaited<ReturnType<typeof createWorker>> | null>(null)
+  // 現在初期化されているworkerの言語を追跡
+  const currentWorkerLanguage = useRef<string | null>(null)
 
   // Workerの初期化関数
   const initializeWorker = useCallback(async () => {
-    if (!workerRef.current) {
-      const worker = await createWorker("jpn")
+    const currentLanguage = i18n.language
 
-      // Tesseract.jsの設定
-      await worker.setParameters({
-        tessedit_pageseg_mode: PSM.SINGLE_WORD, // Treat as single word
-        tessedit_char_whitelist: "0123456789枚",
-      })
-
-      workerRef.current = worker
+    // 言語が変更されていない場合は既存のworkerを再利用
+    if (workerRef.current && currentWorkerLanguage.current === currentLanguage) {
+      return workerRef.current
     }
+
+    // 既存のworkerがある場合は終了
+    if (workerRef.current) {
+      await workerRef.current.terminate()
+      workerRef.current = null
+    }
+
+    // 現在の言語設定に基づいてOCR言語と文字ホワイトリストを決定
+    let ocrLanguages: string[]
+    let charWhitelist: string
+
+    switch (currentLanguage) {
+      case "ja":
+        ocrLanguages = ["jpn"]
+        charWhitelist = ":0123456789枚"
+        break
+      case "ko":
+        ocrLanguages = ["kor"]
+        charWhitelist = ":0123456789장개"
+        break
+      case "zh":
+        ocrLanguages = ["chi_sim"]
+        charWhitelist = ":0123456789张張"
+        break
+      case "en":
+      default:
+        ocrLanguages = ["eng"]
+        charWhitelist = ":0123456789cards"
+        break
+    }
+
+    const worker = await createWorker(ocrLanguages)
+
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_LINE,
+      tessedit_ocr_engine_mode: "2",
+      tessedit_char_whitelist: charWhitelist,
+      tessedit_min_confidence: "50",
+      tessedit_enable_image_preprocessing: "1",
+      tessedit_denoise_image: "1",
+      tessedit_create_hocr: "0",
+      tessedit_create_pdf: "0",
+      classify_integer_matcher_multiplier: "10",
+      debug_file: "",
+    })
+
+    workerRef.current = worker
+    currentWorkerLanguage.current = currentLanguage
     return workerRef.current
   }, [])
 
@@ -90,9 +153,23 @@ export function DeckImageProcessor({
       if (workerRef.current) {
         void workerRef.current.terminate()
         workerRef.current = null
+        currentWorkerLanguage.current = null
       }
     }
   }, [])
+
+  // 言語変更時にworkerを再初期化
+  useEffect(() => {
+    const currentLanguage = i18n.language
+    if (currentWorkerLanguage.current !== null && currentWorkerLanguage.current !== currentLanguage) {
+      // 既存のworkerを終了して再初期化を促す
+      if (workerRef.current) {
+        void workerRef.current.terminate()
+        workerRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language])
 
   const drawPreview = useCallback(() => {
     const img = new Image()
@@ -126,7 +203,7 @@ export function DeckImageProcessor({
     ): Promise<string> => {
       // Create a canvas for the specific region
       const regionCanvas = document.createElement("canvas")
-      const scale = 4 // Upscale more for better OCR
+      const scale = 6 // さらに拡大してOCR精度を向上（4→6）
       regionCanvas.width = width * scale
       regionCanvas.height = height * scale
 
@@ -162,9 +239,10 @@ export function DeckImageProcessor({
         }
       }
 
-      // Second pass: Adaptive thresholding based on background
+      // Simple adaptive thresholding based on background
       const threshold = bgColor > 128 ? bgColor - 40 : bgColor + 40
 
+      // Apply binary threshold
       for (let i = 0; i < data.length; i += 4) {
         const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
 
@@ -201,7 +279,14 @@ export function DeckImageProcessor({
       const worker = await initializeWorker()
       const result = await worker.recognize(regionCanvas)
 
-      return result.data.text
+      const text = result.data.text
+
+      // デバッグログ（開発環境のみ）
+      if (import.meta.env.DEV && window.location.hostname === "localhost" && debugKey) {
+        console.log(`OCR result for ${debugKey}:`, text)
+      }
+
+      return text
     },
     [showDebug, setOcrProcessedCanvases, initializeWorker],
   )
@@ -261,12 +346,38 @@ export function DeckImageProcessor({
           }
         }
 
-        // More flexible regex patterns
-        let mainDeckMatch = mainDeckText.match(/(\d+)\s*枚/)
+        // OCRテキストを保存
+        setOcrTexts((prev) => ({ ...prev, main: mainDeckText }))
+
+        // OCR結果をそのまま使用
+        const processedText = mainDeckText
+
+        // More flexible regex patterns - 多言語対応
+        // パターン1: コロン(:)の後の数字を優先的に検索
+        // パターン2: 日本語: 枚
+        // パターン3: 英語: cards/card
+        // パターン4: 韓国語: 장(枚)/개(個)
+        // パターン5: 中国語簡体字: 张(枚)/个(個)
+        // パターン6: 中国語繁体字: 張(枚)/個(個)
+        let mainDeckMatch = processedText.match(/:\s*(\d+)/) // コロンの後の数字を優先
+        if (!mainDeckMatch) {
+          mainDeckMatch = processedText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+        }
         if (!mainDeckMatch) {
           // Try to find just numbers
-          mainDeckMatch = mainDeckText.match(/(\d+)/)
+          mainDeckMatch = processedText.match(/(\d+)/)
         }
+
+        // デバッグ: OCR認識結果をログ出力（開発環境のみ）
+        if (isDev) {
+          console.log("Main deck OCR result:", {
+            originalText: mainDeckText,
+            processedText: processedText,
+            match: mainDeckMatch ? mainDeckMatch[0] : null,
+            extractedNumber: mainDeckMatch ? mainDeckMatch[1] : null,
+          })
+        }
+
         if (mainDeckMatch) {
           const count = parseInt(mainDeckMatch[1])
           const rows = Math.ceil(count / 10)
@@ -303,7 +414,29 @@ export function DeckImageProcessor({
 
           // Debug: Extra deck OCR
 
-          const extraDeckMatch = extraDeckText.match(/(\d+)\s*枚/)
+          // OCRテキストを保存
+          setOcrTexts((prev) => ({ ...prev, extra: extraDeckText }))
+
+          // OCR結果をそのまま使用
+          const processedExtraText = extraDeckText
+
+          // 多言語対応の正規表現パターン（コロンパターンを優先）
+          let extraDeckMatch = processedExtraText.match(/:\s*(\d+)/) // コロンの後の数字を優先
+          if (!extraDeckMatch) {
+            extraDeckMatch = processedExtraText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+          }
+
+          // デバッグ: OCR認識結果をログ出力（開発環境のみ）
+          if (isDev) {
+            console.log("Extra deck OCR result:", {
+              originalText: extraDeckText,
+              processedText: processedExtraText,
+              match: extraDeckMatch ? extraDeckMatch[0] : null,
+              extractedNumber: extraDeckMatch ? extraDeckMatch[1] : null,
+              extraDeckY: extraDeckY,
+            })
+          }
+
           if (extraDeckMatch) {
             const count = parseInt(extraDeckMatch[1])
             const rows = Math.ceil(count / 10)
@@ -388,7 +521,7 @@ export function DeckImageProcessor({
     }
 
     img.src = imageDataUrl
-  }, [imageDataUrl, showDebug, extractTextFromRegion, t])
+  }, [imageDataUrl, showDebug, extractTextFromRegion, t, isDev])
 
   useEffect(() => {
     if (imageDataUrl) {
@@ -434,6 +567,7 @@ export function DeckImageProcessor({
       const mainDeckCards: GameCard[] = []
       const extraDeckCards: GameCard[] = []
       const sideDeckCards: GameCard[] = []
+      const debugCards: typeof debugExtractedCards = [] // デバッグ用カード情報
 
       // カードIDマッピング用
       const deckCardIds: DeckCardIdsMapping = {
@@ -488,6 +622,17 @@ export function DeckImageProcessor({
               }
               mainDeckCards.push(gameCard)
 
+              // デバッグ用カード情報を追加
+              debugCards.push({
+                index: cardIndex,
+                x: x - horizontalMargin,
+                y: y,
+                width: cardWidth + horizontalMargin * 2,
+                height: cardHeight,
+                imageUrl: cardDataUrl,
+                zone: "main",
+              })
+
               // カードIDマッピングに追加
               deckCardIds.mainDeck[cardIndex] = cardId
             }
@@ -539,6 +684,17 @@ export function DeckImageProcessor({
               }
               extraDeckCards.push(gameCard)
 
+              // デバッグ用カード情報を追加
+              debugCards.push({
+                index: cardIndex + (deckConfig.mainDeck?.count ?? 0), // 通し番号
+                x: x - horizontalMargin,
+                y: y,
+                width: cardWidth + horizontalMargin * 2,
+                height: cardHeight,
+                imageUrl: cardDataUrl,
+                zone: "extra",
+              })
+
               // カードIDマッピングに追加
               deckCardIds.extraDeck[cardIndex] = cardId
             }
@@ -583,11 +739,23 @@ export function DeckImageProcessor({
 
               // Side deck cards can be stored as a separate collection
               // or marked with a special flag
+              const cardId = `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
               sideDeckCards.push({
-                id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: cardId,
                 imageUrl: cardDataUrl,
                 position: "facedown",
                 rotation: 0,
+              })
+
+              // デバッグ用カード情報を追加
+              debugCards.push({
+                index: cardIndex + (deckConfig.mainDeck?.count ?? 0) + (deckConfig.extraDeck?.count ?? 0), // 通し番号
+                x: x - horizontalMargin,
+                y: y,
+                width: cardWidth + horizontalMargin * 2,
+                height: cardHeight,
+                imageUrl: cardDataUrl,
+                zone: "side",
               })
             }
           }
@@ -595,6 +763,7 @@ export function DeckImageProcessor({
       }
 
       setProcessedCards(cards)
+      setDebugExtractedCards(debugCards) // デバッグ用カード情報を保存
 
       // Store extracted cards
       setExtractedCards({
@@ -630,121 +799,143 @@ export function DeckImageProcessor({
   }
 
   return (
-    <Card className="p-6 space-y-4">
-      <h3 className="text-lg font-semibold">{t("deck.loading")}</h3>
-
-      <div className="space-y-4">
-        {/* Preview Canvas - hidden but kept for processing */}
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Preview Image */}
-        {previewImageUrl !== null && (
-          <div className="border rounded-lg overflow-hidden">
-            <img
-              src={previewImageUrl}
-              alt={t("deck.preview")}
-              className="w-full"
-              style={{
-                WebkitTouchCallout: "default",
-                WebkitUserSelect: "auto",
-                userSelect: "auto",
-              }}
+    <div className="space-y-4">
+      {/* デバッグトグル - 開発環境のみ表示 */}
+      {isDev && (
+        <div className="flex items-center gap-2 px-6 pt-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDebug}
+              onChange={(e) => setShowDebug(e.target.checked)}
+              className="w-4 h-4"
             />
-          </div>
-        )}
+            <span className="text-sm font-medium">デバッグ情報を表示</span>
+          </label>
+        </div>
+      )}
 
-        {/* Debug Canvas - Hidden */}
-        {showDebug && (
-          <>
-            <div className="border rounded-lg overflow-hidden bg-gray-100 p-2">
-              <p className="text-xs text-gray-600 mb-1">検出されたデッキ領域:</p>
-              <canvas ref={debugCanvasRef} className="w-full" style={{ maxHeight: "400px", objectFit: "contain" }} />
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold">{t("deck.loading")}</h3>
+
+        <div className="space-y-4">
+          {/* Preview Canvas - hidden but kept for processing */}
+          <canvas ref={canvasRef} className="hidden" />
+
+          {/* Preview Image */}
+          {previewImageUrl !== null && (
+            <div className="border rounded-lg overflow-hidden">
+              <img
+                src={previewImageUrl}
+                alt={t("deck.preview")}
+                className="w-full"
+                style={{
+                  WebkitTouchCallout: "default",
+                  WebkitUserSelect: "auto",
+                  userSelect: "auto",
+                }}
+              />
             </div>
+          )}
 
-            {/* OCR Debug Images */}
-            {(ocrDebugCanvases.main != null || ocrDebugCanvases.extra != null || ocrDebugCanvases.side != null) && (
-              <div className="border rounded-lg bg-gray-100 p-2 space-y-2">
-                <p className="text-xs text-gray-600">OCR対象領域:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {ocrDebugCanvases.main != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">メインデッキ (元画像):</p>
-                      <img src={ocrDebugCanvases.main} alt="Main deck OCR area" className="border" />
-                    </div>
-                  )}
-                  {ocrProcessedCanvases.main != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">メインデッキ (処理済み):</p>
-                      <img src={ocrProcessedCanvases.main} alt="Main deck processed" className="border" />
-                    </div>
-                  )}
-                  {ocrDebugCanvases.extra != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">エクストラデッキ (元画像):</p>
-                      <img src={ocrDebugCanvases.extra} alt="Extra deck OCR area" className="border" />
-                    </div>
-                  )}
-                  {ocrProcessedCanvases.extra != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">エクストラデッキ (処理済み):</p>
-                      <img src={ocrProcessedCanvases.extra} alt="Extra deck processed" className="border" />
-                    </div>
-                  )}
-                  {ocrDebugCanvases.side != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">サイドデッキ (元画像):</p>
-                      <img src={ocrDebugCanvases.side} alt="Side deck OCR area" className="border" />
-                    </div>
-                  )}
-                  {ocrProcessedCanvases.side != null && (
-                    <div>
-                      <p className="text-xs text-gray-500">サイドデッキ (処理済み):</p>
-                      <img src={ocrProcessedCanvases.side} alt="Side deck processed" className="border" />
-                    </div>
-                  )}
-                </div>
+          {/* Debug Canvas - Hidden */}
+          {showDebug && (
+            <>
+              <div className="border rounded-lg overflow-hidden bg-gray-100 p-2">
+                <p className="text-xs text-gray-600 mb-1">検出されたデッキ領域:</p>
+                <canvas ref={debugCanvasRef} className="w-full" style={{ maxHeight: "400px", objectFit: "contain" }} />
               </div>
-            )}
-          </>
-        )}
 
-        {/* Analyzing status */}
-        {isAnalyzing && (
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-700">{t("deck.analyzingStructure")}</p>
-          </div>
-        )}
+              {/* OCR Debug Images */}
+              {(ocrDebugCanvases.main != null || ocrDebugCanvases.extra != null || ocrDebugCanvases.side != null) && (
+                <div className="border rounded-lg bg-gray-100 p-2 space-y-2">
+                  <p className="text-xs text-gray-600">OCR対象領域:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ocrDebugCanvases.main != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">メインデッキ (元画像):</p>
+                        <img src={ocrDebugCanvases.main} alt="Main deck OCR area" className="border" />
+                      </div>
+                    )}
+                    {ocrProcessedCanvases.main != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">メインデッキ (処理済み):</p>
+                        <img src={ocrProcessedCanvases.main} alt="Main deck processed" className="border" />
+                      </div>
+                    )}
+                    {ocrDebugCanvases.extra != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">エクストラデッキ (元画像):</p>
+                        <img src={ocrDebugCanvases.extra} alt="Extra deck OCR area" className="border" />
+                      </div>
+                    )}
+                    {ocrProcessedCanvases.extra != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">エクストラデッキ (処理済み):</p>
+                        <img src={ocrProcessedCanvases.extra} alt="Extra deck processed" className="border" />
+                      </div>
+                    )}
+                    {ocrDebugCanvases.side != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">サイドデッキ (元画像):</p>
+                        <img src={ocrDebugCanvases.side} alt="Side deck OCR area" className="border" />
+                      </div>
+                    )}
+                    {ocrProcessedCanvases.side != null && (
+                      <div>
+                        <p className="text-xs text-gray-500">サイドデッキ (処理済み):</p>
+                        <img src={ocrProcessedCanvases.side} alt="Side deck processed" className="border" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
-        {/* Deck Configuration Display */}
-        {deckConfig && (
-          <div className="bg-blue-50 p-3 rounded-lg space-y-2">
-            <p className="text-sm font-medium">{t("deck.detectedConfig")}</p>
-            {deckConfig.mainDeck && (
-              <p className="text-xs">
-                {t("deck.mainDeckCountWithRows", { count: deckConfig.mainDeck.count, rows: deckConfig.mainDeck.rows })}
-              </p>
-            )}
-            {deckConfig.extraDeck && (
-              <p className="text-xs">
-                {t("deck.extraDeckCountWithRows", {
-                  count: deckConfig.extraDeck.count,
-                  rows: deckConfig.extraDeck.rows,
-                })}
-              </p>
-            )}
-            {deckConfig.sideDeck && (
-              <p className="text-xs">
-                {t("deck.sideDeckCountWithRows", { count: deckConfig.sideDeck.count, rows: deckConfig.sideDeck.rows })}
-              </p>
-            )}
-          </div>
-        )}
+          {/* Analyzing status */}
+          {isAnalyzing && (
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">{t("deck.analyzingStructure")}</p>
+            </div>
+          )}
 
-        {/* Process Button */}
-        <button
-          onClick={processImage}
-          disabled={!deckConfig || isProcessing || processedCards.length > 0}
-          className={`
+          {/* Deck Configuration Display */}
+          {deckConfig && (
+            <div className="bg-blue-50 p-3 rounded-lg space-y-2">
+              <p className="text-sm font-medium">{t("deck.detectedConfig")}</p>
+              {deckConfig.mainDeck && (
+                <p className="text-xs">
+                  {t("deck.mainDeckCountWithRows", {
+                    count: deckConfig.mainDeck.count,
+                    rows: deckConfig.mainDeck.rows,
+                  })}
+                </p>
+              )}
+              {deckConfig.extraDeck && (
+                <p className="text-xs">
+                  {t("deck.extraDeckCountWithRows", {
+                    count: deckConfig.extraDeck.count,
+                    rows: deckConfig.extraDeck.rows,
+                  })}
+                </p>
+              )}
+              {deckConfig.sideDeck && (
+                <p className="text-xs">
+                  {t("deck.sideDeckCountWithRows", {
+                    count: deckConfig.sideDeck.count,
+                    rows: deckConfig.sideDeck.rows,
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Process Button */}
+          <button
+            onClick={processImage}
+            disabled={!deckConfig || isProcessing || processedCards.length > 0}
+            className={`
             w-full py-2 px-4 rounded-lg font-medium transition-colors
             ${
               !deckConfig || isProcessing || processedCards.length > 0
@@ -752,36 +943,75 @@ export function DeckImageProcessor({
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }
           `}
-        >
-          {isProcessing
-            ? t("deck.processing")
-            : processedCards.length > 0
-              ? t("deck.processed")
-              : isReplayMode
-                ? t("deck.startReplay")
-                : t("deck.extractCards")}
-        </button>
+          >
+            {isProcessing
+              ? t("deck.processing")
+              : processedCards.length > 0
+                ? t("deck.processed")
+                : isReplayMode
+                  ? t("deck.startReplay")
+                  : t("deck.extractCards")}
+          </button>
 
-        {/* Processed Cards Count */}
-        {processedCards.length > 0 && (
-          <p className="text-sm text-green-600">{t("deck.cardsExtracted", { count: processedCards.length })}</p>
-        )}
-      </div>
+          {/* Processed Cards Count */}
+          {processedCards.length > 0 && (
+            <p className="text-sm text-green-600">{t("deck.cardsExtracted", { count: processedCards.length })}</p>
+          )}
+        </div>
 
-      {/* Error Dialog */}
-      <ErrorDialog
-        open={errorDialog.open}
-        onOpenChange={(open) => {
-          if (!open) {
-            setErrorDialog({ open: false, message: "" })
-            onError?.()
-          }
-        }}
-        title={t("common.error")}
-        message={errorDialog.message}
-        actionLabel={t("common.ok")}
-        actionHref="#"
-      />
-    </Card>
+        {/* Error Dialog */}
+        <ErrorDialog
+          open={errorDialog.open}
+          onOpenChange={(open) => {
+            if (!open) {
+              setErrorDialog({ open: false, message: "" })
+              onError?.()
+            }
+          }}
+          title={t("common.error")}
+          message={errorDialog.message}
+          actionLabel={t("common.ok")}
+          actionHref="#"
+        />
+      </Card>
+
+      {/* デバッグパネル - 開発環境のみ */}
+      {isDev && showDebug && (
+        <DeckImageDebugPanel
+          imageDataUrl={imageDataUrl}
+          deckConfig={deckConfig}
+          extractedCards={debugExtractedCards}
+          ocrResults={{
+            ...(ocrTexts.main != null && ocrDebugCanvases.main != null && ocrProcessedCanvases.main != null
+              ? {
+                  main: {
+                    text: ocrTexts.main,
+                    originalImage: ocrDebugCanvases.main,
+                    processedImage: ocrProcessedCanvases.main,
+                  },
+                }
+              : {}),
+            ...(ocrTexts.extra != null && ocrDebugCanvases.extra != null && ocrProcessedCanvases.extra != null
+              ? {
+                  extra: {
+                    text: ocrTexts.extra,
+                    originalImage: ocrDebugCanvases.extra,
+                    processedImage: ocrProcessedCanvases.extra,
+                  },
+                }
+              : {}),
+            ...(ocrTexts.side != null && ocrDebugCanvases.side != null && ocrProcessedCanvases.side != null
+              ? {
+                  side: {
+                    text: ocrTexts.side,
+                    originalImage: ocrDebugCanvases.side,
+                    processedImage: ocrProcessedCanvases.side,
+                  },
+                }
+              : {}),
+          }}
+        />
+      )}
+    </div>
   )
 }

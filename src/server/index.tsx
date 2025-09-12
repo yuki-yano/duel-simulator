@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { logger } from "hono/logger"
 import { serveStatic } from "hono/cloudflare-pages"
 import type { Bindings } from "./types/bindings"
+import { sentryMiddleware } from "./lib/sentry"
 
 // Import routes
 import healthRoutes from "./routes/health"
@@ -26,6 +27,7 @@ app.use("*", async (c, next) => {
 })
 
 // Middleware
+app.use("*", sentryMiddleware())
 app.use("*", logger())
 app.use("/api/*", cors())
 
