@@ -71,7 +71,7 @@ export function DeckZone({
     if (draggedCard) {
       setHoveredZone({
         player: isOpponent ? "opponent" : "self",
-        type: type === "deck" ? "deck" : type === "extra" ? "extraDeck" : "hand",
+        type: type === "deck" ? "deck" : type === "extra" ? "extraDeck" : type === "side" ? "sideDeck" : "hand",
       })
 
       // Calculate drop index based on mouse position
@@ -156,7 +156,7 @@ export function DeckZone({
     if (draggedCard != null && onDrop != null && draggedCard.zone != null) {
       const targetZone: ZoneId = {
         player: isOpponent ? "opponent" : "self",
-        type: type === "deck" ? "deck" : type === "extra" ? "extraDeck" : "hand",
+        type: type === "deck" ? "deck" : type === "extra" ? "extraDeck" : type === "side" ? "sideDeck" : "hand",
         index: dropIndex !== null ? dropIndex : undefined,
       }
       onDrop(draggedCard.zone, targetZone, e.shiftKey)
@@ -191,6 +191,7 @@ export function DeckZone({
     deck: "bg-gray-500/10 border-gray-500/30",
     extra: "bg-purple-500/10 border-purple-500/30",
     hand: "bg-blue-500/10 border-blue-500/30",
+    side: "bg-amber-500/10 border-amber-500/30",
     gy: "bg-red-500/10 border-red-500/30",
     banished: "bg-slate-500/10 border-slate-500/30",
   }
@@ -199,6 +200,7 @@ export function DeckZone({
     deck: "from-gray-500/30 to-gray-600/30",
     extra: "from-purple-500/30 to-purple-600/30",
     hand: "from-blue-500/30 to-blue-600/30",
+    side: "from-amber-500/30 to-amber-600/30",
     gy: "from-red-500/30 to-red-600/30",
     banished: "from-slate-500/30 to-slate-600/30",
   }
@@ -215,7 +217,8 @@ export function DeckZone({
     const isHovered =
       hoveredZone != null &&
       hoveredZone.player === "self" &&
-      hoveredZone.type === (type === "deck" ? "deck" : type === "extra" ? "extraDeck" : "hand")
+      hoveredZone.type ===
+        (type === "deck" ? "deck" : type === "extra" ? "extraDeck" : type === "side" ? "sideDeck" : "hand")
 
     // Adjust container height based on number of rows
     const getContainerHeight = () => {
@@ -270,7 +273,14 @@ export function DeckZone({
               : undefined
           }
         >
-          {type === "deck" ? t("zones.deck") : type === "extra" ? t("zones.extraDeck") : t("zones.hand")} ({cardCount})
+          {type === "deck"
+            ? t("zones.deck")
+            : type === "extra"
+              ? t("zones.extraDeck")
+              : type === "side"
+                ? t("zones.sideDeck")
+                : t("zones.hand")}{" "}
+          ({cardCount})
         </span>
         {cardCount > 0 ? (
           <div

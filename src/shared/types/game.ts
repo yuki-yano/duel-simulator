@@ -23,6 +23,7 @@ export type ZoneType =
   | "extraMonsterZone"
   | "freeZone"
   | "sideFreeZone"
+  | "sideDeck"
 
 // Zone identification (read-only location info)
 export interface ZoneId {

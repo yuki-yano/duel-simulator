@@ -10,7 +10,8 @@
     "spellTrapZone": "魔法與陷阱區",
     "extraMonsterZone": "額外怪獸區",
     "freeZone": "自由區",
-    "sideFreeZone": "側邊自由區"
+    "sideFreeZone": "側邊自由區",
+    "sideDeck": "副卡組"
   },
   "position": {
     "attack": "攻擊表示",

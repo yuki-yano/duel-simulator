@@ -22,6 +22,7 @@ export const createInitialPlayerBoard = (): PlayerBoard => ({
     .map(() => []),
   freeZone: [], // フィールド下のフリーゾーン
   sideFreeZone: [], // 左側のフリーゾーン（1024px以上）
+  sideDeck: [], // サイドデッキ
   lifePoints: 8000,
 })
 

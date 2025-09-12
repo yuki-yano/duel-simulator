@@ -47,6 +47,9 @@ export function findCardInState(
     if (board.sideFreeZone?.find((c) => c.id === cardId)) {
       return { player, zone: "sideFreeZone" }
     }
+    if (board.sideDeck?.find((c) => c.id === cardId)) {
+      return { player, zone: "sideDeck" }
+    }
   }
   return null
 }
@@ -146,6 +149,15 @@ export function getCardById(player: PlayerBoard, cardId: string): { card: Card; 
     for (let i = 0; i < player.sideFreeZone.length; i++) {
       if (player.sideFreeZone[i].id === cardId) {
         return { card: player.sideFreeZone[i], zone: { player: "self", type: "sideFreeZone", index: i } }
+      }
+    }
+  }
+
+  // Search side deck
+  if (player.sideDeck) {
+    for (let i = 0; i < player.sideDeck.length; i++) {
+      if (player.sideDeck[i].id === cardId) {
+        return { card: player.sideDeck[i], zone: { player: "self", type: "sideDeck", index: i } }
       }
     }
   }

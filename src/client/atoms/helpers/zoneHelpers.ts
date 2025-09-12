@@ -187,6 +187,22 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
         }
         break
       }
+      case "sideDeck": {
+        if (!draft.sideDeck) draft.sideDeck = []
+        // Reset counter when moving to side deck
+        const cardWithResetCounter = produce(card, (draftCard) => {
+          draftCard.counter = undefined
+        })
+        // If index is specified, insert at that position
+        if (zone.index !== undefined && zone.index >= 0 && zone.index <= draft.sideDeck.length) {
+          // Insert card at specified position
+          draft.sideDeck.splice(zone.index, 0, cardWithResetCounter)
+        } else {
+          // Otherwise append to end
+          draft.sideDeck.push(cardWithResetCounter)
+        }
+        break
+      }
     }
   })
 }
@@ -303,6 +319,15 @@ export function removeCardFromZoneById(
         }
         break
       }
+      case "sideDeck": {
+        if (draft.sideDeck) {
+          const index = draft.sideDeck.findIndex((c) => c.id === cardId)
+          if (index !== -1) {
+            draft.sideDeck.splice(index, 1)
+          }
+        }
+        break
+      }
     }
   })
 }
@@ -339,6 +364,8 @@ export function getCardsInZone(state: GameState, player: "self" | "opponent", zo
       return playerBoard.freeZone ?? []
     case "sideFreeZone":
       return playerBoard.sideFreeZone ?? []
+    case "sideDeck":
+      return playerBoard.sideDeck ?? []
     default:
       return []
   }
@@ -371,6 +398,8 @@ export function getZoneDisplayName(zone: ZoneId): string {
       return `${playerPrefix}フリーゾーン`
     case "sideFreeZone":
       return `${playerPrefix}サイドフリーゾーン`
+    case "sideDeck":
+      return `${playerPrefix}サイドデッキ`
     default:
       return zone.type
   }

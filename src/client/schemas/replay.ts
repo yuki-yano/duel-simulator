@@ -33,6 +33,7 @@ export const PlayerBoardSchema = z.object({
   // 古いリプレイデータとの互換性のためオプショナル
   freeZone: z.array(CardSchema).optional(), // フィールド下のフリーゾーン
   sideFreeZone: z.array(CardSchema).optional(), // 左側のフリーゾーン（1024px以上）
+  sideDeck: z.array(CardSchema).optional(),
   lifePoints: z.number(),
 })
 
@@ -62,6 +63,7 @@ export const OperationZoneSchema = z.object({
     "extraMonsterZone",
     "freeZone",
     "sideFreeZone",
+    "sideDeck",
   ]),
   zoneIndex: z.number().optional(),
   insertPosition: z.union([z.number(), z.literal("last")]).optional(),

@@ -10,7 +10,8 @@
     "spellTrapZone": "마법 & 함정 존",
     "extraMonsterZone": "엑스트라 몬스터 존",
     "freeZone": "프리 존",
-    "sideFreeZone": "사이드 프리 존"
+    "sideFreeZone": "사이드 프리 존",
+    "sideDeck": "사이드 덱"
   },
   "position": {
     "attack": "공격 표시",

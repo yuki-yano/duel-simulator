@@ -85,10 +85,18 @@ export default function App() {
         zone: { player: "self" as const, type: "extraDeck" as const },
         index,
       }))
+      const sideDeckWithZones = (extractedCards.sideDeck ?? []).map((card, index) => ({
+        ...card,
+        zone: { player: "self" as const, type: "sideDeck" as const },
+        index,
+      }))
 
       const newState = produce(gameState, (draft) => {
         draft.players.self.deck = mainDeckWithZones
         draft.players.self.extraDeck = extraDeckWithZones
+        if (sideDeckWithZones.length > 0) {
+          draft.players.self.sideDeck = sideDeckWithZones
+        }
       })
 
       // Reset history with deck loaded state as initial state

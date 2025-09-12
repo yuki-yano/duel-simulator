@@ -32,7 +32,7 @@ export interface GraveZoneProps {
 }
 
 export interface DeckZoneProps {
-  type: "deck" | "extra" | "hand"
+  type: "deck" | "extra" | "hand" | "side"
   isOpponent?: boolean
   cardCount?: number
   orientation?: "horizontal" | "vertical"

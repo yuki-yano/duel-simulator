@@ -27,6 +27,7 @@ export const initialStateAfterDeckLoadAtom = atom<GameState | null>(null)
 export const extractedCardsAtom = atom<ExtractedCards>({
   mainDeck: [],
   extraDeck: [],
+  sideDeck: [],
 })
 
 // Deck metadata for saving replays

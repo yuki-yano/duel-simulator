@@ -53,6 +53,7 @@ export interface CardAnimation {
 export interface ExtractedCards {
   mainDeck: Card[]
   extraDeck: Card[]
+  sideDeck?: Card[]
 }
 
 // Move options for card operations

@@ -34,7 +34,7 @@ export interface DeckProcessMetadata {
 const LAYOUT_RATIOS = {
   mainDeckTextY: 0.071, // Main deck text is below the deck name (7% of width from top)
   textToCardsGap: 0.035, // Gap between text and cards (increased to account for text height)
-  sectionGap: 0.004, // Gap between sections (further reduced for extra deck positioning)
+  sectionGap: 0.006, // Gap between sections (further reduced for extra deck positioning)
   cardAspectRatio: 1.4665, // Card height/width ratio (increased to compensate for no row gap)
   rowGap: 0, // No gap between card rows (solo-mode approach)
   firstRowOffset: 0.002, // Additional offset for the first row of cards
@@ -446,6 +446,54 @@ export function DeckImageProcessor({
               yPosition: extraDeckY,
               rows,
             })
+
+            // Try to find side deck text (after extra deck)
+            const extraSection = { rows, count }
+            const extraDeckHeight =
+              img.width * LAYOUT_RATIOS.firstRowOffset +
+              extraSection.rows * cardHeight +
+              (extraSection.rows - 1) * img.width * LAYOUT_RATIOS.rowGap
+            const sideDeckY =
+              extraDeckY +
+              img.width * LAYOUT_RATIOS.textToCardsGap +
+              extraDeckHeight +
+              img.width * LAYOUT_RATIOS.sectionGap
+
+            const sideDeckText = await extractTextFromRegion(img, textX, sideDeckY, textWidth, textHeight, "side")
+
+            // OCRテキストを保存
+            setOcrTexts((prev) => ({ ...prev, side: sideDeckText }))
+
+            // OCR結果をそのまま使用
+            const processedSideText = sideDeckText
+
+            // 多言語対応の正規表現パターン（コロンパターンを優先）
+            let sideDeckMatch = processedSideText.match(/:\s*(\d+)/) // コロンの後の数字を優先
+            if (!sideDeckMatch) {
+              sideDeckMatch = processedSideText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+            }
+
+            // デバッグ: OCR認識結果をログ出力（開発環境のみ）
+            if (isDev) {
+              console.log("Side deck OCR result:", {
+                originalText: sideDeckText,
+                processedText: processedSideText,
+                match: sideDeckMatch ? sideDeckMatch[0] : null,
+                extractedNumber: sideDeckMatch ? sideDeckMatch[1] : null,
+                sideDeckY: sideDeckY,
+              })
+            }
+
+            if (sideDeckMatch) {
+              const count = parseInt(sideDeckMatch[1])
+              const rows = Math.ceil(count / 10)
+              deckSections.push({
+                label: "side",
+                count,
+                yPosition: sideDeckY,
+                rows,
+              })
+            }
           }
         }
 
@@ -769,6 +817,7 @@ export function DeckImageProcessor({
       setExtractedCards({
         mainDeck: mainDeckCards,
         extraDeck: extraDeckCards,
+        sideDeck: sideDeckCards,
       })
 
       // Create metadata

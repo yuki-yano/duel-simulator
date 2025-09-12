@@ -10,7 +10,8 @@
     "spellTrapZone": "Spell & Trap Zone",
     "extraMonsterZone": "Extra Monster Zone",
     "freeZone": "Free Zone",
-    "sideFreeZone": "Side Free Zone"
+    "sideFreeZone": "Side Free Zone",
+    "sideDeck": "Side Deck"
   },
   "position": {
     "attack": "Attack Position",

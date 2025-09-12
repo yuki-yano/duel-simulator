@@ -1047,6 +1047,19 @@ export function GameFieldContent() {
             onContextMenuClose={() => setContextMenu(null)}
             className="deck-zone-self"
           />
+          {/* Side Deck (below main deck) */}
+          {playerBoard.sideDeck && playerBoard.sideDeck.length > 0 && (
+            <DeckZone
+              type="side"
+              zone={{ player: "self", type: "sideDeck" }}
+              cardCount={playerBoard.sideDeck.length}
+              cards={playerBoard.sideDeck}
+              onDrop={handleCardDrop}
+              onContextMenu={handleCardContextMenu}
+              onContextMenuClose={() => setContextMenu(null)}
+              className="side-deck-zone-self"
+            />
+          )}
         </div>
       </div>
 

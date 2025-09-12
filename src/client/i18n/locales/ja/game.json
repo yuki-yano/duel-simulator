@@ -9,8 +9,9 @@
     "monsterZone": "モンスターゾーン",
     "spellTrapZone": "魔法・罠ゾーン",
     "extraMonsterZone": "エクストラモンスターゾーン",
-    "freeZone": "フリーゾーン",
-    "sideFreeZone": "サイドフリーゾーン"
+    "freeZone": "フリー",
+    "sideFreeZone": "サイドフリーゾーン",
+    "sideDeck": "サイドデッキ"
   },
   "position": {
     "attack": "攻撃表示",
