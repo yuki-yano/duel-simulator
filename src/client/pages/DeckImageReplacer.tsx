@@ -306,7 +306,9 @@ export default function DeckImageReplacer() {
                   <p className="text-xs text-green-600 mt-1">
                     {t("deckImageReplacer.mainDeckCount", { count: deckMetadata.mainDeckCount })}
                     {deckMetadata.extraDeckCount > 0 && (
-                      <span className="ml-2">{t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}</span>
+                      <span className="ml-2">
+                        {t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}
+                      </span>
                     )}
                   </p>
                 </div>
@@ -358,7 +360,9 @@ export default function DeckImageReplacer() {
                           ? t("deckImageReplacer.loadDeckFirst")
                           : t("deckImageReplacer.clickToSelect")}
                       </p>
-                      {deckMetadata !== null && <p className="text-xs text-gray-500">{t("deckImageReplacer.dragAndDrop")}</p>}
+                      {deckMetadata !== null && (
+                        <p className="text-xs text-gray-500">{t("deckImageReplacer.dragAndDrop")}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -426,7 +430,9 @@ export default function DeckImageReplacer() {
                     <p className="text-sm text-gray-600">
                       {t("deckImageReplacer.mainDeckCount", { count: deckMetadata.mainDeckCount })}
                       {deckMetadata.extraDeckCount > 0 && (
-                        <span className="ml-4">{t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}</span>
+                        <span className="ml-4">
+                          {t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}
+                        </span>
                       )}
                     </p>
                   </div>
@@ -435,7 +441,9 @@ export default function DeckImageReplacer() {
                   {selectedImageId !== null && (
                     <>
                       <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("deckImageReplacer.deckTypeLabel")}</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {t("deckImageReplacer.deckTypeLabel")}
+                        </label>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setSelectedDeckType("main")}
@@ -543,7 +551,9 @@ export default function DeckImageReplacer() {
                         {(() => {
                           const selectedImage = replacementImages.find((img) => img.id === selectedImageId)
                           return selectedImage && selectedImage.positions.length > 0 ? (
-                            <p className="text-sm text-gray-600 mt-2">{t("deckImageReplacer.selectedCount", { count: selectedImage.positions.length })}</p>
+                            <p className="text-sm text-gray-600 mt-2">
+                              {t("deckImageReplacer.selectedCount", { count: selectedImage.positions.length })}
+                            </p>
                           ) : null
                         })()}
                       </div>
@@ -576,7 +586,11 @@ export default function DeckImageReplacer() {
                 <h2 className="text-xl font-semibold mb-4">{t("deckImageReplacer.resultTitle")}</h2>
                 <div className="space-y-4">
                   <div className="border rounded-lg overflow-hidden">
-                    <img src={generatedImage} alt={t("deckImageReplacer.generatedImageAlt")} className="w-full h-auto" />
+                    <img
+                      src={generatedImage}
+                      alt={t("deckImageReplacer.generatedImageAlt")}
+                      className="w-full h-auto"
+                    />
                   </div>
                   <Button onClick={downloadImage} className="w-full flex items-center justify-center gap-2">
                     <Download className="w-4 h-4" />

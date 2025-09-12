@@ -62,55 +62,41 @@ export function HelpButton() {
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.undoOperation")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.undoDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.undoDescription")}</p>
             </div>
           </TabsContent>
 
           <TabsContent value="zones" className="space-y-4 mt-4 overflow-y-auto flex-1 px-1">
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.cardStacking")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.cardStackingDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.cardStackingDescription")}</p>
             </div>
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.graveBanishZone")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.graveBanishDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.graveBanishDescription")}</p>
             </div>
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.exDeck")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.exDeckDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.exDeckDescription")}</p>
             </div>
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.freeZone")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.freeZoneDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.freeZoneDescription")}</p>
             </div>
           </TabsContent>
 
           <TabsContent value="features" className="space-y-4 mt-4 overflow-y-auto flex-1 px-1">
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.tokenGeneration")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.tokenDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.tokenDescription")}</p>
             </div>
 
             <div className="space-y-1">
               <h3 className="font-semibold text-sm">{t("help.random5Draw")}</h3>
-              <p className="text-sm text-gray-600">
-                {t("help.random5DrawDescription")}
-              </p>
+              <p className="text-sm text-gray-600">{t("help.random5DrawDescription")}</p>
             </div>
 
             <div className="space-y-1">

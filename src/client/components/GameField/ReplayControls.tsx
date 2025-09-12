@@ -95,7 +95,9 @@ export function ReplayControls({
                 <span>{t("replay:controls.stopRecording")}</span>
               </button>
               <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
-                {t("replay:controls.recording", { count: operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length })}
+                {t("replay:controls.recording", {
+                  count: operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length,
+                })}
               </div>
             </>
           )}
@@ -178,7 +180,9 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-xs font-medium text-muted-foreground w-8">{t("replay:settings.times", { count: replaySpeed })}</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">
+              {t("replay:settings.times", { count: replaySpeed })}
+            </span>
           </div>
 
           {/* Start delay control */}
@@ -201,7 +205,9 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-xs font-medium text-muted-foreground w-8">{t("replay:settings.seconds", { count: replayStartDelay })}</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">
+              {t("replay:settings.seconds", { count: replayStartDelay })}
+            </span>
           </div>
         </div>
       </div>
@@ -234,7 +240,10 @@ export function ReplayControls({
               <span>{t("replay:controls.stop")}</span>
             </button>
             <div className="flex items-center px-3 py-1.5 text-sm font-medium text-muted-foreground">
-              {t("replay:controls.step", { current: currentReplayIndex ?? 0, total: replayData?.operations.length ?? 0 })}
+              {t("replay:controls.step", {
+                current: currentReplayIndex ?? 0,
+                total: replayData?.operations.length ?? 0,
+              })}
             </div>
           </div>
         )}
@@ -255,7 +264,9 @@ export function ReplayControls({
               className="cursor-pointer"
             />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{t("replay:settings.times", { count: replaySpeed })}</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            {t("replay:settings.times", { count: replaySpeed })}
+          </span>
         </div>
 
         {/* Start delay control - Always show */}
@@ -278,7 +289,9 @@ export function ReplayControls({
               className="cursor-pointer"
             />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{t("replay:settings.seconds", { count: replayStartDelay })}</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            {t("replay:settings.seconds", { count: replayStartDelay })}
+          </span>
         </div>
       </div>
 

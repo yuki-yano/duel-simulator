@@ -195,8 +195,14 @@ export function ExtraDeckExpandModal({
     >
       {/* Header with close button */}
       <div className="flex items-center justify-between h-7 px-2 border-b border-border">
-        <span className="text-xs font-medium">{t("zones.extraDeck")} ({cards.length})</span>
-        <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label={t("ui:shareUrl.close")}>
+        <span className="text-xs font-medium">
+          {t("zones.extraDeck")} ({cards.length})
+        </span>
+        <button
+          onClick={onClose}
+          className="p-0.5 rounded hover:bg-muted transition-colors"
+          aria-label={t("ui:shareUrl.close")}
+        >
           <X className="w-3 h-3" />
         </button>
       </div>

@@ -305,7 +305,8 @@ export function GraveZone({
         }
       >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-          {type === "grave" ? t("zones.graveyard") : type === "banish" ? t("zones.banished") : t("zones.freeZone")} ({cardCount})
+          {type === "grave" ? t("zones.graveyard") : type === "banish" ? t("zones.banished") : t("zones.freeZone")} (
+          {cardCount})
         </span>
       </div>
     </div>

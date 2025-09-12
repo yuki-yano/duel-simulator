@@ -172,7 +172,11 @@ export function ZoneExpandModal({
         <span className="text-xs font-medium">
           {zone.type === "graveyard" ? t("zones.graveyard") : t("zones.banished")} ({cards.length})
         </span>
-        <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label={t("ui:shareUrl.close")}>
+        <button
+          onClick={onClose}
+          className="p-0.5 rounded hover:bg-muted transition-colors"
+          aria-label={t("ui:shareUrl.close")}
+        >
           <X className="w-3 h-3" />
         </button>
       </div>
