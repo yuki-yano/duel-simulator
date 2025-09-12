@@ -152,6 +152,8 @@
     "deckTypeLabel": "牌組類型",
     "mainDeck": "主牌組",
     "extraDeck": "額外牌組",
+    "sideDeck": "副卡組",
+    "sideDeckCount": "副卡組：{{count}}張",
     "selectPositions": "選擇替換位置（可多選）",
     "selectedCount": "已選：{{count}}個位置",
     "generating": "生成中...",

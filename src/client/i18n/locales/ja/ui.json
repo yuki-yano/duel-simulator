@@ -152,6 +152,8 @@
     "deckTypeLabel": "デッキタイプ",
     "mainDeck": "メインデッキ",
     "extraDeck": "EXデッキ",
+    "sideDeck": "サイドデッキ",
+    "sideDeckCount": "サイドデッキ: {{count}}枚",
     "selectPositions": "置換位置を選択（複数選択可）",
     "selectedCount": "選択中: {{count}}箇所",
     "generating": "生成中...",

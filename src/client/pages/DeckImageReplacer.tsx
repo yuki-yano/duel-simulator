@@ -8,7 +8,7 @@ import { Download, X, Upload } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import "@client/i18n" // Initialize i18n
 
-type DeckType = "main" | "extra"
+type DeckType = "main" | "extra" | "side"
 type CardPosition = {
   deckType: DeckType
   position: number
@@ -168,7 +168,11 @@ export default function DeckImageReplacer() {
         // Draw replacement image at selected positions
         for (const pos of replacementData.positions) {
           const deckSection =
-            pos.deckType === "main" ? deckMetadata.deckConfig.mainDeck : deckMetadata.deckConfig.extraDeck
+            pos.deckType === "main"
+              ? deckMetadata.deckConfig.mainDeck
+              : pos.deckType === "extra"
+                ? deckMetadata.deckConfig.extraDeck
+                : deckMetadata.deckConfig.sideDeck
 
           if (!deckSection) continue
 
@@ -310,6 +314,11 @@ export default function DeckImageReplacer() {
                         {t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}
                       </span>
                     )}
+                    {(deckMetadata.sideDeckCount ?? 0) > 0 && (
+                      <span className="ml-2">
+                        {t("deckImageReplacer.sideDeckCount", { count: deckMetadata.sideDeckCount })}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -434,6 +443,11 @@ export default function DeckImageReplacer() {
                           {t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}
                         </span>
                       )}
+                      {(deckMetadata.sideDeckCount ?? 0) > 0 && (
+                        <span className="ml-4">
+                          {t("deckImageReplacer.sideDeckCount", { count: deckMetadata.sideDeckCount })}
+                        </span>
+                      )}
                     </p>
                   </div>
 
@@ -467,6 +481,18 @@ export default function DeckImageReplacer() {
                               {t("deckImageReplacer.extraDeck")}
                             </button>
                           )}
+                          {(deckMetadata.sideDeckCount ?? 0) > 0 && (
+                            <button
+                              onClick={() => setSelectedDeckType("side")}
+                              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                selectedDeckType === "side"
+                                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              {t("deckImageReplacer.sideDeck")}
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -478,7 +504,11 @@ export default function DeckImageReplacer() {
                         <div className="grid grid-cols-10 gap-1">
                           {Array.from({
                             length:
-                              selectedDeckType === "main" ? deckMetadata.mainDeckCount : deckMetadata.extraDeckCount,
+                              selectedDeckType === "main"
+                                ? deckMetadata.mainDeckCount
+                                : selectedDeckType === "extra"
+                                  ? deckMetadata.extraDeckCount
+                                  : (deckMetadata.sideDeckCount ?? 0),
                           }).map((_, index) => {
                             const position = index + 1
                             const selectedImage = replacementImages.find((img) => img.id === selectedImageId)

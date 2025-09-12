@@ -152,6 +152,8 @@
     "deckTypeLabel": "Deck Type",
     "mainDeck": "Main Deck",
     "extraDeck": "Extra Deck",
+    "sideDeck": "Side Deck",
+    "sideDeckCount": "Side Deck: {{count}} cards",
     "selectPositions": "Select replacement positions (multiple selection)",
     "selectedCount": "Selected: {{count}} positions",
     "generating": "Generating...",

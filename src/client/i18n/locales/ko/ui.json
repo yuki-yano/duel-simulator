@@ -152,6 +152,8 @@
     "deckTypeLabel": "덱 타입",
     "mainDeck": "메인 덱",
     "extraDeck": "엑스트라 덱",
+    "sideDeck": "사이드 덱",
+    "sideDeckCount": "사이드 덱: {{count}}장",
     "selectPositions": "교체 위치 선택 (다중 선택 가능)",
     "selectedCount": "선택됨: {{count}}개 위치",
     "generating": "생성 중...",
