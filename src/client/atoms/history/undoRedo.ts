@@ -19,11 +19,7 @@ import {
   replayTotalOperationsAtom,
   replaySpeedAtom,
 } from "../replay/playback"
-import {
-  replayRecordingAtom,
-  replayOperationsAtom,
-  replayStartIndexAtom,
-} from "../replay/recording"
+import { replayRecordingAtom, replayOperationsAtom, replayStartIndexAtom } from "../replay/recording"
 import {
   cardAnimationsAtom,
   getCardElementPosition,
@@ -506,12 +502,15 @@ export const undoOperationDescriptionAtom = atom((get) => {
     const prevEntry = history[currentIndex - 1]
     const currentEntry = history[currentIndex]
 
-    // Check if only operations changed (same gameState = effect activation)
+    // Check if only operations changed (same gameState = effect activation or negate)
     // Optimization: Check operation count first before expensive JSON comparison
     if (currentEntry.operationCount > prevEntry.operationCount) {
       const lastOperation = operations[currentEntry.operationCount - 1]
       if (lastOperation?.type === "activate") {
         return "効果発動"
+      }
+      if (lastOperation?.type === "negate") {
+        return "無効化"
       }
     }
 
@@ -530,12 +529,15 @@ export const redoOperationDescriptionAtom = atom((get) => {
     const currentEntry = history[currentIndex]
     const nextEntry = history[currentIndex + 1]
 
-    // Check if only operations changed (same gameState = effect activation)
+    // Check if only operations changed (same gameState = effect activation or negate)
     // Optimization: Check operation count first before expensive JSON comparison
     if (nextEntry.operationCount > currentEntry.operationCount) {
       const nextOperation = operations[nextEntry.operationCount - 1]
       if (nextOperation?.type === "activate") {
         return "効果発動"
+      }
+      if (nextOperation?.type === "negate") {
+        return "無効化"
       }
     }
 

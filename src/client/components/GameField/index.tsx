@@ -50,7 +50,12 @@ import {
   forceDraw5CardsAtom,
 } from "@/client/atoms/boardAtoms"
 import { rotateCardAtom, flipCardAtom, toggleCardHighlightAtom } from "@/client/atoms/operations/rotation"
-import { activateEffectAtom, targetSelectAtom, updateCounterAtom } from "@/client/atoms/operations/effects"
+import {
+  activateEffectAtom,
+  targetSelectAtom,
+  negateEffectAtom,
+  updateCounterAtom,
+} from "@/client/atoms/operations/effects"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { CardContextMenu } from "@/client/components/CardContextMenu"
 import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
@@ -118,6 +123,7 @@ export function GameFieldContent() {
   const [, rotateCard] = useAtom(rotateCardAtom)
   const [, activateEffect] = useAtom(activateEffectAtom)
   const [, targetSelect] = useAtom(targetSelectAtom)
+  const [, negateEffect] = useAtom(negateEffectAtom)
   const [, flipCard] = useAtom(flipCardAtom)
   const [, toggleCardHighlight] = useAtom(toggleCardHighlightAtom)
   const [, updateCounter] = useAtom(updateCounterAtom)
@@ -272,6 +278,9 @@ export function GameFieldContent() {
         } else if (action === "target" && contextMenu) {
           // Include card ID in the zone for accurate card identification
           targetSelect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
+        } else if (action === "negate" && contextMenu) {
+          // Include card ID in the zone for accurate card identification
+          negateEffect({ zone: contextMenu.zone, cardId: card.id }, contextMenu.cardElement ?? undefined)
         } else if (action === "flip" && contextMenu) {
           // Include card ID for ID-based tracking
           flipCard({ zone: contextMenu.zone, cardId: card.id })
@@ -295,7 +304,7 @@ export function GameFieldContent() {
         console.error(`Error in handleContextMenuAction (${action}):`, error)
       }
     },
-    [rotateCard, activateEffect, targetSelect, flipCard, toggleCardHighlight, updateCounter, contextMenu],
+    [rotateCard, activateEffect, targetSelect, negateEffect, flipCard, toggleCardHighlight, updateCounter, contextMenu],
   )
 
   // Handle token generation

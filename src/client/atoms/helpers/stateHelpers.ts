@@ -139,7 +139,10 @@ export function performCardMove(
     // Determine if this is a cross-zone move
     // For zones with index (monster, spell/trap, EMZ), check both type and index
     // For zones without index (hand, deck, etc), only check type
-    const hasIndex = actualFromZone.type === "monsterZone" || actualFromZone.type === "spellTrapZone" || actualFromZone.type === "extraMonsterZone"
+    const hasIndex =
+      actualFromZone.type === "monsterZone" ||
+      actualFromZone.type === "spellTrapZone" ||
+      actualFromZone.type === "extraMonsterZone"
     const isCrossZoneMove = hasIndex
       ? actualFromZone.type !== to.zone.type || actualFromZone.index !== to.zone.index
       : actualFromZone.type !== to.zone.type

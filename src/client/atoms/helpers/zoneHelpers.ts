@@ -192,7 +192,12 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
 }
 
 // Remove card from zone by ID
-export function removeCardFromZoneById(player: PlayerBoard, zone: ZoneId, cardId: string, cardIndex?: number): PlayerBoard {
+export function removeCardFromZoneById(
+  player: PlayerBoard,
+  zone: ZoneId,
+  cardId: string,
+  cardIndex?: number,
+): PlayerBoard {
   return produce(player, (draft) => {
     switch (zone.type) {
       case "monsterZone":

@@ -251,10 +251,13 @@ export function DeckZone({
         onDrop={handleDrop}
         style={style}
       >
-        <span 
+        <span
           className={cn(
             "absolute top-1 left-1 text-[10px] sm:text-xs font-medium text-muted-foreground z-10",
-            onLabelClick && !isDisabled && type === "extra" && "cursor-pointer hover:bg-muted/50 rounded px-1 transition-colors",
+            onLabelClick &&
+              !isDisabled &&
+              type === "extra" &&
+              "cursor-pointer hover:bg-muted/50 rounded px-1 transition-colors",
           )}
           onClick={
             onLabelClick && !isDisabled && type === "extra"

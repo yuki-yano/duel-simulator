@@ -748,7 +748,13 @@ export function DeckImageProcessor({
             }
           `}
         >
-          {isProcessing ? "処理中..." : processedCards.length > 0 ? "切り出し済み" : isReplayMode ? "再生を開始" : "カードを切り出す"}
+          {isProcessing
+            ? "処理中..."
+            : processedCards.length > 0
+              ? "切り出し済み"
+              : isReplayMode
+                ? "再生を開始"
+                : "カードを切り出す"}
         </button>
 
         {/* Processed Cards Count */}

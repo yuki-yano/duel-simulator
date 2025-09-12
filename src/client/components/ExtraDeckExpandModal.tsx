@@ -51,7 +51,7 @@ export function ExtraDeckExpandModal({
   const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
 
   // Calculate layout parameters
-  const padding = isSmallScreen ? 12 : 8  // Reduced padding to prevent scroll
+  const padding = isSmallScreen ? 12 : 8 // Reduced padding to prevent scroll
   const headerHeight = 28
   const cardSpacing = window.innerWidth >= SCREEN_WIDTH.MEDIUM ? 15 : 10
 
@@ -193,9 +193,7 @@ export function ExtraDeckExpandModal({
     >
       {/* Header with close button */}
       <div className="flex items-center justify-between h-7 px-2 border-b border-border">
-        <span className="text-xs font-medium">
-          EXデッキ ({cards.length})
-        </span>
+        <span className="text-xs font-medium">EXデッキ ({cards.length})</span>
         <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label="閉じる">
           <X className="w-3 h-3" />
         </button>
@@ -213,9 +211,9 @@ export function ExtraDeckExpandModal({
       >
         <div
           className="relative flex flex-col"
-          style={{ 
+          style={{
             minHeight: `${availableHeight}px`,
-            gap: rowCount > 2 ? '2px' : '4px' 
+            gap: rowCount > 2 ? "2px" : "4px",
           }}
         >
           {Array.from({ length: rowCount }, (_, rowIndex) => {
@@ -233,12 +231,12 @@ export function ExtraDeckExpandModal({
             const needsOverlap = totalWidth > availableWidth
 
             return (
-              <div 
-                key={rowIndex} 
-                className="relative" 
-                style={{ 
+              <div
+                key={rowIndex}
+                className="relative"
+                style={{
                   height: `${cardHeightPx}px`,
-                  width: availableWidth 
+                  width: availableWidth,
                 }}
               >
                 {rowCards.map((card, cardIndex) => {

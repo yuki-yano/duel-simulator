@@ -34,7 +34,10 @@ export function getCardElementPosition(cardId: string, get: Getter): { x: number
 }
 
 // Get card rect
-export function getCardRect(cardId: string | undefined, get: Getter): { x: number; y: number; width: number; height: number } | undefined {
+export function getCardRect(
+  cardId: string | undefined,
+  get: Getter,
+): { x: number; y: number; width: number; height: number } | undefined {
   if (cardId === undefined || cardId === null || cardId === "") return undefined
   const cardRefs = get(cardRefsAtom)
   const element = cardRefs.get(cardId)
@@ -55,7 +58,7 @@ export function createMoveAnimation(
   toPosition: { x: number; y: number },
   fromRotation: number,
   toRotation: number,
-  duration: number
+  duration: number,
 ): CardAnimation {
   return {
     id: uuidv4(),
@@ -77,7 +80,7 @@ export function createRotateAnimation(
   cardImageUrl: string,
   cardRect: { x: number; y: number; width: number; height: number },
   fromRotation: number,
-  toRotation: number
+  toRotation: number,
 ): CardAnimation {
   return {
     id: uuidv4(),
@@ -96,15 +99,15 @@ export function createRotateAnimation(
 export function createActivateAnimation(
   operation: GameOperation,
   currentState: GameState,
-  get: Getter
+  get: Getter,
 ): CardAnimation | null {
   if (!operation.to || !operation.cardId) return null
 
   const cardRect = getCardRect(operation.cardId, get)
-  
+
   let cardRotation: number | undefined = 0
   let cardImageUrl: string | undefined
-  
+
   const player = currentState.players[operation.to.player]
   const result = getCardById(player, operation.cardId)
   if (result) {
@@ -134,19 +137,61 @@ export function createActivateAnimation(
   }
 }
 
-// Create target animation
-export function createTargetAnimation(
+// Create negate animation
+export function createNegateAnimation(
   operation: GameOperation,
   currentState: GameState,
-  get: Getter
+  get: Getter,
 ): CardAnimation | null {
   if (!operation.to || !operation.cardId) return null
 
   const cardRect = getCardRect(operation.cardId, get)
-  
+
   let cardRotation: number | undefined = 0
   let cardImageUrl: string | undefined
-  
+
+  const player = currentState.players[operation.to.player]
+  const result = getCardById(player, operation.cardId)
+  if (result) {
+    cardRotation = result.card.rotation
+    cardImageUrl = result.card.name === "token" ? TOKEN_IMAGE_DATA_URL : result.card.imageUrl
+  }
+
+  const position = {
+    zone: {
+      player: operation.to.player,
+      type: operation.to.zoneType,
+      index: operation.to.zoneIndex,
+      cardId: operation.cardId,
+    },
+    cardId: operation.cardId,
+  }
+
+  return {
+    id: uuidv4(),
+    type: "negate",
+    cardId: operation.cardId,
+    cardImageUrl,
+    position,
+    cardRect,
+    cardRotation,
+    startTime: Date.now(),
+  }
+}
+
+// Create target animation
+export function createTargetAnimation(
+  operation: GameOperation,
+  currentState: GameState,
+  get: Getter,
+): CardAnimation | null {
+  if (!operation.to || !operation.cardId) return null
+
+  const cardRect = getCardRect(operation.cardId, get)
+
+  let cardRotation: number | undefined = 0
+  let cardImageUrl: string | undefined
+
   const player = currentState.players[operation.to.player]
   const result = getCardById(player, operation.cardId)
   if (result) {
@@ -181,15 +226,15 @@ export function createTargetAnimation(
 export function createHighlightAnimation(
   operation: GameOperation,
   currentState: GameState,
-  get: Getter
+  get: Getter,
 ): CardAnimation | null {
   if (!operation.to || !operation.cardId) return null
 
   const cardRect = getCardRect(operation.cardId, get)
-  
+
   let cardRotation: number | undefined = 0
   let cardImageUrl: string | undefined
-  
+
   const player = currentState.players[operation.to.player]
   const result = getCardById(player, operation.cardId)
   if (result) {
@@ -467,6 +512,49 @@ export function createAnimationsFromOperations(
           animations.push({
             id: uuidv4(),
             type: "target",
+            cardId: operation.cardId,
+            cardImageUrl,
+            position,
+            cardRect,
+            cardRotation,
+            startTime: Date.now(),
+            duration: animationDuration,
+          })
+        }
+        break
+
+      case "negate":
+        if (operation.to) {
+          // Get card element position
+          const cardRect = getCardRect(operation.cardId, get)
+
+          // Get card rotation from state
+          let cardRotation: number | undefined = 0
+          const state = isReverse ? prevState : nextState
+          const player = state.players[operation.to.player]
+          const result = getCardById(player, operation.cardId)
+          if (result) {
+            cardRotation = result.card.rotation
+          }
+
+          const position: Position = {
+            zone: {
+              player: operation.to.player,
+              type: operation.to.zoneType,
+              index: operation.to.zoneIndex,
+              cardId: operation.cardId,
+            },
+            cardId: operation.cardId,
+          }
+
+          let cardImageUrl: string | undefined
+          if (result) {
+            cardImageUrl = result.card.name === "token" ? TOKEN_IMAGE_DATA_URL : result.card.imageUrl
+          }
+
+          animations.push({
+            id: uuidv4(),
+            type: "negate",
             cardId: operation.cardId,
             cardImageUrl,
             position,

@@ -6,6 +6,7 @@ import { EffectActivationAnimation } from "./EffectActivationAnimation"
 import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 import { HighlightAnimation } from "./HighlightAnimation"
 import { RotateAnimation } from "./RotateAnimation"
+import { NegateAnimation } from "./NegateAnimation"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 
 interface AnimatedCardProps {
@@ -122,6 +123,17 @@ export function CardAnimationOverlay() {
               toRotation={animation.toRotation ?? 0}
               cardImageUrl={animation.cardImageUrl}
               duration={animation.duration}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        } else if (animation.type === "negate" && animation.position) {
+          return (
+            <NegateAnimation
+              key={animation.id}
+              position={animation.position}
+              cardRect={animation.cardRect}
+              cardRotation={animation.cardRotation}
+              cardImageUrl={animation.cardImageUrl}
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )

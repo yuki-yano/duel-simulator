@@ -7,9 +7,9 @@ import { gameStateAtom } from "../core/gameState"
 import { gameHistoryAtom, gameHistoryIndexAtom, resetHistoryAtom } from "../history/historyStack"
 import { highlightedZonesAtom } from "../ui/selection"
 import { replayDataAtom } from "./recording"
-import { 
-  cardAnimationsAtom, 
-  replaySpeedAtom, 
+import {
+  cardAnimationsAtom,
+  replaySpeedAtom,
   replayStartDelayAtom,
   getAnimationDuration,
   getCardElementPosition,
@@ -17,8 +17,9 @@ import {
   createMoveAnimation,
   createRotateAnimation,
   createActivateAnimation,
+  createNegateAnimation,
   createTargetAnimation,
-  createHighlightAnimation
+  createHighlightAnimation,
 } from "./animations"
 import { getCardById, findMovedCards } from "../helpers/cardHelpers"
 import { applyOperation } from "../helpers/stateHelpers"
@@ -79,10 +80,10 @@ async function handleMoveAnimation(
   nextState: GameState,
   operation: GameOperation,
   get: Getter,
-  set: Setter
+  set: Setter,
 ): Promise<void> {
   const movedCards = findMovedCards(currentState, nextState)
-  
+
   if (movedCards.length === 0) return
 
   // Get positions before state update
@@ -125,8 +126,8 @@ async function handleMoveAnimation(
           prevPos, // Will be updated after state change
           fromRotation,
           toRotation,
-          animationDuration
-        )
+          animationDuration,
+        ),
       )
     }
   }
@@ -162,7 +163,7 @@ async function handleRotateAnimation(
   nextState: GameState,
   operation: GameOperation,
   get: Getter,
-  set: Setter
+  set: Setter,
 ): Promise<void> {
   if (!operation.to || !operation.metadata || !("angle" in operation.metadata)) return
 
@@ -196,7 +197,7 @@ async function handleRotateAnimation(
     // Create rotation animation
     set(cardAnimationsAtom, [
       ...animations,
-      createRotateAnimation(operation.cardId, cardImageUrl, cardRect, fromRotation, toRotation)
+      createRotateAnimation(operation.cardId, cardImageUrl, cardRect, fromRotation, toRotation),
     ])
   }
 
@@ -220,7 +221,7 @@ async function handleActivateAnimation(
   nextState: GameState,
   operation: GameOperation,
   get: Getter,
-  set: Setter
+  set: Setter,
 ): Promise<void> {
   if (!operation.to) return
 
@@ -256,7 +257,7 @@ async function handleTargetAnimation(
   nextState: GameState,
   operation: GameOperation,
   get: Getter,
-  set: Setter
+  set: Setter,
 ): Promise<void> {
   if (!operation.to) return
 
@@ -278,13 +279,49 @@ async function handleTargetAnimation(
   await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.TARGET.ANIMATION * 2, get)))
 }
 
+// Helper: Handle negate animation
+async function handleNegateAnimation(
+  currentState: GameState,
+  nextState: GameState,
+  operation: GameOperation,
+  get: Getter,
+  set: Setter,
+): Promise<void> {
+  if (!operation.to) return
+
+  // Update state (no change for negate) WITHOUT adding to history
+  const operationIndex = get(replayCurrentIndexAtom) ?? 0
+  updateReplayState(set, nextState, operationIndex + 1)
+
+  // Small delay to ensure DOM is updated
+  await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+
+  // Create negate animation
+  const animation = createNegateAnimation(operation, currentState, get)
+  if (animation) {
+    const animations = get(cardAnimationsAtom)
+    set(cardAnimationsAtom, [...animations, animation])
+
+    // Remove animation after duration
+    setTimeout(
+      () => {
+        set(cardAnimationsAtom, (anims) => anims.filter((a) => a.id !== animation.id))
+      },
+      getAnimationDuration(ANIM.EFFECT.ANIMATION, get),
+    )
+  }
+
+  // Wait for negate animation
+  await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.EFFECT.DURATION, get)))
+}
+
 // Helper: Handle highlight animation
 async function handleHighlightAnimation(
   currentState: GameState,
   nextState: GameState,
   operation: GameOperation,
   get: Getter,
-  set: Setter
+  set: Setter,
 ): Promise<void> {
   if (!operation.to) return
 
@@ -306,11 +343,7 @@ async function handleHighlightAnimation(
 }
 
 // Helper: Handle summon animation
-async function handleSummonAnimation(
-  nextState: GameState,
-  get: Getter,
-  set: Setter
-): Promise<void> {
+async function handleSummonAnimation(nextState: GameState, get: Getter, set: Setter): Promise<void> {
   // Update state for summon (token generation)
   const operationIndex = get(replayCurrentIndexAtom) ?? 0
   updateReplayState(set, nextState, operationIndex + 1)
@@ -323,11 +356,7 @@ async function handleSummonAnimation(
 }
 
 // Helper: Handle other operations
-async function handleOtherOperation(
-  nextState: GameState,
-  get: Getter,
-  set: Setter
-): Promise<void> {
+async function handleOtherOperation(nextState: GameState, get: Getter, set: Setter): Promise<void> {
   // Other operations (no movement, no rotation, no activation) WITHOUT adding to history
   const operationIndex = get(replayCurrentIndexAtom) ?? 0
   updateReplayState(set, nextState, operationIndex + 1)
@@ -472,6 +501,10 @@ export const playReplayAtom = atom(null, async (get, set) => {
           await handleTargetAnimation(currentState, nextState, operation, get, set)
           currentState = nextState
           break
+        case "negate":
+          await handleNegateAnimation(currentState, nextState, operation, get, set)
+          currentState = nextState
+          break
         case "toggleHighlight":
           await handleHighlightAnimation(currentState, nextState, operation, get, set)
           currentState = nextState
@@ -509,6 +542,9 @@ export const playReplayAtom = atom(null, async (get, set) => {
       } else if (finalOperation.type === "target") {
         // Wait for target animation (expand + shrink)
         await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.TARGET.ANIMATION * 2, get)))
+      } else if (finalOperation.type === "negate") {
+        // Wait for negate animation
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.EFFECT.DURATION, get)))
       }
     }
   }

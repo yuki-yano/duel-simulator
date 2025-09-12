@@ -1,12 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
-import {
-  draggedCardAtom,
-  replayPlayingAtom,
-  cardAnimationsAtom,
-  updateCardRefAtom,
-} from "@/client/atoms/boardAtoms"
+import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, updateCardRefAtom } from "@/client/atoms/boardAtoms"
 import { activateEffectAtom, targetSelectAtom } from "@/client/atoms/operations/effects"
 import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"

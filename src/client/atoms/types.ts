@@ -28,7 +28,7 @@ export interface ReplayData {
 // Card animation for visual effects
 export interface CardAnimation {
   id: string
-  type: "move" | "activate" | "target" | "rotate" | "changePosition" | "highlight"
+  type: "move" | "activate" | "target" | "rotate" | "changePosition" | "highlight" | "negate"
   cardId?: string
   cardImageUrl?: string
   fromPosition?: { x: number; y: number }
