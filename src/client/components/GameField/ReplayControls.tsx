@@ -1,6 +1,7 @@
 import { cn } from "@client/lib/utils"
 import { Circle, Square, Play, Pause, Share2 } from "lucide-react"
 import { Slider } from "@client/components/ui/slider"
+import { useTranslation } from "react-i18next"
 
 interface ReplayControlsProps {
   // Recording state
@@ -52,6 +53,8 @@ export function ReplayControls({
   onReplayStartDelayChange,
   onShareReplay,
 }: ReplayControlsProps) {
+  const { t } = useTranslation(["replay"])
+
   return (
     <div className="mb-2 flex justify-start gap-2 flex-wrap" data-html2canvas-ignore="true">
       {!isPlaying && (
@@ -77,7 +80,7 @@ export function ReplayControls({
               aria-label="Start recording"
             >
               <Circle className="w-4 h-4" />
-              <span>リプレイ保存開始</span>
+              <span>{t("replay:controls.startRecording")}</span>
             </button>
           ) : (
             <>
@@ -89,10 +92,10 @@ export function ReplayControls({
                 aria-label="Stop recording"
               >
                 <Square className="w-4 h-4" />
-                <span>保存停止</span>
+                <span>{t("replay:controls.stopRecording")}</span>
               </button>
               <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground">
-                保存中: {operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length} 操作
+                {t("replay:controls.recording", { count: operations.filter((op) => op.timestamp >= (replayData?.startTime ?? Date.now())).length })}
               </div>
             </>
           )}
@@ -106,7 +109,7 @@ export function ReplayControls({
                 aria-label="Play replay"
               >
                 <Play className="w-4 h-4" />
-                <span>リプレイ再生</span>
+                <span>{t("replay:controls.play")}</span>
               </button>
 
               {/* Share replay button */}
@@ -116,7 +119,7 @@ export function ReplayControls({
                 aria-label="Share replay"
               >
                 <Share2 className="w-4 h-4" />
-                <span>共有</span>
+                <span>{t("replay:controls.share")}</span>
               </button>
             </>
           )}
@@ -138,7 +141,7 @@ export function ReplayControls({
             aria-label={isPaused ? "Resume" : "Pause"}
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-            <span>{isPaused ? "再開" : "一時停止"}</span>
+            <span>{isPaused ? t("replay:controls.resume") : t("replay:controls.pause")}</span>
           </button>
           <button
             onClick={() => onStopReplay()}
@@ -146,10 +149,10 @@ export function ReplayControls({
             aria-label="Stop replay"
           >
             <Square className="w-4 h-4" />
-            <span>停止</span>
+            <span>{t("replay:controls.stop")}</span>
           </button>
           <div className="flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+            {t("replay:controls.step", { current: currentReplayIndex ?? 0, total: replayData?.operations.length ?? 0 })}
           </div>
         </div>
       )}
@@ -159,7 +162,7 @@ export function ReplayControls({
         <div className="flex flex-wrap gap-2">
           {/* Replay speed control */}
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-xs text-muted-foreground">速度:</span>
+            <span className="text-xs text-muted-foreground">{t("replay:settings.speed")}</span>
             <div className="flex-1 max-w-[120px]">
               <Slider
                 value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
@@ -175,12 +178,12 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-xs font-medium text-muted-foreground w-8">{replaySpeed}x</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">{t("replay:settings.times", { count: replaySpeed })}</span>
           </div>
 
           {/* Start delay control */}
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-xs text-muted-foreground">待機:</span>
+            <span className="text-xs text-muted-foreground">{t("replay:settings.wait")}</span>
             <div className="flex-1 max-w-[120px]">
               <Slider
                 value={[replayStartDelay]}
@@ -198,7 +201,7 @@ export function ReplayControls({
                 className="cursor-pointer"
               />
             </div>
-            <span className="text-xs font-medium text-muted-foreground w-8">{replayStartDelay}秒</span>
+            <span className="text-xs font-medium text-muted-foreground w-8">{t("replay:settings.seconds", { count: replayStartDelay })}</span>
           </div>
         </div>
       </div>
@@ -220,7 +223,7 @@ export function ReplayControls({
               aria-label={isPaused ? "Resume" : "Pause"}
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              <span>{isPaused ? "再開" : "一時停止"}</span>
+              <span>{isPaused ? t("replay:controls.resume") : t("replay:controls.pause")}</span>
             </button>
             <button
               onClick={() => onStopReplay()}
@@ -228,17 +231,17 @@ export function ReplayControls({
               aria-label="Stop replay"
             >
               <Square className="w-4 h-4" />
-              <span>停止</span>
+              <span>{t("replay:controls.stop")}</span>
             </button>
             <div className="flex items-center px-3 py-1.5 text-sm font-medium text-muted-foreground">
-              ステップ: {currentReplayIndex ?? 0} / {replayData?.operations.length ?? 0}
+              {t("replay:controls.step", { current: currentReplayIndex ?? 0, total: replayData?.operations.length ?? 0 })}
             </div>
           </div>
         )}
 
         {/* Replay speed control - Always show */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">速度:</span>
+          <span className="text-sm text-muted-foreground">{t("replay:settings.speed")}</span>
           <div className="w-24">
             <Slider
               value={[replaySpeed === 0.5 ? 0 : replaySpeed === 1 ? 1 : replaySpeed === 2 ? 2 : 3]}
@@ -252,12 +255,12 @@ export function ReplayControls({
               className="cursor-pointer"
             />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{replaySpeed}x</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("replay:settings.times", { count: replaySpeed })}</span>
         </div>
 
         {/* Start delay control - Always show */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">待機:</span>
+          <span className="text-sm text-muted-foreground">{t("replay:settings.wait")}</span>
           <div className="w-24">
             <Slider
               value={[replayStartDelay]}
@@ -275,7 +278,7 @@ export function ReplayControls({
               className="cursor-pointer"
             />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{replayStartDelay}秒</span>
+          <span className="text-sm font-medium text-muted-foreground">{t("replay:settings.seconds", { count: replayStartDelay })}</span>
         </div>
       </div>
 
@@ -283,7 +286,7 @@ export function ReplayControls({
       {isRecording && (
         <div className="flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-red-600">
           <Circle className="w-3 h-3 mr-1 animate-pulse fill-current" />
-          録画中 (開始: ステップ {replayStartIndex !== null ? replayStartIndex : 0})
+          {t("replay:controls.recordingStatus", { startStep: replayStartIndex !== null ? replayStartIndex : 0 })}
         </div>
       )}
     </div>

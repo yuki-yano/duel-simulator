@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
+import { useTranslation } from "react-i18next"
 import { loadGameState } from "@client/api/gameState"
 
 interface GoToReplayDialogProps {
@@ -9,6 +10,7 @@ interface GoToReplayDialogProps {
 }
 
 export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps) {
+  const { t } = useTranslation(["ui", "common"])
   const [replayId, setReplayId] = useState("")
   const [isChecking, setIsChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -16,7 +18,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
 
   const handleGoToReplay = async () => {
     if (!replayId.trim()) {
-      setError("リプレイIDを入力してください")
+      setError(t("ui:goToReplay.enterReplayId"))
       return
     }
 
@@ -32,7 +34,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
       onOpenChange(false)
     } catch (e) {
       console.error("Failed to check replay:", e)
-      setError("リプレイが見つかりません")
+      setError(t("ui:goToReplay.notFound"))
     } finally {
       setIsChecking(false)
     }
@@ -48,13 +50,13 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>リプレイを開く</DialogTitle>
-          <DialogDescription>リプレイIDを入力して、保存されたリプレイを開きます。</DialogDescription>
+          <DialogTitle>{t("ui:goToReplay.title")}</DialogTitle>
+          <DialogDescription>{t("ui:goToReplay.description")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <label htmlFor="replayId" className="text-sm font-medium">
-              リプレイID
+              {t("ui:goToReplay.replayIdLabel")}
             </label>
             <input
               id="replayId"
@@ -65,7 +67,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
                 setError(null)
               }}
               onKeyPress={handleKeyPress}
-              placeholder="例: xc3k2m9p"
+              placeholder={t("ui:goToReplay.placeholder")}
               className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               autoFocus
               disabled={isChecking}
@@ -80,7 +82,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
             disabled={isChecking}
           >
-            キャンセル
+            {t("common:button.cancel")}
           </button>
           <button
             type="button"
@@ -88,7 +90,7 @@ export function GoToReplayDialog({ isOpen, onOpenChange }: GoToReplayDialogProps
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isChecking || !replayId.trim()}
           >
-            {isChecking ? "確認中..." : "開く"}
+            {isChecking ? t("ui:goToReplay.checking") : t("ui:goToReplay.open")}
           </button>
         </div>
       </DialogContent>

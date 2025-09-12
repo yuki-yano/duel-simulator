@@ -1,0 +1,81 @@
+{
+  "zones": {
+    "hand": "Hand",
+    "deck": "Deck",
+    "graveyard": "Graveyard",
+    "banished": "Banished",
+    "extraDeck": "Extra Deck",
+    "fieldZone": "Field Zone",
+    "monsterZone": "Monster Zone",
+    "spellTrapZone": "Spell & Trap Zone",
+    "extraMonsterZone": "Extra Monster Zone",
+    "freeZone": "Free Zone",
+    "sideFreeZone": "Side Free Zone"
+  },
+  "position": {
+    "attack": "Attack Position",
+    "defense": "Defense Position",
+    "faceUp": "Face-up",
+    "faceDown": "Face-down",
+    "faceDownDefense": "Face-down Defense"
+  },
+  "actions": {
+    "summon": "Summon",
+    "set": "Set",
+    "specialSummon": "Special Summon",
+    "draw": "Draw",
+    "destroy": "Destroy",
+    "banish": "Banish",
+    "negate": "Negate",
+    "shuffle": "Shuffle",
+    "moveToTop": "Stack on top",
+    "moveToBottom": "Stack at bottom"
+  },
+  "cardType": {
+    "monster": "Monster",
+    "spell": "Spell",
+    "trap": "Trap"
+  },
+  "mobile": {
+    "defensePosition": "Defense Position",
+    "faceDown": "Face-down",
+    "stackAtBottom": "Stack at bottom",
+    "stackAtTop": "Stack on top"
+  },
+  "contextMenu": {
+    "activate": "Activate Effect",
+    "negate": "Negate",
+    "target": "Target",
+    "highlight": "Highlight",
+    "unhighlight": "Remove Highlight",
+    "setAttackPosition": "Set to Attack Position",
+    "setDefensePosition": "Set to Defense Position",
+    "setFaceUp": "Set Face-up",
+    "setFaceDown": "Set Face-down",
+    "addCounter": "Add Counter",
+    "removeCounter": "Remove Counter"
+  },
+  "field": {
+    "otherOperations": "Other Operations",
+    "opponentFieldShow": "Show Opponent Field",
+    "opponentFieldHide": "Hide Opponent Field",
+    "fiveDraw": "Random 5 Draw",
+    "shuffle": "Shuffle",
+    "generateToken": "Generate Token",
+    "reorderEnable": "Enable Reorder",
+    "reorderDisable": "Disable Reorder",
+    "operationHints": "Operation Hints",
+    "shiftDrag": "Shift + Drag",
+    "emptyZone": "Empty zone: Defense/Set",
+    "cardZone": "Zone with cards: Stack at bottom",
+    "dropOnCards": "Drop on cards",
+    "stackTop": "Normal: Stack at top",
+    "stackBottom": "Shift held: Stack at bottom",
+    "graveClickExpand": "Graveyard/Banished label click: Expand zone",
+    "rightClickMenu": "Right click: Card menu",
+    "doubleClickEffect": "Double click: Activate effect",
+    "shiftDoubleClickTarget": "Shift + Double click: Target",
+    "undoShortcut": "Ctrl/Cmd + Z: Undo",
+    "redoShortcut": "Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo"
+  }
+}

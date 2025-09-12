@@ -6,6 +6,7 @@ import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 import { SCREEN_WIDTH } from "@client/constants/screen"
+import { useTranslation } from "react-i18next"
 import type { DeckZoneProps } from "./types"
 
 export function DeckZone({
@@ -23,6 +24,7 @@ export function DeckZone({
   onLabelClick,
   isDisabled = false,
 }: DeckZoneProps) {
+  const { t } = useTranslation("game")
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
   const { isLargeScreen, isMediumScreen, isSmallScreen } = useScreenSize()
@@ -268,7 +270,7 @@ export function DeckZone({
               : undefined
           }
         >
-          {type === "deck" ? "デッキ" : type === "extra" ? "EXデッキ" : "手札"} ({cardCount})
+          {type === "deck" ? t("zones.deck") : type === "extra" ? t("zones.extraDeck") : t("zones.hand")} ({cardCount})
         </span>
         {cardCount > 0 ? (
           <div

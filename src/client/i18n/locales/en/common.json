@@ -1,0 +1,29 @@
+{
+  "error": "Error",
+  "ok": "OK",
+  "button": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "reset": "Reset",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "share": "Share",
+    "apply": "Apply"
+  },
+  "loading": {
+    "saving": "Saving...",
+    "generating": "Generating...",
+    "processing": "Processing..."
+  },
+  "error": {
+    "title": "Error",
+    "generic": "An error occurred",
+    "network": "Network error",
+    "notFound": "Not found"
+  },
+  "dialog": {
+    "openImage": "Open Image",
+    "saveImage": "Save Image"
+  }
+}

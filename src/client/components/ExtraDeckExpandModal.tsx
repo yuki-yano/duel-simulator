@@ -7,6 +7,7 @@ import { draggedCardAtom, hoveredZoneAtom } from "@/client/atoms/boardAtoms"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 import { useDeviceType } from "@client/hooks/useDeviceType"
 import { SCREEN_WIDTH } from "@client/constants/screen"
+import { useTranslation } from "react-i18next"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 
 interface ExtraDeckExpandModalProps {
@@ -33,6 +34,7 @@ export function ExtraDeckExpandModal({
   onContextMenuClose,
   modalBounds,
 }: ExtraDeckExpandModalProps) {
+  const { t } = useTranslation(["game", "ui"])
   const modalRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
@@ -193,8 +195,8 @@ export function ExtraDeckExpandModal({
     >
       {/* Header with close button */}
       <div className="flex items-center justify-between h-7 px-2 border-b border-border">
-        <span className="text-xs font-medium">EXデッキ ({cards.length})</span>
-        <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label="閉じる">
+        <span className="text-xs font-medium">{t("zones.extraDeck")} ({cards.length})</span>
+        <button onClick={onClose} className="p-0.5 rounded hover:bg-muted transition-colors" aria-label={t("ui:shareUrl.close")}>
           <X className="w-3 h-3" />
         </button>
       </div>

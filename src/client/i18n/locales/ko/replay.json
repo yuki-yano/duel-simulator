@@ -1,0 +1,57 @@
+{
+  "controls": {
+    "startRecording": "녹화 시작",
+    "stopRecording": "녹화 중지",
+    "recording": "녹화 중: {{count}}개 작업",
+    "play": "리플레이 재생",
+    "resume": "재개",
+    "pause": "일시정지",
+    "stop": "정지",
+    "share": "공유",
+    "step": "단계: {{current}} / {{total}}",
+    "recordingStatus": "녹화 중 (시작: 단계 {{startStep}})"
+  },
+  "settings": {
+    "speed": "속도:",
+    "wait": "대기:",
+    "seconds": "{{count}}초",
+    "times": "{{count}}배"
+  },
+  "dialog": {
+    "saveTitle": "리플레이 저장",
+    "saveDescription": "리플레이를 저장하여 다른 사람과 공유할 수 있습니다.",
+    "titleLabel": "제목",
+    "descriptionLabel": "설명 (선택사항)",
+    "titlePlaceholder": "",
+    "descriptionPlaceholder": "리플레이 설명 입력...",
+    "duration": "리플레이 길이: {{duration}}초",
+    "operationCount": "작업 수: {{count}}회",
+    "goToReplay": "리플레이로 이동",
+    "replayIdLabel": "리플레이 ID",
+    "replayIdPlaceholder": "리플레이 ID 입력"
+  },
+  "share": {
+    "title": "공유 URL",
+    "copied": "복사됨!"
+  },
+  "errors": {
+    "noReplayId": "리플레이 ID가 지정되지 않았습니다",
+    "notFound": "리플레이를 찾을 수 없습니다",
+    "deckImageLoadFailed": "덱 이미지 로드 실패",
+    "deckInfoCorrupted": "덱 정보가 손상되었습니다",
+    "loadFailed": "리플레이 로드 실패",
+    "dataUnavailable": "리플레이 데이터를 사용할 수 없습니다",
+    "invalidFormat": "리플레이 데이터 형식이 잘못되었습니다",
+    "oldFormatCardMapping": "이전 리플레이 형식 (카드 ID 매핑 누락)",
+    "oldFormatInitialState": "이전 리플레이 형식 (초기 상태 데이터 잘못됨)",
+    "oldFormatOperations": "이전 리플레이 형식 (작업 기록 잘못됨)",
+    "cannotPlayInCurrentVersion": "이 리플레이는 현재 버전에서 재생할 수 없습니다. 일반 작업은 여전히 가능합니다.",
+    "prepareFailed": "리플레이 준비 실패",
+    "startFailed": "리플레이 시작 실패",
+    "saveFailed": "리플레이 저장 실패"
+  },
+  "messages": {
+    "loading": "리플레이 로딩 중...",
+    "clickToCopy": "클릭하여 복사"
+  }
+}

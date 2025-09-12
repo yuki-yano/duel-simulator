@@ -1,0 +1,29 @@
+{
+  "error": "エラー",
+  "ok": "OK",
+  "button": {
+    "undo": "元に戻す",
+    "redo": "やり直す",
+    "reset": "リセット",
+    "close": "閉じる",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "share": "共有",
+    "apply": "適用"
+  },
+  "loading": {
+    "saving": "保存中...",
+    "generating": "生成中...",
+    "processing": "処理中..."
+  },
+  "error": {
+    "title": "エラー",
+    "generic": "エラーが発生しました",
+    "network": "ネットワークエラー",
+    "notFound": "見つかりません"
+  },
+  "dialog": {
+    "openImage": "画像を開く",
+    "saveImage": "画像を保存"
+  }
+}

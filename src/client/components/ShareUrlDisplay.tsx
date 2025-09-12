@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
+import { useTranslation } from "react-i18next"
 
 interface ShareUrlDisplayProps {
   isOpen: boolean
@@ -11,6 +12,7 @@ interface ShareUrlDisplayProps {
 
 export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, onClose }: ShareUrlDisplayProps) {
   const [copied, setCopied] = useState(false)
+  const { t } = useTranslation("ui")
 
   const handleCopy = async () => {
     try {
@@ -26,8 +28,8 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, on
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>リプレイを保存しました！</DialogTitle>
-          <DialogDescription>以下のURLを共有すると、他の人がリプレイを見ることができます。</DialogDescription>
+          <DialogTitle>{t("shareUrl.replaySaved")}</DialogTitle>
+          <DialogDescription>{t("shareUrl.shareDescription")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex gap-2">
@@ -42,7 +44,7 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, on
               onClick={handleCopy}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2"
             >
-              {copied ? "コピーしました！" : "コピー"}
+              {copied ? t("shareUrl.copied") : t("shareUrl.copy")}
             </button>
           </div>
           <div className="flex gap-2">
@@ -55,13 +57,13 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, on
               }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-black text-white hover:bg-gray-800 h-10 px-4 py-2"
             >
-              Xにポスト
+              {t("shareUrl.postToX")}
             </button>
             <button
               onClick={() => window.open(shareUrl, "_blank", "noopener,noreferrer")}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gray-600 text-white hover:bg-gray-700 h-10 px-4 py-2"
             >
-              リプレイを開く
+              {t("shareUrl.openReplay")}
             </button>
           </div>
         </div>
@@ -70,7 +72,7 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, on
             onClick={onClose}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-gray-300 bg-white hover:bg-gray-100 h-10 px-4 py-2"
           >
-            閉じる
+            {t("shareUrl.close")}
           </button>
         </div>
       </DialogContent>

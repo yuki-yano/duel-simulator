@@ -1,0 +1,57 @@
+{
+  "controls": {
+    "startRecording": "開始錄製",
+    "stopRecording": "停止錄製",
+    "recording": "錄製中: {{count}} 操作",
+    "play": "播放重播",
+    "resume": "繼續",
+    "pause": "暫停",
+    "stop": "停止",
+    "share": "分享",
+    "step": "步驟: {{current}} / {{total}}",
+    "recordingStatus": "錄製中 (開始: 步驟 {{startStep}})"
+  },
+  "settings": {
+    "speed": "速度:",
+    "wait": "等待:",
+    "seconds": "{{count}}秒",
+    "times": "{{count}}倍"
+  },
+  "dialog": {
+    "saveTitle": "儲存重播",
+    "saveDescription": "儲存您的重播以便與他人分享。",
+    "titleLabel": "標題",
+    "descriptionLabel": "描述（選填）",
+    "titlePlaceholder": "",
+    "descriptionPlaceholder": "輸入重播描述...",
+    "duration": "重播長度：{{duration}}秒",
+    "operationCount": "操作數：{{count}}次",
+    "goToReplay": "前往重播",
+    "replayIdLabel": "重播ID",
+    "replayIdPlaceholder": "輸入重播ID"
+  },
+  "share": {
+    "title": "分享連結",
+    "copied": "已複製！"
+  },
+  "errors": {
+    "noReplayId": "未指定重播ID",
+    "notFound": "找不到重播",
+    "deckImageLoadFailed": "載入牌組圖片失敗",
+    "deckInfoCorrupted": "牌組資訊已損壞",
+    "loadFailed": "載入重播失敗",
+    "dataUnavailable": "重播資料不可用",
+    "invalidFormat": "重播資料格式無效",
+    "oldFormatCardMapping": "舊版重播格式（缺少卡片ID對應）",
+    "oldFormatInitialState": "舊版重播格式（初始狀態資料無效）",
+    "oldFormatOperations": "舊版重播格式（操作記錄無效）",
+    "cannotPlayInCurrentVersion": "此重播無法在當前版本播放。但仍可進行正常操作。",
+    "prepareFailed": "準備重播失敗",
+    "startFailed": "啟動重播失敗",
+    "saveFailed": "儲存回放失敗"
+  },
+  "messages": {
+    "loading": "載入重播中...",
+    "clickToCopy": "點擊複製"
+  }
+}

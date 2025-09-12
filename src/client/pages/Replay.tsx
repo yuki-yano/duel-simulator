@@ -4,6 +4,9 @@ import { Card, CardContent } from "@client/components/ui/Card"
 import { Button } from "@client/components/ui/button"
 import { Copy } from "lucide-react"
 import { GameField } from "@client/components/GameField"
+import { LanguageSelector } from "@client/components/LanguageSelector"
+import { useTranslation } from "react-i18next"
+import "@client/i18n" // Initialize i18n
 import { loadGameState } from "@client/api/gameState"
 import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
 import type { DeckCardIdsMapping, DeckConfiguration } from "@/shared/types/game"
@@ -26,6 +29,7 @@ import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema
 import { cn } from "@/client/lib/utils"
 
 export default function Replay() {
+  const { t } = useTranslation(["ui", "replay"])
   const { id } = useParams<{ id: string }>()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +63,7 @@ export default function Replay() {
 
   useEffect(() => {
     if (id == null || id === "") {
-      setError("リプレイIDが指定されていません")
+      setError(t("replay:errors.noReplayId"))
       setIsLoading(false)
       return
     }
@@ -83,7 +87,7 @@ export default function Replay() {
       } catch (_e) {
         // Handle API errors (404, network errors, etc)
         setIsFatalError(true)
-        throw new Error("リプレイが見つかりません")
+        throw new Error(t("replay:errors.notFound"))
       }
 
       // Store saved state for later use
@@ -99,7 +103,7 @@ export default function Replay() {
         console.error("Failed to load deck image:", e)
         // This is a fatal error - deck image is required
         setIsFatalError(true)
-        throw new Error("デッキ画像の読み込みに失敗しました")
+        throw new Error(t("replay:errors.deckImageLoadFailed"))
       }
 
       // Parse and validate deck config - but don't fail if it's invalid
@@ -136,7 +140,7 @@ export default function Replay() {
       // If we have critical data missing that prevents deck display, it's fatal
       if (deckData.mainDeckCount === 0 && deckData.extraDeckCount === 0) {
         setIsFatalError(true)
-        throw new Error("デッキ情報が破損しています")
+        throw new Error(t("replay:errors.deckInfoCorrupted"))
       }
 
       // Set title and description
@@ -144,7 +148,7 @@ export default function Replay() {
       setDescription(savedState.description ?? "")
 
       // Set document title
-      document.title = `${savedState.title} - Duel Simulator`
+      document.title = `${savedState.title} - ${t("ui:page.homeTitle")}`
 
       // Set deck metadata - always set if we have deck image data
       // This allows deck display even if deckCardIds is invalid
@@ -279,7 +283,7 @@ export default function Replay() {
       if (error instanceof Error) {
         setError(error.message)
       } else {
-        setError("リプレイの読み込みに失敗しました")
+        setError(t("replay:errors.loadFailed"))
       }
 
       setIsLoading(false)
@@ -342,7 +346,7 @@ export default function Replay() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">リプレイを読み込み中...</p>
+          <p className="mt-4 text-gray-600">{t("replay:messages.loading")}</p>
         </div>
       </div>
     )
@@ -355,7 +359,7 @@ export default function Replay() {
         <div className="text-center">
           <p className="text-red-600 font-semibold">{error}</p>
           <Button asChild variant="link" className="mt-4">
-            <a href="/">ホームに戻る</a>
+            <a href="/">{t("ui:error.returnHome")}</a>
           </Button>
         </div>
       </div>
@@ -371,7 +375,7 @@ export default function Replay() {
   const handleReplayStart = async () => {
     // Check if saved state data is available
     if (!savedStateData || !deckMetadata) {
-      setError("リプレイデータが利用できません")
+      setError(t("replay:errors.dataUnavailable"))
       setShowErrorDialog(true)
       setShowDeckProcessor(false)
       return
@@ -387,18 +391,18 @@ export default function Replay() {
         console.error("Replay validation errors:", errors)
 
         // Determine specific compatibility issue
-        let validationError = "リプレイデータの形式が不正です"
+        let validationError = t("replay:errors.invalidFormat")
         if (errors.data?.deckCardIds?._errors && errors.data.deckCardIds._errors.length > 0) {
-          validationError = "古い形式のリプレイです（カードIDマッピングが不足）"
+          validationError = t("replay:errors.oldFormatCardMapping")
         } else if (errors.data?.initialState?._errors && errors.data.initialState._errors.length > 0) {
-          validationError = "古い形式のリプレイです（初期状態データが不正）"
+          validationError = t("replay:errors.oldFormatInitialState")
         } else if (errors.data?.operations?._errors && errors.data.operations._errors.length > 0) {
-          validationError = "古い形式のリプレイです（操作履歴が不正）"
+          validationError = t("replay:errors.oldFormatOperations")
         }
 
         // Show error dialog but still allow normal play
         setError(validationError)
-        setErrorDetails("このリプレイは現在のバージョンで再生できません。通常の操作は可能です。")
+        setErrorDetails(t("replay:errors.cannotPlayInCurrentVersion"))
         setShowErrorDialog(true)
 
         // バリデーションエラーでも、デッキの初期状態を設定して通常操作可能にする
@@ -553,7 +557,7 @@ export default function Replay() {
       setShowAutoPlayDialog(true)
     } catch (e) {
       console.error("Failed to prepare replay:", e)
-      setError("リプレイの準備に失敗しました")
+      setError(t("replay:errors.prepareFailed"))
       setShowErrorDialog(true)
       setShowDeckProcessor(false)
     }
@@ -571,7 +575,7 @@ export default function Replay() {
         void playReplay()
       } catch (e) {
         console.error("Failed to start replay:", e)
-        setError("リプレイの開始に失敗しました")
+        setError(t("replay:errors.startFailed"))
         setShowErrorDialog(true)
       }
     }, 0)
@@ -588,17 +592,19 @@ export default function Replay() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full py-4 sm:py-8">
-        <div className="max-w-2xl mx-auto mb-2 px-4 sm:px-0">
-          <div className="flex items-center">
+      <div className="container mx-auto py-4 sm:py-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-8">
+          <div className="flex-1">
             <Button asChild variant="outline" size="sm">
               <a href="/">
                 <span className="sm:hidden">←</span>
-                <span className="hidden sm:inline">← ホームに戻る</span>
+                <span className="hidden sm:inline">{t("ui:page.returnHome")}</span>
               </a>
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold flex-1 text-center">Duel Simulator - リプレイ</h1>
-            <div className="w-[32px] sm:w-[116px]"></div>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-center">{t("ui:page.replayTitle")}</h1>
+          <div className="flex-1 flex justify-end">
+            <LanguageSelector />
           </div>
         </div>
 
@@ -609,7 +615,7 @@ export default function Replay() {
             <p className="text-xs md:text-sm text-gray-600 mb-2 whitespace-pre-line">{description}</p>
           )}
           <p className="text-xs md:text-sm text-gray-500">
-            リプレイID:{" "}
+            {t("ui:page.replayId")}{" "}
             <span className="relative inline-flex items-center">
               <code
                 className={cn(
@@ -624,14 +630,14 @@ export default function Replay() {
                     }, 2000)
                   })
                 }}
-                title="クリックしてコピー"
+                title={t("replay:messages.clickToCopy")}
               >
                 {id}
                 <Copy className="h-3 w-3 opacity-60" />
               </code>
               {copyFeedback && (
                 <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-600 text-white text-xs rounded whitespace-nowrap animate-fade-in-out">
-                  コピーしました！
+                  {t("ui:page.copied")}
                 </span>
               )}
             </span>
@@ -666,7 +672,7 @@ export default function Replay() {
         <ErrorDialog
           open={showErrorDialog}
           onOpenChange={setShowErrorDialog}
-          title="エラー"
+          title={t("common:error.title")}
           message={error ?? ""}
           details={errorDetails ?? undefined}
         />

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import { cn } from "@client/lib/utils"
 import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown } from "lucide-react"
 import { useScreenSize } from "@client/hooks/useScreenSize"
@@ -97,6 +98,7 @@ export function GameFieldContent() {
   const location = useLocation()
   const isReplayMode = location.pathname.startsWith("/replay/")
   const [hasEverPlayedInReplayMode, setHasEverPlayedInReplayMode] = useAtom(hasEverPlayedInReplayModeAtom)
+  const { t } = useTranslation(["game", "ui"])
 
   const [isOpponentFieldOpen, setIsOpponentFieldOpen] = useState(false)
   const [isExtraActionsOpen, setIsExtraActionsOpen] = useState(false)
@@ -437,12 +439,12 @@ export function GameFieldContent() {
       } catch (error) {
         console.error("Failed to save replay:", error)
         const errorMessage = error instanceof Error ? error.message : String(error)
-        alert(`リプレイの保存に失敗しました${errorMessage ? `\n\n${errorMessage}` : ""}`)
+        alert(`${t("replay:errors.saveFailed")}${errorMessage ? `\n\n${errorMessage}` : ""}`)
       } finally {
         setIsSavingReplay(false)
       }
     },
-    [replayData, deckMetadata, setScreenshotWidth],
+    [replayData, deckMetadata, setScreenshotWidth, t],
   )
 
   // Function to open zone expand modal (only for self player)
@@ -578,7 +580,7 @@ export function GameFieldContent() {
               aria-label={isExtraActionsOpen ? "Hide extra actions" : "Show extra actions"}
             >
               <MoreHorizontal className="w-4 h-4" />
-              <span>その他操作</span>
+              <span>{t("game:field.otherOperations")}</span>
             </button>
             <button
               onClick={() => setIsOpponentFieldOpen(!isOpponentFieldOpen)}
@@ -591,12 +593,12 @@ export function GameFieldContent() {
               {isOpponentFieldOpen ? (
                 <>
                   <ChevronUp className="w-4 h-4" />
-                  <span>相手フィールドを非表示</span>
+                  <span>{t("game:field.opponentFieldHide")}</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="w-4 h-4" />
-                  <span>相手フィールドの表示</span>
+                  <span>{t("game:field.opponentFieldShow")}</span>
                 </>
               )}
             </button>
@@ -615,7 +617,7 @@ export function GameFieldContent() {
                 aria-label="Shuffle deck"
               >
                 <Shuffle className="w-4 h-4" />
-                <span>シャッフル</span>
+                <span>{t("game:field.shuffle")}</span>
               </button>
               <button
                 onClick={handleDraw5Cards}
@@ -629,7 +631,7 @@ export function GameFieldContent() {
                 aria-label="Random 5 draw"
               >
                 <Layers2 className="w-4 h-4" />
-                <span>ランダム5ドロー</span>
+                <span>{t("game:field.fiveDraw")}</span>
               </button>
               <button
                 onClick={handleGenerateToken}
@@ -643,7 +645,7 @@ export function GameFieldContent() {
                 aria-label="Generate token"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span>トークン生成</span>
+                <span>{t("game:field.generateToken")}</span>
               </button>
               <button
                 onClick={() => setPreventSameZoneReorder(!preventSameZoneReorder)}
@@ -659,7 +661,7 @@ export function GameFieldContent() {
                 aria-label="Toggle zone reordering"
               >
                 <ArrowUpDown className="w-4 h-4" />
-                <span>並び替え{!preventSameZoneReorder ? "禁止" : "可能"}</span>
+                <span>{!preventSameZoneReorder ? t("game:field.reorderDisable") : t("game:field.reorderEnable")}</span>
               </button>
             </div>
           )}
@@ -1223,7 +1225,7 @@ export function GameFieldContent() {
         <div className="hidden md:block fixed bottom-4 right-4 max-w-xs">
           <div className="bg-gray-800/90 text-white rounded-lg text-xs">
             <div className={cn("px-3 pt-3 flex items-center justify-between", isHintMinimized ? "pb-3" : "pb-1")}>
-              <div className="font-semibold">操作ヒント</div>
+              <div className="font-semibold">{t("game:field.operationHints")}</div>
               <button
                 onClick={() => {
                   const newState = !isHintMinimized
@@ -1231,7 +1233,7 @@ export function GameFieldContent() {
                   localStorage.setItem("duel-simulator-hint-minimized", String(newState))
                 }}
                 className="bg-gray-600 hover:bg-gray-500 text-white transition-colors p-1 rounded"
-                aria-label={isHintMinimized ? "展開" : "最小化"}
+                aria-label={isHintMinimized ? "Expand" : "Minimize"}
               >
                 {isHintMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
@@ -1243,32 +1245,32 @@ export function GameFieldContent() {
               )}
             >
               <div>
-                • <span className="text-yellow-400">Shift + ドラッグ</span>:
+                • <span className="text-yellow-400">{t("game:field.shiftDrag")}</span>:
               </div>
-              <div className="ml-4 text-xs">- 空きゾーン: 守備表示/セット</div>
-              <div className="ml-4 text-xs">- カードがあるゾーン: 下に重ねる</div>
+              <div className="ml-4 text-xs">- {t("game:field.emptyZone")}</div>
+              <div className="ml-4 text-xs">- {t("game:field.cardZone")}</div>
               <div>
-                • <span className="text-blue-400">カードがあるゾーンにドロップ</span>:
+                • <span className="text-blue-400">{t("game:field.dropOnCards")}</span>:
               </div>
-              <div className="ml-4 text-xs">- 通常: 上に重ねる</div>
-              <div className="ml-4 text-xs">- Shift押下: 下に重ねる</div>
+              <div className="ml-4 text-xs">- {t("game:field.stackTop")}</div>
+              <div className="ml-4 text-xs">- {t("game:field.stackBottom")}</div>
               <div>
-                • <span className="text-green-400">墓地/除外ラベルクリック</span>: ゾーン拡大
-              </div>
-              <div>
-                • <span className="text-gray-400">右クリック</span>: カードメニュー
+                • <span className="text-green-400">{t("game:field.graveClickExpand")}</span>
               </div>
               <div>
-                • <span className="text-purple-400">ダブルクリック</span>: 効果発動
+                • <span className="text-gray-400">{t("game:field.rightClickMenu")}</span>
               </div>
               <div>
-                • <span className="text-purple-400">Shift + ダブルクリック</span>: 対象に取る
+                • <span className="text-purple-400">{t("game:field.doubleClickEffect")}</span>
               </div>
               <div>
-                • <span className="text-gray-400">Ctrl/Cmd + Z</span>: 元に戻す
+                • <span className="text-purple-400">{t("game:field.shiftDoubleClickTarget")}</span>
               </div>
               <div>
-                • <span className="text-gray-400">Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z</span>: やり直し
+                • <span className="text-gray-400">{t("game:field.undoShortcut")}</span>
+              </div>
+              <div>
+                • <span className="text-gray-400">{t("game:field.redoShortcut")}</span>
               </div>
             </div>
           </div>

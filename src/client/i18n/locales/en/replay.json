@@ -1,0 +1,57 @@
+{
+  "controls": {
+    "startRecording": "Start Recording",
+    "stopRecording": "Stop Recording",
+    "recording": "Recording: {{count}} operations",
+    "play": "Play Replay",
+    "resume": "Resume",
+    "pause": "Pause",
+    "stop": "Stop",
+    "share": "Share",
+    "step": "Step: {{current}} / {{total}}",
+    "recordingStatus": "Recording (Started: Step {{startStep}})"
+  },
+  "settings": {
+    "speed": "Speed:",
+    "wait": "Wait:",
+    "seconds": "{{count}}s",
+    "times": "{{count}}x"
+  },
+  "dialog": {
+    "saveTitle": "Save Replay",
+    "saveDescription": "Save your replay to share with others.",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description (optional)",
+    "titlePlaceholder": "",
+    "descriptionPlaceholder": "Enter replay description...",
+    "duration": "Replay duration: {{duration}} seconds",
+    "operationCount": "Operations: {{count}}",
+    "goToReplay": "Go to Replay",
+    "replayIdLabel": "Replay ID",
+    "replayIdPlaceholder": "Enter Replay ID"
+  },
+  "share": {
+    "title": "Share URL",
+    "copied": "Copied!"
+  },
+  "errors": {
+    "noReplayId": "No replay ID specified",
+    "notFound": "Replay not found",
+    "deckImageLoadFailed": "Failed to load deck image",
+    "deckInfoCorrupted": "Deck information is corrupted",
+    "loadFailed": "Failed to load replay",
+    "dataUnavailable": "Replay data is not available",
+    "invalidFormat": "Invalid replay data format",
+    "oldFormatCardMapping": "Old replay format (card ID mapping missing)",
+    "oldFormatInitialState": "Old replay format (invalid initial state data)",
+    "oldFormatOperations": "Old replay format (invalid operation history)",
+    "cannotPlayInCurrentVersion": "This replay cannot be played in the current version. Normal operation is still possible.",
+    "prepareFailed": "Failed to prepare replay",
+    "startFailed": "Failed to start replay",
+    "saveFailed": "Failed to save replay"
+  },
+  "messages": {
+    "loading": "Loading replay...",
+    "clickToCopy": "Click to copy"
+  }
+}

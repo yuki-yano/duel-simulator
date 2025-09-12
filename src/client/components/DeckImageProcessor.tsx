@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { produce } from "immer"
@@ -48,6 +49,7 @@ export function DeckImageProcessor({
   onReplayStart,
   onError,
 }: DeckImageProcessorProps) {
+  const { t } = useTranslation(["ui", "common"])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const debugCanvasRef = useRef<HTMLCanvasElement>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -318,7 +320,7 @@ export function DeckImageProcessor({
         if (deckSections.length === 0) {
           console.warn("No deck sections found in OCR.")
           setIsAnalyzing(false)
-          setErrorDialog({ open: true, message: "デッキ構造の検出に失敗しました。画像の品質を確認してください。" })
+          setErrorDialog({ open: true, message: t("deck.structureDetectionFailed") })
           return
         }
 
@@ -377,7 +379,7 @@ export function DeckImageProcessor({
         }
       } catch (error) {
         console.error("Failed to analyze deck structure:", error)
-        setErrorDialog({ open: true, message: "デッキ構造の解析に失敗しました。画像の品質を確認してください。" })
+        setErrorDialog({ open: true, message: t("deck.analysisError") })
         // エラー時は解析済みフラグをリセット
         analyzedRef.current = false
       }
@@ -386,7 +388,7 @@ export function DeckImageProcessor({
     }
 
     img.src = imageDataUrl
-  }, [imageDataUrl, showDebug, extractTextFromRegion])
+  }, [imageDataUrl, showDebug, extractTextFromRegion, t])
 
   useEffect(() => {
     if (imageDataUrl) {
@@ -413,7 +415,7 @@ export function DeckImageProcessor({
     }
 
     if (!deckConfig) {
-      setErrorDialog({ open: true, message: "先にデッキ構造を解析してください。" })
+      setErrorDialog({ open: true, message: t("deck.analyzeFirst") })
       return
     }
 
@@ -424,7 +426,7 @@ export function DeckImageProcessor({
 
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve()
-        img.onerror = () => reject(new Error("画像の読み込みに失敗しました"))
+        img.onerror = () => reject(new Error(t("deck.imageLoadError")))
         img.src = imageDataUrl
       })
 
@@ -621,7 +623,7 @@ export function DeckImageProcessor({
       }
     } catch (error) {
       console.error("カードの切り出し処理でエラーが発生しました:", error)
-      setErrorDialog({ open: true, message: "カードの切り出しに失敗しました。" })
+      setErrorDialog({ open: true, message: t("deck.extractionError") })
     } finally {
       setIsProcessing(false)
     }
@@ -629,7 +631,7 @@ export function DeckImageProcessor({
 
   return (
     <Card className="p-6 space-y-4">
-      <h3 className="text-lg font-semibold">デッキ読み込み</h3>
+      <h3 className="text-lg font-semibold">{t("deck.loading")}</h3>
 
       <div className="space-y-4">
         {/* Preview Canvas - hidden but kept for processing */}
@@ -640,7 +642,7 @@ export function DeckImageProcessor({
           <div className="border rounded-lg overflow-hidden">
             <img
               src={previewImageUrl}
-              alt="デッキ画像プレビュー"
+              alt={t("deck.preview")}
               className="w-full"
               style={{
                 WebkitTouchCallout: "default",
@@ -709,27 +711,30 @@ export function DeckImageProcessor({
         {/* Analyzing status */}
         {isAnalyzing && (
           <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-700">デッキ構造を解析中...</p>
+            <p className="text-sm text-blue-700">{t("deck.analyzingStructure")}</p>
           </div>
         )}
 
         {/* Deck Configuration Display */}
         {deckConfig && (
           <div className="bg-blue-50 p-3 rounded-lg space-y-2">
-            <p className="text-sm font-medium">検出されたデッキ構成:</p>
+            <p className="text-sm font-medium">{t("deck.detectedConfig")}</p>
             {deckConfig.mainDeck && (
               <p className="text-xs">
-                メインデッキ: {deckConfig.mainDeck.count}枚 ({deckConfig.mainDeck.rows}行)
+                {t("deck.mainDeckCountWithRows", { count: deckConfig.mainDeck.count, rows: deckConfig.mainDeck.rows })}
               </p>
             )}
             {deckConfig.extraDeck && (
               <p className="text-xs">
-                エクストラデッキ: {deckConfig.extraDeck.count}枚 ({deckConfig.extraDeck.rows}行)
+                {t("deck.extraDeckCountWithRows", {
+                  count: deckConfig.extraDeck.count,
+                  rows: deckConfig.extraDeck.rows,
+                })}
               </p>
             )}
             {deckConfig.sideDeck && (
               <p className="text-xs">
-                サイドデッキ: {deckConfig.sideDeck.count}枚 ({deckConfig.sideDeck.rows}行)
+                {t("deck.sideDeckCountWithRows", { count: deckConfig.sideDeck.count, rows: deckConfig.sideDeck.rows })}
               </p>
             )}
           </div>
@@ -749,17 +754,17 @@ export function DeckImageProcessor({
           `}
         >
           {isProcessing
-            ? "処理中..."
+            ? t("deck.processing")
             : processedCards.length > 0
-              ? "切り出し済み"
+              ? t("deck.processed")
               : isReplayMode
-                ? "再生を開始"
-                : "カードを切り出す"}
+                ? t("deck.startReplay")
+                : t("deck.extractCards")}
         </button>
 
         {/* Processed Cards Count */}
         {processedCards.length > 0 && (
-          <p className="text-sm text-green-600">{processedCards.length}枚のカードを切り出しました</p>
+          <p className="text-sm text-green-600">{t("deck.cardsExtracted", { count: processedCards.length })}</p>
         )}
       </div>
 
@@ -772,9 +777,9 @@ export function DeckImageProcessor({
             onError?.()
           }
         }}
-        title="エラー"
+        title={t("common.error")}
         message={errorDialog.message}
-        actionLabel="OK"
+        actionLabel={t("common.ok")}
         actionHref="#"
       />
     </Card>

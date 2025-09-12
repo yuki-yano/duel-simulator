@@ -1,0 +1,29 @@
+{
+  "error": "錯誤",
+  "ok": "確定",
+  "button": {
+    "undo": "撤銷",
+    "redo": "重做",
+    "reset": "重置",
+    "close": "關閉",
+    "save": "儲存",
+    "cancel": "取消",
+    "share": "分享",
+    "apply": "套用"
+  },
+  "loading": {
+    "saving": "儲存中...",
+    "generating": "生成中...",
+    "processing": "處理中..."
+  },
+  "error": {
+    "title": "錯誤",
+    "generic": "發生錯誤",
+    "network": "網路錯誤",
+    "notFound": "找不到"
+  },
+  "dialog": {
+    "openImage": "開啟圖片",
+    "saveImage": "儲存圖片"
+  }
+}

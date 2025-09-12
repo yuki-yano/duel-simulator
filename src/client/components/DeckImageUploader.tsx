@@ -1,4 +1,5 @@
 import { useState, useRef, ChangeEvent, DragEvent } from "react"
+import { useTranslation } from "react-i18next"
 import { Card } from "@/client/components/ui/Card"
 import { ErrorDialog } from "@/client/components/ErrorDialog"
 import { Upload } from "lucide-react"
@@ -8,6 +9,7 @@ interface DeckImageUploaderProps {
 }
 
 export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
+  const { t } = useTranslation(["ui", "common"])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showError, setShowError] = useState(false)
@@ -79,10 +81,10 @@ export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
             <Upload className="w-12 h-12 text-gray-400" />
           </div>
           <div>
-            <p className="text-lg font-medium">デッキ画像をアップロード</p>
-            <p className="text-sm text-gray-500 mt-1">クリックまたはドラッグ&ドロップ</p>
+            <p className="text-lg font-medium">{t("deck.uploadTitle")}</p>
+            <p className="text-sm text-gray-500 mt-1">{t("deck.clickOrDrag")}</p>
           </div>
-          <p className="text-xs text-gray-400">遊戯王ニューロンからエクスポートした画像に対応</p>
+          <p className="text-xs text-gray-400">{t("deck.neuronSupport")}</p>
         </div>
       </div>
 
@@ -90,9 +92,9 @@ export function DeckImageUploader({ onImageUpload }: DeckImageUploaderProps) {
       <ErrorDialog
         open={showError}
         onOpenChange={setShowError}
-        title="エラー"
-        message="画像ファイルを選択してください"
-        actionLabel="OK"
+        title={t("common.error")}
+        message={t("deck.imageSelectError")}
+        actionLabel={t("common.ok")}
         actionHref="#"
       />
     </Card>

@@ -5,6 +5,7 @@ import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { ZoneId } from "@/shared/types/game"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { useTranslation } from "react-i18next"
 import type { GraveZoneProps } from "./types"
 
 export function GraveZone({
@@ -21,6 +22,7 @@ export function GraveZone({
   onLabelClick,
   isDisabled = false,
 }: GraveZoneProps) {
+  const { t } = useTranslation("game")
   const [hoveredZone, setHoveredZone] = useAtom(hoveredZoneAtom)
   const draggedCard = useAtomValue(draggedCardAtom)
   const { isMediumScreen, isSmallScreen } = useScreenSize()
@@ -303,7 +305,7 @@ export function GraveZone({
         }
       >
         <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-          {type === "grave" ? "墓地" : type === "banish" ? "除外" : "フリー"} ({cardCount})
+          {type === "grave" ? t("zones.graveyard") : type === "banish" ? t("zones.banished") : t("zones.freeZone")} ({cardCount})
         </span>
       </div>
     </div>

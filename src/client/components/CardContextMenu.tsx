@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react"
 import { produce } from "immer"
+import { useTranslation } from "react-i18next"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { useScreenSize } from "@client/hooks/useScreenSize"
@@ -16,6 +17,7 @@ interface CardContextMenuProps {
 export function CardContextMenu({ card, zone, position, onClose, onAction, isReplayActive }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const { width: screenWidth } = useScreenSize()
+  const { t } = useTranslation(["game"])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -63,42 +65,42 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
   const menuItems = [
     {
       id: "activate",
-      label: "効果の発動",
+      label: t("contextMenu.activate"),
       enabled: card.faceDown !== true && isReplayActive === false,
     },
     {
       id: "negate",
-      label: "無効化",
+      label: t("contextMenu.negate"),
       enabled: card.faceDown !== true && isReplayActive === false,
     },
     {
       id: "target",
-      label: "対象に取る",
+      label: t("contextMenu.target"),
       enabled: card.faceDown !== true && isReplayActive === false,
     },
     {
       id: "highlight",
-      label: card.highlighted === true ? "ハイライトを解除" : "ハイライト",
+      label: card.highlighted === true ? t("contextMenu.unhighlight") : t("contextMenu.highlight"),
       enabled: isReplayActive === false,
     },
     {
       id: "rotate",
-      label: card.rotation === -90 ? "攻撃表示にする" : "守備表示にする",
+      label: card.rotation === -90 ? t("contextMenu.setAttackPosition") : t("contextMenu.setDefensePosition"),
       enabled: isMonsterZone && isReplayActive === false,
     },
     {
       id: "flip",
-      label: card.faceDown === true ? "表側表示にする" : "裏側表示にする",
+      label: card.faceDown === true ? t("contextMenu.setFaceUp") : t("contextMenu.setFaceDown"),
       enabled: isMonsterSpellTrapZone && isReplayActive === false,
     },
     {
       id: "addCounter",
-      label: "カウンターの追加",
+      label: t("contextMenu.addCounter"),
       enabled: isCounterZone && isReplayActive === false,
     },
     {
       id: "removeCounter",
-      label: "カウンターの削除",
+      label: t("contextMenu.removeCounter"),
       enabled: isCounterZone && isReplayActive === false && (card.counter ?? 0) > 0,
     },
   ]

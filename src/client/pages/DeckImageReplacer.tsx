@@ -3,7 +3,10 @@ import { Card, CardContent } from "@client/components/ui/Card"
 import { Button } from "@client/components/ui/button"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
+import { LanguageSelector } from "@client/components/LanguageSelector"
 import { Download, X, Upload } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import "@client/i18n" // Initialize i18n
 
 type DeckType = "main" | "extra"
 type CardPosition = {
@@ -19,6 +22,7 @@ type ReplacementImage = {
 }
 
 export default function DeckImageReplacer() {
+  const { t } = useTranslation("ui")
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [replacementImages, setReplacementImages] = useState<ReplacementImage[]>([])
@@ -249,17 +253,19 @@ export default function DeckImageReplacer() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="w-full py-4 sm:py-8">
-        <div className="max-w-2xl mx-auto mb-8 px-4 sm:px-0">
-          <div className="flex items-center">
+      <div className="container mx-auto py-4 sm:py-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-8">
+          <div className="flex-1">
             <Button asChild variant="outline" size="sm">
               <a href="/">
                 <span className="sm:hidden">←</span>
-                <span className="hidden sm:inline">← ホームに戻る</span>
+                <span className="hidden sm:inline">{t("deckImageReplacer.returnHome")}</span>
               </a>
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold flex-1 text-center">Deck Image Replacer</h1>
-            <div className="w-[32px] sm:w-[116px]"></div>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-center">{t("deckImageReplacer.title")}</h1>
+          <div className="flex-1 flex justify-end">
+            <LanguageSelector />
           </div>
         </div>
 
@@ -296,11 +302,11 @@ export default function DeckImageReplacer() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-green-800">デッキ画像の読み込みが完了しました</p>
+                  <p className="text-sm font-medium text-green-800">{t("deckImageReplacer.loadComplete")}</p>
                   <p className="text-xs text-green-600 mt-1">
-                    メインデッキ: {deckMetadata.mainDeckCount}枚
+                    {t("deckImageReplacer.mainDeckCount", { count: deckMetadata.mainDeckCount })}
                     {deckMetadata.extraDeckCount > 0 && (
-                      <span className="ml-2">EXデッキ: {deckMetadata.extraDeckCount}枚</span>
+                      <span className="ml-2">{t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}</span>
                     )}
                   </p>
                 </div>
@@ -314,7 +320,7 @@ export default function DeckImageReplacer() {
           {/* Replacement Image Upload */}
           <Card className={deckMetadata === null ? "opacity-50" : ""}>
             <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">置換画像のアップロード</h2>
+              <h2 className="text-xl font-semibold mb-4">{t("deckImageReplacer.uploadReplacementTitle")}</h2>
               <div className="space-y-4">
                 <div>
                   <input
@@ -349,10 +355,10 @@ export default function DeckImageReplacer() {
                     <div className="text-center">
                       <p className={`text-sm font-medium ${deckMetadata === null ? "text-gray-400" : "text-gray-700"}`}>
                         {deckMetadata === null
-                          ? "デッキ画像を先に読み込んでください"
-                          : "クリックして画像を選択（複数対応）"}
+                          ? t("deckImageReplacer.loadDeckFirst")
+                          : t("deckImageReplacer.clickToSelect")}
                       </p>
-                      {deckMetadata !== null && <p className="text-xs text-gray-500">またはドラッグ&ドロップ</p>}
+                      {deckMetadata !== null && <p className="text-xs text-gray-500">{t("deckImageReplacer.dragAndDrop")}</p>}
                     </div>
                   </div>
                 </div>
@@ -363,12 +369,12 @@ export default function DeckImageReplacer() {
           {/* Position Selection */}
           <Card className={deckMetadata === null ? "opacity-50" : ""}>
             <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">置換位置の選択</h2>
+              <h2 className="text-xl font-semibold mb-4">{t("deckImageReplacer.positionSelectionTitle")}</h2>
 
               {/* Show placeholder when deck not loaded */}
               {deckMetadata === null ? (
                 <div className="p-8 text-center">
-                  <p className="text-sm text-gray-400">デッキ画像を読み込むと、ここで置換位置を選択できます</p>
+                  <p className="text-sm text-gray-400">{t("deckImageReplacer.positionSelectionHelpText")}</p>
                 </div>
               ) : (
                 <>
@@ -394,7 +400,7 @@ export default function DeckImageReplacer() {
                           </div>
                           {img.positions.length > 0 && (
                             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs text-center py-1">
-                              {img.positions.length}箇所
+                              {t("deckImageReplacer.selectedPositions", { count: img.positions.length })}
                             </div>
                           )}
                           <button
@@ -411,16 +417,16 @@ export default function DeckImageReplacer() {
                     </div>
                   ) : (
                     <div className="mb-4 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                      <p className="text-sm text-gray-500">置換画像をアップロードしてください</p>
+                      <p className="text-sm text-gray-500">{t("deckImageReplacer.uploadReplacementImages")}</p>
                     </div>
                   )}
 
                   {/* Deck Count Information */}
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      メインデッキ: {deckMetadata.mainDeckCount}枚
+                      {t("deckImageReplacer.mainDeckCount", { count: deckMetadata.mainDeckCount })}
                       {deckMetadata.extraDeckCount > 0 && (
-                        <span className="ml-4">EXデッキ: {deckMetadata.extraDeckCount}枚</span>
+                        <span className="ml-4">{t("deckImageReplacer.extraDeckCount", { count: deckMetadata.extraDeckCount })}</span>
                       )}
                     </p>
                   </div>
@@ -429,7 +435,7 @@ export default function DeckImageReplacer() {
                   {selectedImageId !== null && (
                     <>
                       <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">デッキタイプ</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("deckImageReplacer.deckTypeLabel")}</label>
                         <div className="flex gap-2">
                           <button
                             onClick={() => setSelectedDeckType("main")}
@@ -439,7 +445,7 @@ export default function DeckImageReplacer() {
                                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                             }`}
                           >
-                            メインデッキ
+                            {t("deckImageReplacer.mainDeck")}
                           </button>
                           {deckMetadata.extraDeckCount > 0 && (
                             <button
@@ -450,7 +456,7 @@ export default function DeckImageReplacer() {
                                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
-                              EXデッキ
+                              {t("deckImageReplacer.extraDeck")}
                             </button>
                           )}
                         </div>
@@ -459,7 +465,7 @@ export default function DeckImageReplacer() {
                       {/* Position Grid */}
                       <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          置換位置を選択（複数選択可）
+                          {t("deckImageReplacer.selectPositions")}
                         </label>
                         <div className="grid grid-cols-10 gap-1">
                           {Array.from({
@@ -537,7 +543,7 @@ export default function DeckImageReplacer() {
                         {(() => {
                           const selectedImage = replacementImages.find((img) => img.id === selectedImageId)
                           return selectedImage && selectedImage.positions.length > 0 ? (
-                            <p className="text-sm text-gray-600 mt-2">選択中: {selectedImage.positions.length}箇所</p>
+                            <p className="text-sm text-gray-600 mt-2">{t("deckImageReplacer.selectedCount", { count: selectedImage.positions.length })}</p>
                           ) : null
                         })()}
                       </div>
@@ -557,7 +563,7 @@ export default function DeckImageReplacer() {
                   disabled={isGenerating}
                   className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isGenerating ? "生成中..." : "画像を生成"}
+                  {isGenerating ? t("deckImageReplacer.generating") : t("deckImageReplacer.generateImage")}
                 </button>
               </CardContent>
             </Card>
@@ -567,14 +573,14 @@ export default function DeckImageReplacer() {
           {generatedImage !== null && (
             <Card>
               <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">生成結果</h2>
+                <h2 className="text-xl font-semibold mb-4">{t("deckImageReplacer.resultTitle")}</h2>
                 <div className="space-y-4">
                   <div className="border rounded-lg overflow-hidden">
-                    <img src={generatedImage} alt="生成されたデッキ画像" className="w-full h-auto" />
+                    <img src={generatedImage} alt={t("deckImageReplacer.generatedImageAlt")} className="w-full h-auto" />
                   </div>
                   <Button onClick={downloadImage} className="w-full flex items-center justify-center gap-2">
                     <Download className="w-4 h-4" />
-                    画像をダウンロード
+                    {t("deckImageReplacer.downloadImage")}
                   </Button>
                 </div>
               </CardContent>

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { cn } from "@client/lib/utils"
 import { Undo2, Redo2, RotateCcw, Shield, EyeOff, Layers, Camera } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@client/components/ui/tooltip"
@@ -47,6 +48,7 @@ interface ActionButtonsProps {
 
 // スクリーンショット用のローディングオーバーレイコンポーネント
 function ScreenshotOverlay({ isVisible }: { isVisible: boolean }) {
+  const { t } = useTranslation("ui")
   if (!isVisible) return null
 
   return (
@@ -57,7 +59,7 @@ function ScreenshotOverlay({ isVisible }: { isVisible: boolean }) {
     >
       <div className="flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-500" />
-        <p className="text-lg font-medium text-gray-700">スクリーンショットを生成中...</p>
+        <p className="text-lg font-medium text-gray-700">{t("screenshot.generating")}</p>
       </div>
     </div>
   )
@@ -84,6 +86,7 @@ export function ActionButtons({
   onToggleStackBottom,
   isTouchDevice,
 }: ActionButtonsProps) {
+  const { t } = useTranslation(["common", "game", "ui"])
   const [hoveredButton, setHoveredButton] = useState<"undo" | "redo" | "reset" | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
   const [screenshotData, setScreenshotData] = useState<{ url: string; fileName: string } | null>(null)
@@ -170,15 +173,19 @@ export function ActionButtons({
                 aria-label="Screenshot"
               >
                 <Camera className="w-4 h-4" />
-                <span>{isCapturing ? "生成中..." : "スクリーンショット"}</span>
+                <span>{isCapturing ? t("ui:screenshot.generating") : t("ui:screenshot.title")}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.SP)}>スマホ</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.TABLET)}>
-                タブレット
+              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.SP)}>
+                {t("ui:screenshot.mobile")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.PC)}>PC</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.TABLET)}>
+                {t("ui:screenshot.tablet")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleScreenshot(SCREENSHOT_SCREEN_WIDTH.PC)}>
+                {t("ui:screenshot.pc")}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -208,7 +215,7 @@ export function ActionButtons({
                 aria-label="Undo"
               >
                 <Undo2 className="w-4 h-4" />
-                <span>元に戻す</span>
+                <span>{t("common:button.undo")}</span>
               </button>
             </TooltipTrigger>
             {undoDescription !== null && (
@@ -241,7 +248,7 @@ export function ActionButtons({
                 aria-label="Redo"
               >
                 <Redo2 className="w-4 h-4" />
-                <span>やり直す</span>
+                <span>{t("common:button.redo")}</span>
               </button>
             </TooltipTrigger>
             {redoDescription !== null && (
@@ -268,7 +275,7 @@ export function ActionButtons({
             aria-label="Reset"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>リセット</span>
+            <span>{t("common:button.reset")}</span>
           </button>
         </div>
 
@@ -288,7 +295,10 @@ export function ActionButtons({
             aria-label="Toggle defense mode"
           >
             <Shield className="w-4 h-4" />
-            <span>守備表示{mobileDefenseMode ? " ON" : ""}</span>
+            <span>
+              {t("game:mobile.defensePosition")}
+              {mobileDefenseMode ? " ON" : ""}
+            </span>
           </button>
           <button
             onClick={() => onToggleFaceDownMode()}
@@ -304,7 +314,10 @@ export function ActionButtons({
             aria-label="Toggle face down mode"
           >
             <EyeOff className="w-4 h-4" />
-            <span>裏側表示{mobileFaceDownMode ? " ON" : ""}</span>
+            <span>
+              {t("game:mobile.faceDown")}
+              {mobileFaceDownMode ? " ON" : ""}
+            </span>
           </button>
           <button
             onClick={() => onToggleStackBottom()}
@@ -320,7 +333,7 @@ export function ActionButtons({
             aria-label="Toggle stack position"
           >
             <Layers className="w-4 h-4" />
-            <span>{mobileStackBottom ? "下に重ねる" : "上に重ねる"}</span>
+            <span>{mobileStackBottom ? t("game:mobile.stackAtBottom") : t("game:mobile.stackAtTop")}</span>
           </button>
         </div>
 
@@ -333,7 +346,7 @@ export function ActionButtons({
         >
           <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-auto">
             <DialogHeader>
-              <DialogTitle>スクリーンショット</DialogTitle>
+              <DialogTitle>{t("ui:screenshot.title")}</DialogTitle>
             </DialogHeader>
             {screenshotData && (
               <>
@@ -388,11 +401,11 @@ export function ActionButtons({
                     }}
                   >
                     {/iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window)
-                      ? "画像を開く"
-                      : "画像を保存"}
+                      ? t("common:dialog.openImage")
+                      : t("common:dialog.saveImage")}
                   </Button>
                   <Button variant="secondary" onClick={() => setScreenshotData(null)}>
-                    閉じる
+                    {t("common:button.close")}
                   </Button>
                 </DialogFooter>
               </>

@@ -53,6 +53,12 @@ self.addEventListener("fetch", (event) => {
   const { request } = event
   const url = new URL(request.url)
 
+  // chrome-extension等、http/https以外のスキームはキャッシュしない
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    event.respondWith(fetch(request))
+    return
+  }
+
   // APIリクエストはキャッシュしない（オフライン時は失敗させる）
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request))

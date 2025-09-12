@@ -1,0 +1,81 @@
+{
+  "zones": {
+    "hand": "패",
+    "deck": "덱",
+    "graveyard": "묘지",
+    "banished": "제외",
+    "extraDeck": "엑스트라 덱",
+    "fieldZone": "필드 존",
+    "monsterZone": "몬스터 존",
+    "spellTrapZone": "마법 & 함정 존",
+    "extraMonsterZone": "엑스트라 몬스터 존",
+    "freeZone": "프리 존",
+    "sideFreeZone": "사이드 프리 존"
+  },
+  "position": {
+    "attack": "공격 표시",
+    "defense": "수비 표시",
+    "faceUp": "앞면 표시",
+    "faceDown": "뒷면 표시",
+    "faceDownDefense": "뒷면 수비 표시"
+  },
+  "actions": {
+    "summon": "소환",
+    "set": "세트",
+    "specialSummon": "특수 소환",
+    "draw": "드로우",
+    "destroy": "파괴",
+    "banish": "제외",
+    "negate": "무효",
+    "shuffle": "셔플",
+    "moveToTop": "위에 겹치기",
+    "moveToBottom": "아래에 겹치기"
+  },
+  "cardType": {
+    "monster": "몬스터",
+    "spell": "마법",
+    "trap": "함정"
+  },
+  "mobile": {
+    "defensePosition": "수비 표시",
+    "faceDown": "뒷면 표시",
+    "stackAtBottom": "아래에 겹치기",
+    "stackAtTop": "위에 겹치기"
+  },
+  "contextMenu": {
+    "activate": "효과 발동",
+    "negate": "무효화",
+    "target": "대상 선택",
+    "highlight": "강조 표시",
+    "unhighlight": "강조 표시 해제",
+    "setAttackPosition": "공격 표시로 변경",
+    "setDefensePosition": "수비 표시로 변경",
+    "setFaceUp": "앞면 표시로 변경",
+    "setFaceDown": "뒷면 표시로 변경",
+    "addCounter": "카운터 추가",
+    "removeCounter": "카운터 제거"
+  },
+  "field": {
+    "otherOperations": "기타 조작",
+    "opponentFieldShow": "상대 필드 표시",
+    "opponentFieldHide": "상대 필드 숨기기",
+    "fiveDraw": "랜덤 5드로",
+    "shuffle": "셔플",
+    "generateToken": "토큰 생성",
+    "reorderEnable": "재배열 허용",
+    "reorderDisable": "재배열 금지",
+    "operationHints": "조작 힌트",
+    "shiftDrag": "Shift + 드래그",
+    "emptyZone": "빈 구역: 수비 표시/세트",
+    "cardZone": "카드가 있는 구역: 아래에 겹치기",
+    "dropOnCards": "카드가 있는 구역에 드롭",
+    "stackTop": "일반: 위에 겹치기",
+    "stackBottom": "Shift 누른 상태: 아래에 겹치기",
+    "graveClickExpand": "묘지/제외 라벨 클릭: 구역 확대",
+    "rightClickMenu": "우클릭: 카드 메뉴",
+    "doubleClickEffect": "더블클릭: 효과 발동",
+    "shiftDoubleClickTarget": "Shift + 더블클릭: 타겟으로 지정",
+    "undoShortcut": "Ctrl/Cmd + Z: 실행취소",
+    "redoShortcut": "Ctrl/Cmd + Y 또는 Ctrl/Cmd + Shift + Z: 다시실행"
+  }
+}

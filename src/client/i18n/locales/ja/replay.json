@@ -1,0 +1,57 @@
+{
+  "controls": {
+    "startRecording": "リプレイ保存開始",
+    "stopRecording": "保存停止",
+    "recording": "保存中: {{count}} 操作",
+    "play": "リプレイ再生",
+    "resume": "再開",
+    "pause": "一時停止",
+    "stop": "停止",
+    "share": "共有",
+    "step": "ステップ: {{current}} / {{total}}",
+    "recordingStatus": "録画中 (開始: ステップ {{startStep}})"
+  },
+  "settings": {
+    "speed": "速度:",
+    "wait": "待機:",
+    "seconds": "{{count}}秒",
+    "times": "{{count}}x"
+  },
+  "dialog": {
+    "saveTitle": "リプレイの保存",
+    "saveDescription": "リプレイを保存して、他の人と共有できます。",
+    "titleLabel": "タイトル",
+    "descriptionLabel": "説明（任意）",
+    "titlePlaceholder": "",
+    "descriptionPlaceholder": "リプレイの説明を入力...",
+    "duration": "リプレイの長さ: {{duration}}秒",
+    "operationCount": "操作数: {{count}}回",
+    "goToReplay": "リプレイへ移動",
+    "replayIdLabel": "リプレイID",
+    "replayIdPlaceholder": "リプレイIDを入力"
+  },
+  "share": {
+    "title": "共有URL",
+    "copied": "コピーしました"
+  },
+  "errors": {
+    "noReplayId": "リプレイIDが指定されていません",
+    "notFound": "リプレイが見つかりません",
+    "deckImageLoadFailed": "デッキ画像の読み込みに失敗しました",
+    "deckInfoCorrupted": "デッキ情報が破損しています",
+    "loadFailed": "リプレイの読み込みに失敗しました",
+    "dataUnavailable": "リプレイデータが利用できません",
+    "invalidFormat": "リプレイデータの形式が不正です",
+    "oldFormatCardMapping": "古い形式のリプレイです（カードIDマッピングが不足）",
+    "oldFormatInitialState": "古い形式のリプレイです（初期状態データが不正）",
+    "oldFormatOperations": "古い形式のリプレイです（操作履歴が不正）",
+    "cannotPlayInCurrentVersion": "このリプレイは現在のバージョンで再生できません。通常の操作は可能です。",
+    "prepareFailed": "リプレイの準備に失敗しました",
+    "startFailed": "リプレイの開始に失敗しました",
+    "saveFailed": "リプレイの保存に失敗しました"
+  },
+  "messages": {
+    "loading": "リプレイを読み込み中...",
+    "clickToCopy": "クリックしてコピー"
+  }
+}

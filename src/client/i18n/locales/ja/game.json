@@ -1,0 +1,81 @@
+{
+  "zones": {
+    "hand": "手札",
+    "deck": "デッキ",
+    "graveyard": "墓地",
+    "banished": "除外",
+    "extraDeck": "エクストラデッキ",
+    "fieldZone": "フィールドゾーン",
+    "monsterZone": "モンスターゾーン",
+    "spellTrapZone": "魔法・罠ゾーン",
+    "extraMonsterZone": "エクストラモンスターゾーン",
+    "freeZone": "フリーゾーン",
+    "sideFreeZone": "サイドフリーゾーン"
+  },
+  "position": {
+    "attack": "攻撃表示",
+    "defense": "守備表示",
+    "faceUp": "表側表示",
+    "faceDown": "裏側表示",
+    "faceDownDefense": "裏側守備表示"
+  },
+  "actions": {
+    "summon": "召喚",
+    "set": "セット",
+    "specialSummon": "特殊召喚",
+    "draw": "ドロー",
+    "destroy": "破壊",
+    "banish": "除外",
+    "negate": "無効",
+    "shuffle": "シャッフル",
+    "moveToTop": "上に重ねる",
+    "moveToBottom": "下に重ねる"
+  },
+  "cardType": {
+    "monster": "モンスター",
+    "spell": "魔法",
+    "trap": "罠"
+  },
+  "mobile": {
+    "defensePosition": "守備表示",
+    "faceDown": "裏側表示",
+    "stackAtBottom": "下に重ねる",
+    "stackAtTop": "上に重ねる"
+  },
+  "contextMenu": {
+    "activate": "効果の発動",
+    "negate": "無効化",
+    "target": "対象に取る",
+    "highlight": "ハイライト",
+    "unhighlight": "ハイライトを解除",
+    "setAttackPosition": "攻撃表示にする",
+    "setDefensePosition": "守備表示にする",
+    "setFaceUp": "表側表示にする",
+    "setFaceDown": "裏側表示にする",
+    "addCounter": "カウンターの追加",
+    "removeCounter": "カウンターの削除"
+  },
+  "field": {
+    "otherOperations": "その他操作",
+    "opponentFieldShow": "相手フィールドの表示",
+    "opponentFieldHide": "相手フィールドを非表示",
+    "fiveDraw": "ランダム5ドロー",
+    "shuffle": "シャッフル",
+    "generateToken": "トークン生成",
+    "reorderEnable": "並び替え可能",
+    "reorderDisable": "並び替え禁止",
+    "operationHints": "操作ヒント",
+    "shiftDrag": "Shift + ドラッグ",
+    "emptyZone": "空きゾーン: 守備表示/セット",
+    "cardZone": "カードがあるゾーン: 下に重ねる",
+    "dropOnCards": "カードがあるゾーンにドロップ",
+    "stackTop": "通常: 上に重ねる",
+    "stackBottom": "Shift押下: 下に重ねる",
+    "graveClickExpand": "墓地/除外ラベルクリック: ゾーン拡大",
+    "rightClickMenu": "右クリック: カードメニュー",
+    "doubleClickEffect": "ダブルクリック: 効果発動",
+    "shiftDoubleClickTarget": "Shift + ダブルクリック: 対象に取る",
+    "undoShortcut": "Ctrl/Cmd + Z: 元に戻す",
+    "redoShortcut": "Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z: やり直し"
+  }
+}

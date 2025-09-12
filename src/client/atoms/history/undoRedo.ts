@@ -10,6 +10,7 @@ import { applyOperation } from "../helpers/stateHelpers"
 import { findMovedCards } from "../helpers/cardHelpers"
 import { getCardById } from "../helpers/cardHelpers"
 import { getOperationDescription } from "../helpers/operationHelpers"
+import i18n from "@client/i18n"
 
 import {
   replayPlayingAtom,
@@ -494,6 +495,12 @@ export const canRedoAtom = atom((get) => {
 
 // Get undo/redo operation description
 export const undoOperationDescriptionAtom = atom((get) => {
+  // Only show Japanese descriptions when language is Japanese
+  const currentLanguage = i18n.language
+  if (currentLanguage !== "ja") {
+    return null
+  }
+
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   const operations = get(operationsAtom)
@@ -521,6 +528,12 @@ export const undoOperationDescriptionAtom = atom((get) => {
 })
 
 export const redoOperationDescriptionAtom = atom((get) => {
+  // Only show Japanese descriptions when language is Japanese
+  const currentLanguage = i18n.language
+  if (currentLanguage !== "ja") {
+    return null
+  }
+
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   const operations = get(operationsAtom)

@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/client/components/ui/dialog"
 import { AlertCircle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 interface ErrorDialogProps {
   open: boolean
@@ -24,9 +25,11 @@ export function ErrorDialog({
   title,
   message,
   details,
-  actionLabel = "ホームに戻る",
+  actionLabel,
   actionHref = "/",
 }: ErrorDialogProps) {
+  const { t } = useTranslation(["ui", "common"])
+  const label = actionLabel ?? t("ui:error.returnHome")
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -56,13 +59,13 @@ export function ErrorDialog({
             onClick={() => onOpenChange(false)}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gray-100 hover:bg-gray-200 h-10 px-4 py-2"
           >
-            閉じる
+            {t("common:button.close")}
           </button>
           <button
             onClick={() => (window.location.href = actionHref)}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           >
-            {actionLabel}
+            {label}
           </button>
         </DialogFooter>
       </DialogContent>

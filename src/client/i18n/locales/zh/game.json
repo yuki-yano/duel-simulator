@@ -1,0 +1,81 @@
+{
+  "zones": {
+    "hand": "手牌",
+    "deck": "牌組",
+    "graveyard": "墓地",
+    "banished": "除外區",
+    "extraDeck": "額外牌組",
+    "fieldZone": "場地區",
+    "monsterZone": "主怪獸區",
+    "spellTrapZone": "魔法與陷阱區",
+    "extraMonsterZone": "額外怪獸區",
+    "freeZone": "自由區",
+    "sideFreeZone": "側邊自由區"
+  },
+  "position": {
+    "attack": "攻擊表示",
+    "defense": "守備表示",
+    "faceUp": "表側表示",
+    "faceDown": "裏側表示",
+    "faceDownDefense": "裏側守備表示"
+  },
+  "actions": {
+    "summon": "召喚",
+    "set": "覆蓋",
+    "specialSummon": "特殊召喚",
+    "draw": "抽牌",
+    "destroy": "破壞",
+    "banish": "除外",
+    "negate": "無效",
+    "shuffle": "洗牌",
+    "moveToTop": "疊放在上",
+    "moveToBottom": "疊放在下"
+  },
+  "cardType": {
+    "monster": "怪獸",
+    "spell": "魔法",
+    "trap": "陷阱"
+  },
+  "mobile": {
+    "defensePosition": "守備表示",
+    "faceDown": "裏側表示",
+    "stackAtBottom": "疊放在下",
+    "stackAtTop": "疊放在上"
+  },
+  "contextMenu": {
+    "activate": "效果發動",
+    "negate": "無效化",
+    "target": "選作對象",
+    "highlight": "強調顯示",
+    "unhighlight": "取消強調顯示",
+    "setAttackPosition": "變為攻擊表示",
+    "setDefensePosition": "變為守備表示",
+    "setFaceUp": "變為表側表示",
+    "setFaceDown": "變為裏側表示",
+    "addCounter": "添加指示物",
+    "removeCounter": "移除指示物"
+  },
+  "field": {
+    "otherOperations": "其他操作",
+    "opponentFieldShow": "顯示對手場地",
+    "opponentFieldHide": "隱藏對手場地",
+    "fiveDraw": "隨機5抽",
+    "shuffle": "洗牌",
+    "generateToken": "生成衍生物",
+    "reorderEnable": "允許重新排列",
+    "reorderDisable": "禁止重新排列",
+    "operationHints": "操作提示",
+    "shiftDrag": "Shift + 拖曳",
+    "emptyZone": "空白區域：守備表示/蓋放",
+    "cardZone": "有卡片的區域：疊在下方",
+    "dropOnCards": "拖放到有卡片的區域",
+    "stackTop": "一般：疊在上方",
+    "stackBottom": "按住Shift：疊在下方",
+    "graveClickExpand": "墓地/除外標籤點擊：區域放大",
+    "rightClickMenu": "右鍵點擊：卡片選單",
+    "doubleClickEffect": "雙擊：發動效果",
+    "shiftDoubleClickTarget": "Shift + 雙擊：作為對象",
+    "undoShortcut": "Ctrl/Cmd + Z：復原",
+    "redoShortcut": "Ctrl/Cmd + Y 或 Ctrl/Cmd + Shift + Z：重做"
+  }
+}

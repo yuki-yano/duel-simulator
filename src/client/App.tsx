@@ -5,7 +5,10 @@ import { GameField } from "@client/components/GameField"
 import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
+import { LanguageSelector } from "@client/components/LanguageSelector"
 import { useAtom, useAtomValue } from "jotai"
+import { useTranslation } from "react-i18next"
+import "./i18n" // Initialize i18n
 import {
   extractedCardsAtom,
   gameStateAtom,
@@ -19,6 +22,7 @@ import {
 import { ExternalLink, ImageIcon } from "lucide-react"
 
 export default function App() {
+  const { t } = useTranslation("ui")
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [processedCards, setProcessedCards] = useState<string[]>([])
   const [_deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
@@ -116,7 +120,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-center mb-4 sm:mb-8">Duel Simulator</h1>
+        <div className="flex items-center justify-between mb-4 sm:mb-8">
+          <div className="flex-1"></div>
+          <h1 className="text-2xl md:text-3xl font-bold text-center">Duel Simulator</h1>
+          <div className="flex-1 flex justify-end">
+            <LanguageSelector />
+          </div>
+        </div>
 
         {/* Image Upload Section */}
         {uploadedImage === null && (
@@ -128,14 +138,14 @@ export default function App() {
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
-                リプレイIDからリプレイを開く
+                {t("app.openReplayFromId")}
               </button>
               <a
                 href="/deck-image-replacer"
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors font-medium flex items-center gap-2"
               >
                 <ImageIcon className="w-4 h-4" />
-                デッキ画像置換ツール
+                {t("app.deckImageReplacer")}
               </a>
             </div>
           </div>
