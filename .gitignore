@@ -12,3 +12,8 @@ tmp
 
 # lsmcp cache
 .lsmcp/cache
+# Ignore local development variables
+.dev.vars
+
+# Sentry Config File
+.env.sentry-build-plugin

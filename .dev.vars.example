@@ -1,0 +1,12 @@
+# Cloudflare Workers Local Development Variables
+# Copy this file to .dev.vars and add your actual values
+
+# Backend Sentry DSN for Cloudflare Workers
+# Create as JavaScript project in Sentry, NOT Node.js
+SENTRY_DSN_BACKEND=
+
+# Environment
+ENVIRONMENT=development
+
+# App Version
+APP_VERSION=1.0.0

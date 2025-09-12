@@ -6,9 +6,9 @@ import adapter from "@hono/vite-dev-server/cloudflare"
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import path from "path"
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   if (mode === "client") {
-    const isProduction = process.env.NODE_ENV === "production"
+    const isProduction = command === "build"
 
     const plugins = [react()]
 
@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       build: {
-        sourcemap: isProduction && process.env.SENTRY_AUTH_TOKEN ? "hidden" : false,
+        sourcemap: isProduction ? "hidden" : false,
         rollupOptions: {
           input: "./index.html",
           output: {

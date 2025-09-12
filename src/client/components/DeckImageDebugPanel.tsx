@@ -105,7 +105,7 @@ export function DeckImageDebugPanel({
       {extractedCards.length > 0 && (
         <div className="space-y-2">
           <h5 className="text-sm font-semibold">切り出されたカード ({extractedCards.length}枚)</h5>
-          
+
           {/* カード座標情報 */}
           {selectedCard !== null && extractedCards[selectedCard] != null && (
             <div className="text-xs bg-white p-2 rounded border">
@@ -129,15 +129,12 @@ export function DeckImageDebugPanel({
                 onClick={() => setSelectedCard(index)}
                 title={`カード #${index + 1} (${card.zone})`}
               >
-                <img
-                  src={card.imageUrl}
-                  alt={`Card ${index + 1}`}
-                  className="w-full border"
-                />
-                <div className={`absolute top-0 left-0 text-xs px-1 text-white ${
-                  card.zone === "main" ? "bg-green-600" : 
-                  card.zone === "extra" ? "bg-purple-600" : "bg-orange-600"
-                }`}>
+                <img src={card.imageUrl} alt={`Card ${index + 1}`} className="w-full border" />
+                <div
+                  className={`absolute top-0 left-0 text-xs px-1 text-white ${
+                    card.zone === "main" ? "bg-green-600" : card.zone === "extra" ? "bg-purple-600" : "bg-orange-600"
+                  }`}
+                >
                   {index + 1}
                 </div>
               </div>
@@ -156,8 +153,9 @@ export function DeckImageDebugPanel({
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ width: "100%", height: "100%" }}
               viewBox={`0 0 ${extractedCards[0]?.width ? (extractedCards[0].x + extractedCards[0].width) * 1.1 : 1000} ${
-                extractedCards[extractedCards.length - 1]?.y 
-                  ? (extractedCards[extractedCards.length - 1].y + extractedCards[extractedCards.length - 1].height) * 1.1
+                extractedCards[extractedCards.length - 1]?.y
+                  ? (extractedCards[extractedCards.length - 1].y + extractedCards[extractedCards.length - 1].height) *
+                    1.1
                   : 1000
               }`}
               preserveAspectRatio="xMidYMid meet"
@@ -171,9 +169,13 @@ export function DeckImageDebugPanel({
                     height={card.height}
                     fill="none"
                     stroke={
-                      selectedCard === index ? "blue" :
-                      card.zone === "main" ? "green" :
-                      card.zone === "extra" ? "purple" : "orange"
+                      selectedCard === index
+                        ? "blue"
+                        : card.zone === "main"
+                          ? "green"
+                          : card.zone === "extra"
+                            ? "purple"
+                            : "orange"
                     }
                     strokeWidth={selectedCard === index ? 3 : 1}
                     opacity={0.8}
@@ -181,10 +183,7 @@ export function DeckImageDebugPanel({
                   <text
                     x={card.x + 2}
                     y={card.y + 12}
-                    fill={
-                      card.zone === "main" ? "green" :
-                      card.zone === "extra" ? "purple" : "orange"
-                    }
+                    fill={card.zone === "main" ? "green" : card.zone === "extra" ? "purple" : "orange"}
                     fontSize="10"
                     fontWeight="bold"
                   >

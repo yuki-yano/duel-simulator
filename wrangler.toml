@@ -1,10 +1,10 @@
 name = "duel-simulator"
 pages_build_output_dir = "dist"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 
 # Environment variables
 [vars]
-ENVIRONMENT = "production"
 
 # D1 Database binding for Pages
 [[d1_databases]]
@@ -17,3 +17,7 @@ migrations_dir = "db/migrations"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "duel-simulator-images"
+
+# Version metadata binding for Sentry
+[version_metadata]
+binding = "CF_VERSION_METADATA"
