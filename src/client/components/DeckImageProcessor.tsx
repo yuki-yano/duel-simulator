@@ -122,8 +122,8 @@ export function DeckImageProcessor({
         break
       case "en":
       default:
-        ocrLanguages = ["eng"]
-        charWhitelist = ":0123456789cards"
+        ocrLanguages = ["jpn"]
+        charWhitelist = ":0123456789枚"
         break
     }
 
