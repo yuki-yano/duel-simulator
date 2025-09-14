@@ -14,8 +14,10 @@ const urlsToCache = [
   `${TESSERACT_CDN}worker.min.js`,
   `${TESSERACT_CORE_CDN}tesseract-core-simd.wasm.js`,
   `${TESSERACT_CORE_CDN}tesseract-core.wasm.js`,
-  // 日本語言語データファイル
+  // OCRで使用する言語データファイル（日本語、韓国語、英語）
   "https://tessdata.projectnaptha.com/4.0.0/jpn.traineddata.gz",
+  "https://tessdata.projectnaptha.com/4.0.0/kor.traineddata.gz",
+  "https://tessdata.projectnaptha.com/4.0.0/eng.traineddata.gz",
 ]
 
 // インストール時にキャッシュ
