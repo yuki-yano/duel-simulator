@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "WebWorker"],
+    "module": "ES2020",
+    "target": "ES2020",
+    "outDir": "./public",
+    "rootDir": "./src/client",
+    "types": []
+  },
+  "include": ["src/client/sw.ts"],
+  "exclude": ["node_modules", "dist"]
+}

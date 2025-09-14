@@ -17,3 +17,6 @@ tmp
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Generated Service Worker
+public/sw.js

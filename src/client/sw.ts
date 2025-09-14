@@ -1,3 +1,6 @@
+/// <reference lib="webworker" />
+declare const self: ServiceWorkerGlobalScope
+
 const CACHE_NAME = "duel-simulator-v2"
 
 // Tesseract.js v6のCDN URLs
@@ -29,7 +32,7 @@ self.addEventListener("install", (event) => {
     }),
   )
   // 新しいService Workerをすぐにアクティベート
-  self.skipWaiting()
+  void self.skipWaiting()
 })
 
 // アクティベート時に古いキャッシュを削除
@@ -47,7 +50,7 @@ self.addEventListener("activate", (event) => {
     }),
   )
   // すぐに全クライアントをコントロール
-  self.clients.claim()
+  void self.clients.claim()
 })
 
 // フェッチ戦略: ネットワーク優先、フォールバックでキャッシュ
@@ -80,12 +83,12 @@ self.addEventListener("fetch", (event) => {
         }
         return fetch(request).then((response) => {
           // 成功したレスポンスのみキャッシュ
-          if (!response || response.status !== 200) {
+          if (response == null || response.status !== 200) {
             return response
           }
           const responseToCache = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache)
+          void caches.open(CACHE_NAME).then((cache) => {
+            void cache.put(request, responseToCache)
           })
           return response
         })
@@ -103,12 +106,12 @@ self.addEventListener("fetch", (event) => {
         }
         return fetch(request).then((response) => {
           // 成功したレスポンスのみキャッシュ
-          if (!response || response.status !== 200 || response.type !== "basic") {
+          if (response == null || response.status !== 200 || response.type !== "basic") {
             return response
           }
           const responseToCache = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache)
+          void caches.open(CACHE_NAME).then((cache) => {
+            void cache.put(request, responseToCache)
           })
           return response
         })
@@ -122,26 +125,35 @@ self.addEventListener("fetch", (event) => {
     fetch(request)
       .then((response) => {
         // 成功したレスポンスをキャッシュして返す
-        if (!response || response.status !== 200 || response.type !== "basic") {
+        if (response == null || response.status !== 200 || response.type !== "basic") {
           return response
         }
         const responseToCache = response.clone()
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache)
+        void caches.open(CACHE_NAME).then((cache) => {
+          void cache.put(request, responseToCache)
         })
         return response
       })
-      .catch(() => {
+      .catch(async () => {
         // ネットワークエラー時はキャッシュから返す
-        return caches.match(request).then((response) => {
-          if (response) {
-            return response
+        const cachedResponse = await caches.match(request)
+        if (cachedResponse) {
+          return cachedResponse
+        }
+        // ナビゲーションリクエストの場合はindex.htmlを返す（SPAのため）
+        if (request.mode === "navigate") {
+          const indexResponse = await caches.match("/index.html")
+          if (indexResponse) {
+            return indexResponse
           }
-          // ナビゲーションリクエストの場合はindex.htmlを返す（SPAのため）
-          if (request.mode === "navigate") {
-            return caches.match("/index.html")
-          }
+        }
+        // 何も見つからない場合は、ネットワークエラーを示すレスポンスを返す
+        return new Response("Network error and no cache available", {
+          status: 503,
+          statusText: "Service Unavailable",
         })
       }),
   )
 })
+
+export {}

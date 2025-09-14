@@ -1,5 +1,5 @@
 onlyBuiltDependencies:
-  - '@sentry/cli'
+  - "@sentry/cli"
   - better-sqlite3
   - esbuild
   - sharp
