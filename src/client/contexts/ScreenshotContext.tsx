@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react"
 
-interface ScreenshotContextType {
+type ScreenshotContextType = {
   screenshotWidth: number | undefined
   setScreenshotWidth: (width: number | undefined) => void
   isScreenshotMode: boolean

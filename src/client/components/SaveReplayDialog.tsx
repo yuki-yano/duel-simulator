@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import type { ReplayData } from "@client/atoms/boardAtoms"
 
-interface SaveReplayDialogProps {
+type SaveReplayDialogProps = {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   replayData: ReplayData

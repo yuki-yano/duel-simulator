@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Card } from "@/client/components/ui/Card"
 import type { DeckConfiguration } from "@/shared/types/game"
 
-interface DeckImageDebugPanelProps {
+type DeckImageDebugPanelProps = {
   imageDataUrl: string
   deckConfig: DeckConfiguration | null
   extractedCards: {

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { ANIM } from "@/client/constants/animation"
 
-interface TargetSelectionAnimationProps {
+type TargetSelectionAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
   cardRotation?: number
   cardImageUrl?: string

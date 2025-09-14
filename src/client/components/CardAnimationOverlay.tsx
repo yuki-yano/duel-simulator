@@ -9,7 +9,7 @@ import { RotateAnimation } from "./RotateAnimation"
 import { NegateAnimation } from "./NegateAnimation"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 
-interface AnimatedCardProps {
+type AnimatedCardProps = {
   animation: CardAnimation
   onComplete: () => void
 }

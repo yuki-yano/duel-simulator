@@ -8,7 +8,7 @@ import { useScreenSize } from "@client/hooks/useScreenSize"
 import { useTranslation } from "react-i18next"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 
-interface ZoneExpandModalProps {
+type ZoneExpandModalProps = {
   isOpen: boolean
   onClose: () => void
   zone: ZoneId

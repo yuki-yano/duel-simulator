@@ -10,7 +10,7 @@ import { ErrorDialog } from "@/client/components/ErrorDialog"
 import { DeckImageDebugPanel } from "@/client/components/DeckImageDebugPanel"
 import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
 
-interface DeckImageProcessorProps {
+type DeckImageProcessorProps = {
   imageDataUrl: string
   onProcessComplete: (cards: string[], metadata: DeckProcessMetadata) => void
   isReplayMode?: boolean
@@ -18,7 +18,7 @@ interface DeckImageProcessorProps {
   onError?: () => void
 }
 
-export interface DeckProcessMetadata {
+export type DeckProcessMetadata = {
   imageDataUrl: string
   imageUrl?: string
   deckConfig: DeckConfiguration

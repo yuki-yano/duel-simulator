@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
 import { useTranslation } from "react-i18next"
 
-interface ShareUrlDisplayProps {
+type ShareUrlDisplayProps = {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   shareUrl: string

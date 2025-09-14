@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useTranslation } from "react-i18next"
 import { loadGameState } from "@client/api/gameState"
 
-interface GoToReplayDialogProps {
+type GoToReplayDialogProps = {
   isOpen: boolean
   onOpenChange: (open: boolean) => void
 }

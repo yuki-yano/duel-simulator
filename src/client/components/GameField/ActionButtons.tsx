@@ -15,7 +15,7 @@ import { useScreenshot } from "@client/contexts/ScreenshotContext"
 import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
 import { captureGameBoard, canvasToBlob } from "@/client/utils/screenshotUtils"
 
-interface ActionButtonsProps {
+type ActionButtonsProps = {
   // Undo/Redo state
   canUndo: boolean
   canRedo: boolean

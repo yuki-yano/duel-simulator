@@ -10,7 +10,7 @@ import { SCREEN_WIDTH } from "@client/constants/screen"
 import { useTranslation } from "react-i18next"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 
-interface ExtraDeckExpandModalProps {
+type ExtraDeckExpandModalProps = {
   isOpen: boolean
   onClose: () => void
   cards: GameCard[]

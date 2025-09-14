@@ -16,7 +16,7 @@ const DOUBLE_CLICK_THRESHOLD_MS = 300
 const EMPTY_DRAG_IMAGE = new Image()
 EMPTY_DRAG_IMAGE.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs="
 
-interface DraggableCardProps {
+type DraggableCardProps = {
   card: GameCard
   zone: ZoneId
   className?: string

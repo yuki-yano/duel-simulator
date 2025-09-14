@@ -5,7 +5,7 @@ import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 
-interface CardContextMenuProps {
+type CardContextMenuProps = {
   card: GameCard
   zone: ZoneId
   position: { x: number; y: number }

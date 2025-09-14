@@ -9,7 +9,7 @@ import {
 import { AlertCircle } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-interface ErrorDialogProps {
+type ErrorDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string

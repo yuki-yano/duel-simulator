@@ -3,7 +3,7 @@ import { Circle, Square, Play, Pause, Share2 } from "lucide-react"
 import { Slider } from "@client/components/ui/slider"
 import { useTranslation } from "react-i18next"
 
-interface ReplayControlsProps {
+type ReplayControlsProps = {
   // Recording state
   isRecording: boolean
   isDeckLoaded: boolean

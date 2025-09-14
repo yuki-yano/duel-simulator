@@ -1,6 +1,6 @@
 import { cn } from "@client/lib/utils"
 
-interface CardProps {
+type CardProps = {
   className?: string
   children?: React.ReactNode
 }

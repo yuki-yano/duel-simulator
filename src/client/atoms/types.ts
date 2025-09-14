@@ -11,14 +11,14 @@ export type Setter = <Value, Args extends unknown[], Result>(
 ) => Result
 
 // History entry for undo/redo
-export interface HistoryEntry {
+export type HistoryEntry = {
   gameState: GameState
   operationCount: number
   operations: GameOperation[]
 }
 
 // Replay data structure
-export interface ReplayData {
+export type ReplayData = {
   startSnapshot: GameState
   operations: GameOperation[]
   startTime: number
@@ -26,7 +26,7 @@ export interface ReplayData {
 }
 
 // Card animation for visual effects
-export interface CardAnimation {
+export type CardAnimation = {
   id: string
   type: "move" | "activate" | "target" | "rotate" | "changePosition" | "highlight" | "negate"
   cardId?: string
@@ -50,20 +50,20 @@ export interface CardAnimation {
 }
 
 // Extracted deck data
-export interface ExtractedCards {
+export type ExtractedCards = {
   mainDeck: Card[]
   extraDeck: Card[]
   sideDeck?: Card[]
 }
 
 // Move options for card operations
-export interface MoveOptions {
+export type MoveOptions = {
   stackPosition?: "top" | "bottom"
   suppressAnimation?: boolean
 }
 
 // Moved card info
-export interface MovedCard {
+export type MovedCard = {
   card: Card
   fromZone: ZoneId
   toZone: ZoneId

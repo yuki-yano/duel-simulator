@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/client/components/ui/Card"
 import { useTranslation } from "react-i18next"
 
-interface AutoPlayDialogProps {
+type AutoPlayDialogProps = {
   onStart: () => void
   onCancel: () => void
   countdown?: number

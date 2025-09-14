@@ -2,7 +2,7 @@
 import type { FC } from "hono/jsx"
 import { OGP_IMAGE } from "@/shared/constants/ogp"
 
-interface ReplayHTMLProps {
+type ReplayHTMLProps = {
   title: string
   description: string
   url: string

@@ -1,4 +1,4 @@
-export interface SaveDeckImageRequest {
+export type SaveDeckImageRequest = {
   hash: string
   imageData: string
   mainDeckCount: number
@@ -7,7 +7,7 @@ export interface SaveDeckImageRequest {
   sourceHeight: number
 }
 
-export interface DeckImageResponse {
+export type DeckImageResponse = {
   hash: string
   mainDeckCount: number
   extraDeckCount: number

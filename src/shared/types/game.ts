@@ -26,7 +26,7 @@ export type ZoneType =
   | "sideDeck"
 
 // Zone identification (read-only location info)
-export interface ZoneId {
+export type ZoneId = {
   player: "self" | "opponent"
   type: ZoneType
   index?: number // Zone slot index (e.g., monsterZone[0-4])
@@ -35,14 +35,14 @@ export interface ZoneId {
 }
 
 // Position for card operations (includes operation hints)
-export interface Position {
+export type Position = {
   zone: ZoneId
   insertIndex?: number // Where to insert the card (for move operations)
   cardId: string // IDベースでカードを特定するため（必須）
 }
 
 // Target position for move operations
-export interface MoveTarget {
+export type MoveTarget = {
   player: "self" | "opponent"
   type: ZoneType
   zoneIndex?: number // Target zone slot (e.g., monsterZone[0-4])

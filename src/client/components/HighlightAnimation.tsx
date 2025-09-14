@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { ANIM } from "@/client/constants/animation"
 
-interface HighlightAnimationProps {
+type HighlightAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
   cardRotation?: number
   cardImageUrl?: string

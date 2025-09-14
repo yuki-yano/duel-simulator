@@ -1,6 +1,6 @@
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 
-export interface ZoneProps {
+export type ZoneProps = {
   className?: string
   label?: string
   children?: React.ReactNode
@@ -15,7 +15,7 @@ export interface ZoneProps {
   onContextMenuClose?: () => void
 }
 
-export interface GraveZoneProps {
+export type GraveZoneProps = {
   type: "grave" | "banish" | "sideFree"
   cardCount: number
   label?: string
@@ -31,7 +31,7 @@ export interface GraveZoneProps {
   isDisabled?: boolean
 }
 
-export interface DeckZoneProps {
+export type DeckZoneProps = {
   type: "deck" | "extra" | "hand" | "side"
   isOpponent?: boolean
   cardCount?: number

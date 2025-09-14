@@ -3,7 +3,7 @@ import { cn } from "@/client/lib/utils"
 import { ANIM } from "@/client/constants/animation"
 import type { Position } from "@/shared/types/game"
 
-interface NegateAnimationProps {
+type NegateAnimationProps = {
   position: Position
   cardRect?: { x: number; y: number; width: number; height: number }
   cardRotation?: number

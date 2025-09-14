@@ -4,7 +4,7 @@ import { Card } from "@/client/components/ui/Card"
 import { ErrorDialog } from "@/client/components/ErrorDialog"
 import { Upload } from "lucide-react"
 
-interface DeckImageUploaderProps {
+type DeckImageUploaderProps = {
   onImageUpload: (imageDataUrl: string) => void
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { SCREEN_WIDTH } from "@client/constants/screen"
 
 // User-Agent Client Hints API types
-interface NavigatorUAData {
+type NavigatorUAData = {
   mobile?: boolean
   platform?: string
   brands?: Array<{
@@ -19,7 +19,7 @@ declare global {
 
 type DeviceType = "pc" | "mobile" | "tablet"
 
-interface UseDeviceTypeReturn {
+type UseDeviceTypeReturn = {
   deviceType: DeviceType
   isPc: boolean
   isMobile: boolean

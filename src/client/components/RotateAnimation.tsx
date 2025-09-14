@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "react"
 import { ANIM } from "@/client/constants/animation"
 
-interface RotateAnimationProps {
+type RotateAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
   fromRotation?: number
   toRotation?: number

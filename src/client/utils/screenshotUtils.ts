@@ -1,7 +1,7 @@
 import html2canvas from "html2canvas"
 import { preprocessScreenshot } from "./canvasUtils"
 
-export interface ScreenshotOptions {
+export type ScreenshotOptions = {
   width: number
   scale?: number
   imageFormat?: "image/png" | "image/jpeg"

@@ -4,7 +4,7 @@ import type { R2Bucket } from "@cloudflare/workers-types"
  * R2ストレージ操作のヘルパー関数
  */
 
-export interface R2PutOptions {
+export type R2PutOptions = {
   contentType: string
   cacheControl?: string
 }
