@@ -162,6 +162,7 @@ export default function Replay() {
           finalDeckCardIds = {
             mainDeck: {},
             extraDeck: {},
+            sideDeck: {},
           }
           // Generate default IDs for main deck
           for (let i = 0; i < deckData.mainDeckCount; i++) {

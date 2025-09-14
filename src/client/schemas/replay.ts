@@ -106,6 +106,7 @@ export const GameOperationSchema = z.object({
 export const DeckCardIdsMappingSchema = z.object({
   mainDeck: z.record(z.string(), z.string()),
   extraDeck: z.record(z.string(), z.string()),
+  sideDeck: z.record(z.string(), z.string()).optional(), // Optional for backward compatibility
 })
 
 // DeckSection schema

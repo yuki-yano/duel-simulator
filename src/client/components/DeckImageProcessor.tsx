@@ -619,6 +619,7 @@ export function DeckImageProcessor({
       const deckCardIds: DeckCardIdsMapping = {
         mainDeck: {},
         extraDeck: {},
+        sideDeck: {},
       }
 
       const { cardWidth, cardHeight, cardGap, leftMargin } = deckConfig
@@ -803,6 +804,11 @@ export function DeckImageProcessor({
                 imageUrl: cardDataUrl,
                 zone: "side",
               })
+
+              // カードIDマッピングに追加
+              if (deckCardIds.sideDeck != null) {
+                deckCardIds.sideDeck[cardIndex] = cardId
+              }
             }
           }
         }

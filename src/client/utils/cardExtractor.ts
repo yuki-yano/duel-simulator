@@ -105,6 +105,38 @@ export async function extractCardsFromDeckImage(
     }
   }
 
+  // Process side deck
+  if (deckConfig.sideDeck && deckCardIds.sideDeck != null) {
+    const { yPosition, count, rows } = deckConfig.sideDeck
+
+    const startY = yPosition + img.width * LAYOUT_RATIOS.textToCardsGap + img.width * LAYOUT_RATIOS.firstRowOffset
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cardsPerRow; col++) {
+        const cardIndex = row * cardsPerRow + col
+        if (cardIndex >= count) break
+
+        try {
+          const cardDataUrl = extractCardImage(img, {
+            x: leftMargin + col * (cardWidth + cardGap),
+            y: startY + row * (cardHeight + img.width * LAYOUT_RATIOS.rowGap),
+            width: cardWidth,
+            height: cardHeight,
+            horizontalMargin: img.width * LAYOUT_RATIOS.cardHorizontalMargin,
+          })
+
+          // Use actual card ID from mapping
+          const cardId = deckCardIds.sideDeck[cardIndex.toString()]
+          if (cardId != null) {
+            cardImageMap.set(cardId, cardDataUrl)
+          }
+        } catch (err) {
+          console.error(`Failed to extract side deck card ${cardIndex}:`, err)
+        }
+      }
+    }
+  }
+
   return cardImageMap
 }
 
