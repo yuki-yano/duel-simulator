@@ -117,8 +117,8 @@ export function DeckImageProcessor({
         charWhitelist = ":0123456789장개"
         break
       case "zh":
-        ocrLanguages = ["chi_sim"]
-        charWhitelist = ":0123456789张張"
+        ocrLanguages = ["eng"]
+        charWhitelist = ":0123456789cards"
         break
       case "en":
       default:
@@ -357,11 +357,9 @@ export function DeckImageProcessor({
         // パターン2: 日本語: 枚
         // パターン3: 英語: cards/card
         // パターン4: 韓国語: 장(枚)/개(個)
-        // パターン5: 中国語簡体字: 张(枚)/个(個)
-        // パターン6: 中国語繁体字: 張(枚)/個(個)
         let mainDeckMatch = processedText.match(/:\s*(\d+)/) // コロンの後の数字を優先
         if (!mainDeckMatch) {
-          mainDeckMatch = processedText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+          mainDeckMatch = processedText.match(/(\d+)\s*(?:枚|cards?|장|개)/i)
         }
         if (!mainDeckMatch) {
           // Try to find just numbers
@@ -423,7 +421,7 @@ export function DeckImageProcessor({
           // 多言語対応の正規表現パターン（コロンパターンを優先）
           let extraDeckMatch = processedExtraText.match(/:\s*(\d+)/) // コロンの後の数字を優先
           if (!extraDeckMatch) {
-            extraDeckMatch = processedExtraText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+            extraDeckMatch = processedExtraText.match(/(\d+)\s*(?:枚|cards?|장|개)/i)
           }
 
           // デバッグ: OCR認識結果をログ出力（開発環境のみ）
@@ -470,7 +468,7 @@ export function DeckImageProcessor({
             // 多言語対応の正規表現パターン（コロンパターンを優先）
             let sideDeckMatch = processedSideText.match(/:\s*(\d+)/) // コロンの後の数字を優先
             if (!sideDeckMatch) {
-              sideDeckMatch = processedSideText.match(/(\d+)\s*(?:枚|cards?|장|개|张|張|个|個)/i)
+              sideDeckMatch = processedSideText.match(/(\d+)\s*(?:枚|cards?|장|개)/i)
             }
 
             // デバッグ: OCR認識結果をログ出力（開発環境のみ）
