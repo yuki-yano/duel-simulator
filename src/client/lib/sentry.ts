@@ -4,18 +4,34 @@ import type { BrowserOptions } from "@sentry/react"
 export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN
 
+  // 本番環境の判定:
+  // MODEが"production"またはPRODフラグがtrueの場合のみ本番環境とする
+  // "client"モードはビルド時に使用されるので、これも本番扱い
+  const isProduction =
+    import.meta.env.PROD || import.meta.env.MODE === "production" || import.meta.env.MODE === "client"
+
+  // DSNがない、または本番環境でない場合はSentryを初期化しない
   if (dsn === undefined || dsn === null || dsn === "") {
     console.info("Sentry: Disabled (No DSN configured)")
     return
   }
 
-  const environment = import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE
+  if (!isProduction) {
+    console.info(
+      `Sentry: Disabled (Development environment - MODE=${import.meta.env.MODE}, PROD=${import.meta.env.PROD})`,
+    )
+    return
+  }
+
+  // 本番環境の場合のみここに到達
+  const environment = "production"
   const release = import.meta.env.VITE_APP_VERSION ?? "unknown"
 
   const options: BrowserOptions = {
     dsn,
     environment,
     release,
+    enabled: true, // ここに到達した時点で本番環境確定なのでtrue
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration({
@@ -24,20 +40,13 @@ export function initSentry() {
         blockAllMedia: false,
       }),
     ],
-    tracesSampleRate: environment === "production" ? 0.1 : 1.0,
-    replaysSessionSampleRate: environment === "production" ? 0.1 : 1.0,
+    tracesSampleRate: 0.1,
+    replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     beforeSend(event, hint) {
-      // 開発環境では詳細なログを出力
-      if (environment === "development") {
-        console.error("Sentry Event:", event)
-        console.error("Error Hint:", hint)
-      }
-
-      // 特定のエラーをフィルタリング（必要に応じて追加）
+      // 特定のエラーをフィルタリング
       const error = hint.originalException
       if (error !== null && error !== undefined && typeof error === "object" && "message" in error) {
-        // ネットワークエラーや予期されるエラーをフィルタ
         const errorMessage = String(error.message)
         if (
           errorMessage.includes("ResizeObserver loop limit exceeded") ||
@@ -46,7 +55,6 @@ export function initSentry() {
           return null
         }
       }
-
       return event
     },
     ignoreErrors: [
