@@ -49,6 +49,7 @@ import {
   drawMultipleCardsAtom,
   hasEverPlayedInReplayModeAtom,
   forceDraw5CardsAtom,
+  hasSideDeckAtom,
 } from "@/client/atoms/boardAtoms"
 import { rotateCardAtom, flipCardAtom, toggleCardHighlightAtom } from "@/client/atoms/operations/rotation"
 import {
@@ -194,6 +195,7 @@ export function GameFieldContent() {
   const [, togglePause] = useAtom(toggleReplayPauseAtom)
   const [, stopReplay] = useAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
+  const hasSideDeck = useAtomValue(hasSideDeckAtom)
 
   // Track if replay has ever been played in replay mode
   useEffect(() => {
@@ -1048,12 +1050,12 @@ export function GameFieldContent() {
             className="deck-zone-self"
           />
           {/* Side Deck (below main deck) */}
-          {playerBoard.sideDeck && playerBoard.sideDeck.length > 0 && (
+          {(hasSideDeck || (playerBoard.sideDeck && playerBoard.sideDeck.length > 0)) && (
             <DeckZone
               type="side"
               zone={{ player: "self", type: "sideDeck" }}
-              cardCount={playerBoard.sideDeck.length}
-              cards={playerBoard.sideDeck}
+              cardCount={playerBoard.sideDeck?.length ?? 0}
+              cards={playerBoard.sideDeck ?? []}
               onDrop={handleCardDrop}
               onContextMenu={handleCardContextMenu}
               onContextMenuClose={() => setContextMenu(null)}

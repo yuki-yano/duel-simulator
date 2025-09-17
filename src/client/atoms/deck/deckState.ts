@@ -32,3 +32,6 @@ export const extractedCardsAtom = atom<ExtractedCards>({
 
 // Deck metadata for saving replays
 export const deckMetadataAtom = atom<DeckProcessMetadata | null>(null)
+
+// Track if side deck was initially loaded with deck
+export const hasSideDeckAtom = atom<boolean>(false)

@@ -18,6 +18,7 @@ import {
   draggedCardAtom,
   initialStateAfterDeckLoadAtom,
   deckMetadataAtom,
+  hasSideDeckAtom,
 } from "@client/atoms/boardAtoms"
 import { ExternalLink, ImageIcon } from "lucide-react"
 
@@ -36,6 +37,7 @@ export default function App() {
   const draggedCard = useAtomValue(draggedCardAtom)
   const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
   const [, setDeckMetadataAtom] = useAtom(deckMetadataAtom)
+  const [, setHasSideDeck] = useAtom(hasSideDeckAtom)
 
   // Disable pinch zoom on mount
   useEffect(() => {
@@ -74,6 +76,9 @@ export default function App() {
   // When cards are extracted, reflect them in game state
   useEffect(() => {
     if (extractedCards.mainDeck.length > 0 || extractedCards.extraDeck.length > 0) {
+      // Reset side deck flag for new deck load
+      setHasSideDeck(false)
+      
       // Set zone information and index for cards
       const mainDeckWithZones = extractedCards.mainDeck.map((card, index) => ({
         ...card,
@@ -96,6 +101,8 @@ export default function App() {
         draft.players.self.extraDeck = extraDeckWithZones
         if (sideDeckWithZones.length > 0) {
           draft.players.self.sideDeck = sideDeckWithZones
+          // Mark that side deck was initially loaded
+          setHasSideDeck(true)
         }
       })
 
