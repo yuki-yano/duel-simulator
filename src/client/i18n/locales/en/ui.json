@@ -161,5 +161,30 @@
     "resultTitle": "Generation Result",
     "generatedImageAlt": "Generated deck image",
     "downloadImage": "Download Image"
+  },
+  "dialogs": {
+    "recordingConfirm": {
+      "title": "Overwrite Recording Confirmation",
+      "description": "Existing replay data will be overwritten when you start a new recording. Do you want to continue?",
+      "cancel": "Cancel",
+      "start": "Start Recording"
+    },
+    "resetConfirm": {
+      "title": "Reset Game State Confirmation",
+      "description": "This will reset the game state to right after deck loading. This action cannot be undone. Do you want to continue?",
+      "cancel": "Cancel",
+      "reset": "Reset"
+    },
+    "tokenLimitError": {
+      "title": "Token Generation Error",
+      "description": "The free zone already has 5 or more cards. Cannot generate more tokens.",
+      "ok": "OK"
+    },
+    "drawWarning": {
+      "title": "5 Draw Confirmation",
+      "description": "Cards exist in zones other than hand, deck, and extra deck. Executing 5 draw will return all cards to deck, shuffle, and draw 5 cards. This action cannot be undone. Do you want to continue?",
+      "cancel": "Cancel",
+      "execute": "Execute 5 Draw"
+    }
   }
 }

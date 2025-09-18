@@ -1088,18 +1088,15 @@ export function GameFieldContent() {
       <Dialog open={showRecordingConfirmDialog} onOpenChange={setShowRecordingConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>録画データの上書き確認</DialogTitle>
-            <DialogDescription>
-              既に録画されたリプレイデータが存在します。 新しい録画を開始すると、現在のリプレイデータは上書きされます。
-              続行しますか？
-            </DialogDescription>
+            <DialogTitle>{t("ui:dialogs.recordingConfirm.title")}</DialogTitle>
+            <DialogDescription>{t("ui:dialogs.recordingConfirm.description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <button
               onClick={() => setShowRecordingConfirmDialog(false)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              キャンセル
+              {t("ui:dialogs.recordingConfirm.cancel")}
             </button>
             <button
               onClick={() => {
@@ -1108,7 +1105,7 @@ export function GameFieldContent() {
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
             >
-              録画開始
+              {t("ui:dialogs.recordingConfirm.start")}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -1118,18 +1115,15 @@ export function GameFieldContent() {
       <Dialog open={showResetConfirmDialog} onOpenChange={setShowResetConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>ゲーム状態のリセット確認</DialogTitle>
-            <DialogDescription>
-              現在のゲーム状態をリセットして、デッキ読み込み直後の状態に戻します。 この操作は元に戻すことができません。
-              続行しますか？
-            </DialogDescription>
+            <DialogTitle>{t("ui:dialogs.resetConfirm.title")}</DialogTitle>
+            <DialogDescription>{t("ui:dialogs.resetConfirm.description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <button
               onClick={() => setShowResetConfirmDialog(false)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              キャンセル
+              {t("ui:dialogs.resetConfirm.cancel")}
             </button>
             <button
               onClick={() => {
@@ -1138,7 +1132,7 @@ export function GameFieldContent() {
               }}
               className="px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors"
             >
-              リセット
+              {t("ui:dialogs.resetConfirm.reset")}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -1196,14 +1190,12 @@ export function GameFieldContent() {
       <AlertDialog open={showTokenLimitDialog} onOpenChange={setShowTokenLimitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>トークン生成エラー</AlertDialogTitle>
-            <AlertDialogDescription>
-              フリーゾーンには既に5枚以上のカードが存在します。 これ以上トークンを生成することはできません。
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("ui:dialogs.tokenLimitError.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("ui:dialogs.tokenLimitError.description")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <Button onClick={() => setShowTokenLimitDialog(false)} variant="default">
-              OK
+              {t("ui:dialogs.tokenLimitError.ok")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1213,25 +1205,21 @@ export function GameFieldContent() {
       <Dialog open={showDrawWarningDialog} onOpenChange={setShowDrawWarningDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>5枚ドロー確認</DialogTitle>
-            <DialogDescription>
-              手札・デッキ・エクストラデッキ以外のゾーンにカードが存在します。
-              5枚ドローを実行すると、全てのカードがデッキに戻され、シャッフル後に5枚を引き直します。
-              この操作は元に戻すことができません。 続行しますか？
-            </DialogDescription>
+            <DialogTitle>{t("ui:dialogs.drawWarning.title")}</DialogTitle>
+            <DialogDescription>{t("ui:dialogs.drawWarning.description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <button
               onClick={() => setShowDrawWarningDialog(false)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              キャンセル
+              {t("ui:dialogs.drawWarning.cancel")}
             </button>
             <button
               onClick={handleConfirmedDraw5Cards}
               className="px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md transition-colors"
             >
-              5枚ドロー実行
+              {t("ui:dialogs.drawWarning.execute")}
             </button>
           </DialogFooter>
         </DialogContent>

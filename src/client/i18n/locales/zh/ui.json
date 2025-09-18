@@ -161,5 +161,30 @@
     "resultTitle": "生成結果",
     "generatedImageAlt": "生成的牌組圖片",
     "downloadImage": "下載圖片"
+  },
+  "dialogs": {
+    "recordingConfirm": {
+      "title": "覆蓋錄製確認",
+      "description": "現在的重播資料將被覆蓋。您要繼續嗎？",
+      "cancel": "取消",
+      "start": "開始錄製"
+    },
+    "resetConfirm": {
+      "title": "重置遊戲狀態確認",
+      "description": "這將重置遊戲狀態到載入牌組後的狀態。此操作無法撤銷。您要繼續嗎？",
+      "cancel": "取消",
+      "reset": "重置"
+    },
+    "tokenLimitError": {
+      "title": "衍生物生成錯誤",
+      "description": "自由區域已有5張或更多卡片。無法生成更多衍生物。",
+      "ok": "確定"
+    },
+    "drawWarning": {
+      "title": "5抽確認",
+      "description": "手牌、牌組、額外牌組以外的區域有卡片。執补5抽將把所有卡片退回牌組，洗牌後抽5張牌。此操作無法撤銷。您要繼續嗎？",
+      "cancel": "取消",
+      "execute": "執补5抽"
+    }
   }
 }

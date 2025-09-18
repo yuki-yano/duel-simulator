@@ -161,5 +161,30 @@
     "resultTitle": "생성 결과",
     "generatedImageAlt": "생성된 덱 이미지",
     "downloadImage": "이미지 다운로드"
+  },
+  "dialogs": {
+    "recordingConfirm": {
+      "title": "녹화 덮어쓰기 확인",
+      "description": "기존 리플레이 데이터가 덮어씁니다. 계속하시겠습니까?",
+      "cancel": "취소",
+      "start": "녹화 시작"
+    },
+    "resetConfirm": {
+      "title": "게임 상태 리셋 확인",
+      "description": "덱 로드 직후 상태로 리셋합니다. 이 작업은 취소할 수 없습니다. 계속하시겠습니까?",
+      "cancel": "취소",
+      "reset": "리셋"
+    },
+    "tokenLimitError": {
+      "title": "토큰 생성 오류",
+      "description": "프리 존에 이미 5장 이상의 카드가 있습니다. 더 이상 토큰을 생성할 수 없습니다.",
+      "ok": "확인"
+    },
+    "drawWarning": {
+      "title": "5드로 확인",
+      "description": "패, 덱, 엑스트라 덱 이외의 구역에 카드가 있습니다. 5드로를 실행하면 모든 카드를 덱으로 돌리고, 셋플 후 5장을 드로합니다. 이 작업은 취소할 수 없습니다. 계속하시겠습니까?",
+      "cancel": "취소",
+      "execute": "5드로 실행"
+    }
   }
 }
