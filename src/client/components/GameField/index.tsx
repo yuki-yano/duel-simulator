@@ -165,7 +165,7 @@ export function GameFieldContent() {
 
   // Save replay dialog state
   const [showSaveReplayDialog, setShowSaveReplayDialog] = useState(false)
-  const [_isSavingReplay, setIsSavingReplay] = useState(false)
+  const [isSavingReplay, setIsSavingReplay] = useState(false)
   const [shareUrl, setShareUrl] = useState<string>("")
   const [shareTitle, setShareTitle] = useState<string>("")
   const [showShareUrlDialog, setShowShareUrlDialog] = useState(false)
@@ -379,6 +379,7 @@ export function GameFieldContent() {
         return
       }
 
+      setIsSavingReplay(true)
       try {
         // Generate OGP image
         const ogpImageBlob = await generateOGPImage(setScreenshotWidth)
@@ -1151,6 +1152,7 @@ export function GameFieldContent() {
           replayData={replayData}
           onSave={handleSaveReplay}
           onCancel={() => setShowSaveReplayDialog(false)}
+          isLoading={isSavingReplay}
         />
       )}
 
