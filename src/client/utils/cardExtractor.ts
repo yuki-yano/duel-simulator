@@ -211,6 +211,7 @@ export function restoreCardImages(
           "extraMonsterZones",
           "freeZone",
           "sideFreeZone",
+          "sideDeck",
         ]
 
         for (const zoneName of zones) {
