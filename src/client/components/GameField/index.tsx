@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { TooltipProvider } from "@client/components/ui/tooltip"
 import { useTranslation } from "react-i18next"
 
@@ -24,6 +25,36 @@ export function GameField() {
 export function GameFieldContent() {
   const { t } = useTranslation(["game", "ui", "replay"])
   const controller = useGameFieldController(t)
+  const { isReplayMode, isPlaying, replayData, isOpponentFieldOpen, setIsOpponentFieldOpen } = controller
+
+  const prevIsPlayingRef = useRef(isPlaying)
+  const prevHasReplayDataRef = useRef(replayData != null)
+  const autoOpenedRef = useRef(false)
+
+  useEffect(() => {
+    const opponentState = replayData?.startSnapshot?.players?.opponent
+    const opponentHasLoadedDeck =
+      (opponentState?.deck?.length ?? 0) > 0 ||
+      (opponentState?.extraDeck?.length ?? 0) > 0 ||
+      (opponentState?.sideDeck?.length ?? 0) > 0
+
+    const startedPlaying = isPlaying && !prevIsPlayingRef.current
+    const replayDataJustPrepared = !prevHasReplayDataRef.current && replayData != null
+
+    if (
+      isReplayMode &&
+      opponentHasLoadedDeck &&
+      !autoOpenedRef.current &&
+      !isOpponentFieldOpen &&
+      (startedPlaying || replayDataJustPrepared)
+    ) {
+      setIsOpponentFieldOpen(true)
+      autoOpenedRef.current = true
+    }
+
+    prevIsPlayingRef.current = isPlaying
+    prevHasReplayDataRef.current = replayData != null
+  }, [isReplayMode, isPlaying, replayData, isOpponentFieldOpen, setIsOpponentFieldOpen])
 
   return (
     <>

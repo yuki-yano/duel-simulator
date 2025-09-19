@@ -8,7 +8,7 @@ import { produce } from "immer"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 import { addToHistory, resetHistoryAtom } from "../history/historyStack"
-import { replayRecordingAtom, replayOperationsAtom, stopReplayRecordingAtom } from "../replay/recording"
+import { replayRecordingAtom, replayOperationsAtom, replayDataAtom, stopReplayRecordingAtom } from "../replay/recording"
 import { replayPlayingAtom, stopReplayAtom } from "../replay/playback"
 import { cardAnimationsAtom } from "../replay/animations"
 import { selectedCardAtom, draggedCardAtom, hoveredZoneAtom, highlightedZonesAtom } from "../ui/selection"
@@ -138,6 +138,78 @@ export const generateTokenAtom = atom(null, (get, set, targetPlayer: "self" | "o
   return tokenCard
 })
 
+// Load opponent deck atom
+export const loadOpponentDeckToGameStateAtom = atom(
+  null,
+  (get, set, { mainDeck, extraDeck, sideDeck }: { mainDeck: Card[]; extraDeck: Card[]; sideDeck: Card[] }) => {
+    const state = get(gameStateAtom)
+
+    // Create new state with opponent deck loaded
+    const newState = produce(state, (draft) => {
+      draft.players.opponent.deck = [...mainDeck]
+      draft.players.opponent.extraDeck = [...extraDeck]
+      draft.players.opponent.sideDeck = [...sideDeck]
+    })
+
+    // Update initialStateAfterDeckLoad to include opponent deck
+    const currentInitialState = get(initialStateAfterDeckLoadAtom)
+    if (currentInitialState) {
+      const updatedInitialState = produce(currentInitialState, (draft) => {
+        draft.players.opponent.deck = [...mainDeck]
+        draft.players.opponent.extraDeck = [...extraDeck]
+        draft.players.opponent.sideDeck = [...sideDeck]
+      })
+      set(initialStateAfterDeckLoadAtom, updatedInitialState)
+    } else {
+      // If initialStateAfterDeckLoad is not yet set (opponent deck loaded before self deck),
+      // set it now with the current state including opponent deck
+      set(initialStateAfterDeckLoadAtom, newState)
+    }
+
+    // Create operation for history
+    const operation: GameOperation = {
+      id: nanoid(),
+      timestamp: Date.now(),
+      type: "load",
+      cardId: "opponent-deck", // Dummy card ID for deck load operation
+      player: "opponent",
+      metadata: {
+        isOpponentDeckLoad: true,
+        mainDeckCount: mainDeck.length,
+        extraDeckCount: extraDeck.length,
+        sideDeckCount: sideDeck.length,
+      },
+    }
+
+    // Update operations BEFORE history
+    set(operationsAtom, (prev) => [...prev, operation])
+
+    // Then update state and history
+    set(gameStateAtom, newState)
+    addToHistory(get, set, newState)
+
+    // Also record to replay operations if recording
+    if (get(replayRecordingAtom)) {
+      set(replayOperationsAtom, (prev) => [...prev, operation])
+
+      // Update replay start snapshot if opponent deck is loaded during recording
+      // This ensures the opponent deck images are included in the replay
+      const currentReplayData = get(replayDataAtom)
+      if (currentReplayData != null) {
+        const updatedReplayData = {
+          ...currentReplayData,
+          startSnapshot: produce(currentReplayData.startSnapshot, (draft) => {
+            draft.players.opponent.deck = [...mainDeck]
+            draft.players.opponent.extraDeck = [...extraDeck]
+            draft.players.opponent.sideDeck = [...sideDeck]
+          }),
+        }
+        set(replayDataAtom, updatedReplayData)
+      }
+    }
+  },
+)
+
 // Shuffle deck atom
 export const shuffleDeckAtom = atom(null, (get, set, targetPlayer: "self" | "opponent" = "self") => {
   const state = get(gameStateAtom)
@@ -199,7 +271,7 @@ export const drawMultipleCardsAtom = atom(
   null,
   (get, set, count: number = 5, targetPlayer: "self" | "opponent" = "self") => {
     // Special handling for 5-card draw (reset + shuffle + draw)
-    if (count === 5) {
+    if (count === 5 && targetPlayer === "self") {
       const state = get(gameStateAtom)
       const player = state.players[targetPlayer]
       const forceDrawFlag = get(forceDraw5CardsAtom)
@@ -232,6 +304,7 @@ export const drawMultipleCardsAtom = atom(
         return { success: false }
       }
 
+      // Process self player
       const initialDeck = initialState.players[targetPlayer].deck
       const initialHand = initialState.players[targetPlayer].hand
       const initialExtraDeck = initialState.players[targetPlayer].extraDeck
@@ -247,9 +320,30 @@ export const drawMultipleCardsAtom = atom(
         ;[shuffledMainCards[i], shuffledMainCards[j]] = [shuffledMainCards[j], shuffledMainCards[i]]
       }
 
+      // Process opponent if they have a deck
+      const opponentHasDeck = initialState.players.opponent.deck.length > 0
+      let opponentShuffledCards: Card[] = []
+      let opponentExtraCards: Card[] = []
+
+      if (opponentHasDeck) {
+        const oppInitialDeck = initialState.players.opponent.deck
+        const oppInitialHand = initialState.players.opponent.hand
+        const oppInitialExtraDeck = initialState.players.opponent.extraDeck
+
+        // Combine and shuffle opponent's cards
+        const allOppMainCards = [...oppInitialDeck, ...oppInitialHand]
+        opponentExtraCards = [...oppInitialExtraDeck]
+
+        opponentShuffledCards = [...allOppMainCards]
+        for (let i = opponentShuffledCards.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[opponentShuffledCards[i], opponentShuffledCards[j]] = [opponentShuffledCards[j], opponentShuffledCards[i]]
+        }
+      }
+
       // Create new state based on initial state
       const newState = produce(initialState, (draft) => {
-        // Clear all zones first (reset to initial state)
+        // Clear all zones first (reset to initial state) for self
         const targetPlayerBoard = draft.players[targetPlayer]
 
         // Clear all zones
@@ -266,6 +360,26 @@ export const drawMultipleCardsAtom = atom(
         targetPlayerBoard.hand = shuffledMainCards.slice(0, 5)
         targetPlayerBoard.deck = shuffledMainCards.slice(5)
         targetPlayerBoard.extraDeck = extraCards
+
+        // If opponent has deck, process them too
+        if (opponentHasDeck) {
+          const opponentBoard = draft.players.opponent
+
+          // Clear opponent zones
+          opponentBoard.monsterZones = [[], [], [], [], []]
+          opponentBoard.spellTrapZones = [[], [], [], [], []]
+          opponentBoard.extraMonsterZones = [[], []]
+          opponentBoard.fieldZone = null
+          opponentBoard.graveyard = []
+          opponentBoard.banished = []
+          opponentBoard.freeZone = []
+          opponentBoard.sideFreeZone = []
+
+          // Set up opponent's shuffled deck and draw 5
+          opponentBoard.hand = opponentShuffledCards.slice(0, 5)
+          opponentBoard.deck = opponentShuffledCards.slice(5)
+          opponentBoard.extraDeck = opponentExtraCards
+        }
       })
 
       // Reset history to make this operation non-undoable

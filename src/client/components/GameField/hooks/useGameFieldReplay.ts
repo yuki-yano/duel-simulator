@@ -20,11 +20,19 @@ import {
   deckMetadataAtom,
   hasSideDeckAtom,
 } from "@/client/atoms/boardAtoms"
+import {
+  hasOpponentDeckAtom,
+  opponentDeckCardsAtom,
+  opponentExtraDeckCardsAtom,
+  opponentSideDeckCardsAtom,
+  opponentDeckMetadataAtom,
+} from "@/client/atoms/opponentDeckAtom"
 import { useScreenshot } from "@/client/contexts/ScreenshotContext"
 import { saveReplayData } from "@/client/api/gameState"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 import { generateOGPImage } from "@/client/utils/ogpScreenshot"
 import type { ReplaySaveData } from "@/shared/types/game"
+import { createOpponentDeckMapping, addOpponentDeckToMapping } from "@/client/utils/opponentDeckUtils"
 
 interface ReplayDialogControllers {
   setIsSavingReplay: (value: boolean) => void
@@ -54,6 +62,11 @@ export const useGameFieldReplay = (
   const [, stopReplay] = useAtom(stopReplayAtom)
   const deckMetadata = useAtomValue(deckMetadataAtom)
   const hasSideDeck = useAtomValue(hasSideDeckAtom)
+  const hasOpponentDeck = useAtomValue(hasOpponentDeckAtom)
+  const opponentMainDeck = useAtomValue(opponentDeckCardsAtom)
+  const opponentExtraDeck = useAtomValue(opponentExtraDeckCardsAtom)
+  const opponentSideDeck = useAtomValue(opponentSideDeckCardsAtom)
+  const opponentDeckMetadata = useAtomValue(opponentDeckMetadataAtom)
 
   const { setScreenshotWidth } = useScreenshot()
 
@@ -87,6 +100,14 @@ export const useGameFieldReplay = (
           sourceHeight: deckMetadata.sourceHeight,
         })
 
+        // 相手デッキマッピングを準備
+        const extendedDeckCardIds = hasOpponentDeck
+          ? addOpponentDeckToMapping(
+              deckMetadata.deckCardIds,
+              createOpponentDeckMapping(opponentMainDeck, opponentExtraDeck, opponentSideDeck),
+            )
+          : deckMetadata.deckCardIds
+
         const saveData: ReplaySaveData = {
           version: "1.0",
           type: "replay",
@@ -94,7 +115,8 @@ export const useGameFieldReplay = (
             initialState: replayData.startSnapshot,
             operations: replayData.operations,
             deckImageHash: imageHash,
-            deckCardIds: deckMetadata.deckCardIds,
+            deckCardIds: extendedDeckCardIds,
+            opponentDeckImageHash: opponentDeckMetadata?.imageHash, // 相手デッキ画像ハッシュを追加
           },
           metadata: {
             title,
@@ -102,10 +124,17 @@ export const useGameFieldReplay = (
             createdAt: Date.now(),
             duration: replayData.endTime !== undefined ? replayData.endTime - replayData.startTime : 0,
             operationCount: replayData.operations.length,
+            hasOpponentDeck: hasOpponentDeck, // 相手デッキフラグを追加
           },
         }
 
-        const response = await saveReplayData(saveData, imageHash, deckMetadata.deckConfig, deckMetadata.deckCardIds, ogpImageData)
+        const response = await saveReplayData(
+          saveData,
+          imageHash,
+          deckMetadata.deckConfig,
+          extendedDeckCardIds,
+          ogpImageData,
+        )
 
         dialogControllers.setShareUrl(response.shareUrl)
         dialogControllers.setShareTitle(title)
@@ -119,7 +148,18 @@ export const useGameFieldReplay = (
         dialogControllers.setIsSavingReplay(false)
       }
     },
-    [deckMetadata, dialogControllers, replayData, setScreenshotWidth, t],
+    [
+      deckMetadata,
+      dialogControllers,
+      replayData,
+      setScreenshotWidth,
+      t,
+      hasOpponentDeck,
+      opponentMainDeck,
+      opponentExtraDeck,
+      opponentSideDeck,
+      opponentDeckMetadata,
+    ],
   )
 
   return {

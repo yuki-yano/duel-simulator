@@ -1,13 +1,16 @@
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown } from "lucide-react"
+import { ChevronDown, ChevronUp, PlusCircle, MoreHorizontal, Shuffle, Layers2, ArrowUpDown, Upload } from "lucide-react"
 
 import { cn } from "@client/lib/utils"
+import { OpponentDeckModal } from "@/client/components/OpponentDeckModal"
 
 import { DeckZone } from "../DeckZone"
 import type { GameFieldController } from "../hooks/useGameFieldController"
 
 export function OpponentArea({ controller }: { controller: GameFieldController }) {
   const { t } = useTranslation(["game"])
+  const [isOpponentDeckModalOpen, setIsOpponentDeckModalOpen] = useState(false)
   const {
     isExtraActionsOpen,
     setIsExtraActionsOpen,
@@ -124,6 +127,20 @@ export function OpponentArea({ controller }: { controller: GameFieldController }
             <ArrowUpDown className="w-4 h-4" />
             <span>{!preventSameZoneReorder ? t("game:field.reorderDisable") : t("game:field.reorderEnable")}</span>
           </button>
+          <button
+            onClick={() => setIsOpponentDeckModalOpen(true)}
+            disabled={!isDeckLoaded || isPlaying}
+            className={cn(
+              "flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors text-xs sm:text-sm font-medium",
+              isDeckLoaded && !isPlaying
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed",
+            )}
+            aria-label="Load opponent deck"
+          >
+            <Upload className="w-4 h-4" />
+            <span>{t("game:field.loadOpponentDeck")}</span>
+          </button>
         </div>
       )}
 
@@ -166,6 +183,13 @@ export function OpponentArea({ controller }: { controller: GameFieldController }
           </div>
         </div>
       )}
+
+      {/* 相手デッキ読み込みモーダル */}
+      <OpponentDeckModal
+        isOpen={isOpponentDeckModalOpen}
+        onClose={() => setIsOpponentDeckModalOpen(false)}
+        onLoadSuccess={() => setIsOpponentFieldOpen(true)} // 読み込み成功時に相手フィールドを表示
+      />
     </div>
   )
 }

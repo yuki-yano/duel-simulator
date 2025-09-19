@@ -99,7 +99,16 @@ export const useGameFieldInteractions = ({
         moveCard({ zone: from, cardId: draggedCard.id }, { zone: to, cardId: draggedCard.id }, options)
       }
     },
-    [draggedCard, mobileDefenseMode, mobileFaceDownMode, mobileStackBottom, moveCard, opponentBoard, playerBoard, preventSameZoneReorder],
+    [
+      draggedCard,
+      mobileDefenseMode,
+      mobileFaceDownMode,
+      mobileStackBottom,
+      moveCard,
+      opponentBoard,
+      playerBoard,
+      preventSameZoneReorder,
+    ],
   )
 
   const handleCardContextMenu = useCallback((e: MouseEvent | TouchEvent, card: GameCard, zone: ZoneId) => {
