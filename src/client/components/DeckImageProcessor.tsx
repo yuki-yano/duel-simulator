@@ -16,6 +16,7 @@ type DeckImageProcessorProps = {
   isReplayMode?: boolean
   onReplayStart?: () => void
   onError?: () => void
+  deckTarget?: "self" | "opponent" // デッキの対象プレイヤー（デフォルト: 'self'）
 }
 
 export type DeckProcessMetadata = {
@@ -50,6 +51,7 @@ export function DeckImageProcessor({
   isReplayMode = false,
   onReplayStart,
   onError,
+  deckTarget = "self",
 }: DeckImageProcessorProps) {
   const { t } = useTranslation(["ui", "common"])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -817,12 +819,15 @@ export function DeckImageProcessor({
       setProcessedCards(cards)
       setDebugExtractedCards(debugCards) // デバッグ用カード情報を保存
 
-      // Store extracted cards
-      setExtractedCards({
-        mainDeck: mainDeckCards,
-        extraDeck: extraDeckCards,
-        sideDeck: sideDeckCards,
-      })
+      // Store extracted cards for self deck only
+      // (opponent deck is handled directly in OpponentDeckModal)
+      if (deckTarget === "self") {
+        setExtractedCards({
+          mainDeck: mainDeckCards,
+          extraDeck: extraDeckCards,
+          sideDeck: sideDeckCards,
+        })
+      }
 
       // Create metadata
       const metadata: DeckProcessMetadata = {
