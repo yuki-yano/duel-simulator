@@ -9,6 +9,7 @@ export const SaveDeckImageRequestSchema = z.object({
   extraDeckCount: z.number().int().min(0).max(30),
   sourceWidth: z.number().int().positive(),
   sourceHeight: z.number().int().positive(),
+  deckConfig: DeckConfigurationSchema.optional(), // deck config（オプショナル）
 })
 
 export const SaveGameStateRequestSchema = z.object({
@@ -44,6 +45,7 @@ export const DeckImageResponseSchema = z.object({
   extraDeckCount: z.number(),
   sourceWidth: z.number(),
   sourceHeight: z.number(),
+  deckConfig: DeckConfigurationSchema.optional(), // deck config（オプショナル）
 })
 
 export const SavedStateResponseSchema = z.object({

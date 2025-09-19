@@ -87,6 +87,7 @@ export const GameOperationSchema = z.object({
     "changePosition",
     "toggleHighlight",
     "updateCounter",
+    "load",
   ]),
   cardId: z.string(),
   from: OperationZoneSchema.optional(),
@@ -102,11 +103,15 @@ export const GameOperationSchema = z.object({
     .optional(),
 })
 
-// DeckCardIdsMapping schema - only supports old format (index -> cardId mapping)
+// DeckCardIdsMapping schema - supports both player's decks
 export const DeckCardIdsMappingSchema = z.object({
   mainDeck: z.record(z.string(), z.string()),
   extraDeck: z.record(z.string(), z.string()),
   sideDeck: z.record(z.string(), z.string()).optional(), // Optional for backward compatibility
+  // 相手デッキのマッピング（オプショナル - 後方互換性のため）
+  opponentMainDeck: z.record(z.string(), z.string()).optional(),
+  opponentExtraDeck: z.record(z.string(), z.string()).optional(),
+  opponentSideDeck: z.record(z.string(), z.string()).optional(),
 })
 
 // DeckSection schema
@@ -137,6 +142,7 @@ export const ReplaySaveDataSchema = z.object({
     operations: z.array(GameOperationSchema),
     deckImageHash: z.string(),
     deckCardIds: DeckCardIdsMappingSchema.optional(), // May be stored separately
+    opponentDeckImageHash: z.string().optional(), // 相手デッキの画像ハッシュ
   }),
   metadata: z.object({
     title: z.string(),
@@ -144,6 +150,7 @@ export const ReplaySaveDataSchema = z.object({
     createdAt: z.number(),
     duration: z.number(),
     operationCount: z.number(),
+    hasOpponentDeck: z.boolean().optional(), // 相手デッキ有無フラグ（後方互換性のためオプショナル）
   }),
 })
 

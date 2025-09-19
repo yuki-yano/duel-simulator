@@ -24,6 +24,7 @@ import {
   hasEverPlayedInReplayModeAtom,
   initialStateAfterDeckLoadAtom,
 } from "@/client/atoms/boardAtoms"
+import { opponentDeckMetadataAtom } from "@/client/atoms/opponentDeckAtom"
 import { extractCardsFromDeckImage, restoreCardImages } from "@/client/utils/cardExtractor"
 import { DeckConfigurationSchema, DeckCardIdsMappingSchema, ReplaySaveDataSchema } from "@/client/schemas/replay"
 import { cn } from "@/client/lib/utils"
@@ -59,6 +60,7 @@ export default function Replay() {
   const deckMetadata = useAtomValue(deckMetadataAtom)
   const setReplayTotalOperations = useSetAtom(replayTotalOperationsAtom)
   const setHasEverPlayedInReplayMode = useSetAtom(hasEverPlayedInReplayModeAtom)
+  const _setOpponentDeckMetadata = useSetAtom(opponentDeckMetadataAtom)
   const [copyFeedback, setCopyFeedback] = useState(false)
 
   useEffect(() => {
@@ -514,7 +516,6 @@ export default function Replay() {
 
       // バリデーション成功 - リプレイデータを使用
       const replaySaveData = validationResult.data
-
       // 古いリプレイデータとの互換性対応
       // freeZone, sideFreeZone が存在しない場合は空配列を設定
       if (!replaySaveData.data.initialState.players.self.freeZone) {
@@ -533,8 +534,60 @@ export default function Replay() {
       // Extract card images from deck metadata
       const cardImageMap = await extractCardsFromDeckImage(deckMetadata, deckMetadata.deckCardIds)
 
+      // 相手デッキ画像がある場合、R2から取得して復元
+      if (replaySaveData.data.opponentDeckImageHash != null) {
+        try {
+          const opponentDeckData = await getDeckImage(replaySaveData.data.opponentDeckImageHash)
+
+          // 相手デッキの画像URLを生成（自分のデッキと同様に/imageエンドポイントを使用）
+          const opponentImageUrl = getDeckImageUrl(replaySaveData.data.opponentDeckImageHash)
+
+          // 相手デッキのカード画像も抽出
+          if (replaySaveData.data.deckCardIds != null) {
+            // 相手デッキのカードIDマッピングを作成
+            const opponentDeckCardIds = {
+              mainDeck: replaySaveData.data.deckCardIds.opponentMainDeck ?? {},
+              extraDeck: replaySaveData.data.deckCardIds.opponentExtraDeck ?? {},
+              sideDeck: replaySaveData.data.deckCardIds.opponentSideDeck ?? {},
+            }
+
+            const opponentCardImageMap = await extractCardsFromDeckImage(
+              {
+                ...opponentDeckData,
+                imageUrl: opponentImageUrl, // imageUrlを使用（imageエンドポイント経由）
+                imageDataUrl: opponentDeckData.imageDataUrl, // フォールバック用
+                deckCardIds: opponentDeckCardIds,
+                // 相手デッキのdeck configを使用（R2から取得したものを優先）
+                deckConfig:
+                  opponentDeckData.deckConfig ??
+                  (deckMetadata.deckConfig as DeckConfiguration | undefined) ??
+                  ({
+                    mainDeck: null,
+                    extraDeck: null,
+                    sideDeck: null,
+                    cardWidth: 0,
+                    cardHeight: 0,
+                    cardGap: 0,
+                    leftMargin: 0,
+                  } as DeckConfiguration),
+                sideDeckCount: Object.keys(replaySaveData.data.deckCardIds.opponentSideDeck || {}).length,
+              },
+              opponentDeckCardIds,
+            )
+            // 相手デッキの画像をcardImageMapに追加
+            for (const [cardId, imageUrl] of opponentCardImageMap.entries()) {
+              cardImageMap.set(cardId, imageUrl)
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load opponent deck image:", error)
+        }
+      }
+
       // Restore card images to initial state
       restoreCardImages(replaySaveData.data.initialState, cardImageMap)
+
+      // 相手デッキは restoreCardImages 内で imageUrl を復元済みなので、setOpponentDeck は呼ばない
 
       // Set initial game state with restored images
       setGameState(replaySaveData.data.initialState)
