@@ -127,8 +127,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@types/node':
-        specifier: ^24.4.0
-        version: 24.4.0
+        specifier: ^24.5.2
+        version: 24.5.2
       '@types/react':
         specifier: ^19.1.13
         version: 19.1.13
@@ -143,7 +143,7 @@ importers:
         version: 7.0.0-dev.20250914.1
       '@vitejs/plugin-react':
         specifier: ^4.6.0
-        version: 4.7.0(vite@7.1.5(@types/node@24.4.0)(jiti@1.21.7)(yaml@2.8.1))
+        version: 4.7.0(vite@7.1.5(@types/node@24.5.2)(jiti@1.21.7)(yaml@2.8.1))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
@@ -188,7 +188,7 @@ importers:
         version: 8.39.1(eslint@9.35.0(jiti@1.21.7))(typescript@5.9.2)
       vite:
         specifier: ^7.1.5
-        version: 7.1.5(@types/node@24.4.0)(jiti@1.21.7)(yaml@2.8.1)
+        version: 7.1.5(@types/node@24.5.2)(jiti@1.21.7)(yaml@2.8.1)
       wrangler:
         specifier: ^4.36.0
         version: 4.36.0(@cloudflare/workers-types@4.20250913.0)
@@ -1692,8 +1692,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@24.4.0':
-    resolution: {integrity: sha512-gUuVEAK4/u6F9wRLznPUU4WGUacSEBDPoC2TrBkw3GAnOLHBL45QdfHOXp1kJ4ypBGLxTOB+t7NJLpKoC3gznQ==}
+  '@types/node@24.5.2':
+    resolution: {integrity: sha512-FYxk1I7wPv3K2XBaoyH2cTnocQEu8AOZ60hPbsyukMPLv5/5qr7V1i8PLHdl6Zf87I+xZXFvPCXYjiTFq+YSDQ==}
 
   '@types/react-dom@19.1.9':
     resolution: {integrity: sha512-qXRuZaOsAdXKFyOhRBg6Lqqc0yay13vN7KrIg4L7N4aaHN68ma9OK3NE1BoDFgFOTfM7zg+3/8+2n8rLUH3OKQ==}
@@ -3537,8 +3537,8 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-types@7.11.0:
-    resolution: {integrity: sha512-kt1ZriHTi7MU+Z/r9DOdAI3ONdaR3M3csEaRc6ewa4f4dTvX4cQCbJ4NkEn0ohE4hHtq85+PhPSTY+pO/1PwgA==}
+  undici-types@7.12.0:
+    resolution: {integrity: sha512-goOacqME2GYyOZZfb5Lgtu+1IDmAlAEu5xnD3+xTzS10hT0vzpf0SPjkXwAw9Jm+4n/mQGDP3LO8CPbYROeBfQ==}
 
   undici@7.14.0:
     resolution: {integrity: sha512-Vqs8HTzjpQXZeXdpsfChQTlafcMQaaIwnGwLam1wudSSjlJeQ3bw1j+TLPePgrCnCpUXx7Ba5Pdpf5OBih62NQ==}
@@ -4985,9 +4985,9 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@24.4.0':
+  '@types/node@24.5.2':
     dependencies:
-      undici-types: 7.11.0
+      undici-types: 7.12.0
 
   '@types/react-dom@19.1.9(@types/react@19.1.13)':
     dependencies:
@@ -5123,7 +5123,7 @@ snapshots:
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20250914.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20250914.1
 
-  '@vitejs/plugin-react@4.7.0(vite@7.1.5(@types/node@24.4.0)(jiti@1.21.7)(yaml@2.8.1))':
+  '@vitejs/plugin-react@4.7.0(vite@7.1.5(@types/node@24.5.2)(jiti@1.21.7)(yaml@2.8.1))':
     dependencies:
       '@babel/core': 7.28.3
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.3)
@@ -5131,7 +5131,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 7.1.5(@types/node@24.4.0)(jiti@1.21.7)(yaml@2.8.1)
+      vite: 7.1.5(@types/node@24.5.2)(jiti@1.21.7)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -7063,7 +7063,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-types@7.11.0: {}
+  undici-types@7.12.0: {}
 
   undici@7.14.0: {}
 
@@ -7117,7 +7117,7 @@ snapshots:
 
   uuid@13.0.0: {}
 
-  vite@7.1.5(@types/node@24.4.0)(jiti@1.21.7)(yaml@2.8.1):
+  vite@7.1.5(@types/node@24.5.2)(jiti@1.21.7)(yaml@2.8.1):
     dependencies:
       esbuild: 0.25.9
       fdir: 6.5.0(picomatch@4.0.3)
@@ -7126,7 +7126,7 @@ snapshots:
       rollup: 4.50.1
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 24.4.0
+      '@types/node': 24.5.2
       fsevents: 2.3.3
       jiti: 1.21.7
       yaml: 2.8.1

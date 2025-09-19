@@ -57,6 +57,6 @@ export default [
     },
   },
   {
-    ignores: ["**/*.js", "**/*.mjs", "vite.config.ts", "dist", "node_modules", ".wrangler"],
+    ignores: ["**/*.js", "**/*.mjs", "vite.config.ts", "dist", "node_modules", ".wrangler", "docs"],
   },
 ]
