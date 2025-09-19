@@ -78,7 +78,7 @@ export default function App() {
     if (extractedCards.mainDeck.length > 0 || extractedCards.extraDeck.length > 0) {
       // Reset side deck flag for new deck load
       setHasSideDeck(false)
-      
+
       // Set zone information and index for cards
       const mainDeckWithZones = extractedCards.mainDeck.map((card, index) => ({
         ...card,
@@ -173,6 +173,7 @@ export default function App() {
               imageDataUrl={uploadedImage}
               onProcessComplete={handleProcessComplete}
               onError={() => setUploadedImage(null)}
+              deckTarget="self"
             />
           </div>
         )}
