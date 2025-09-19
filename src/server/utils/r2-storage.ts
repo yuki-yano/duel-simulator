@@ -7,6 +7,7 @@ import type { R2Bucket } from "@cloudflare/workers-types"
 export type R2PutOptions = {
   contentType: string
   cacheControl?: string
+  customMetadata?: Record<string, string>
 }
 
 /**
@@ -34,6 +35,7 @@ export async function saveBase64ToR2(
       contentType: options.contentType,
       cacheControl: options.cacheControl ?? "public, max-age=31536000, immutable",
     },
+    customMetadata: options.customMetadata,
   })
 }
 
@@ -49,6 +51,27 @@ export async function getImageFromR2(bucket: R2Bucket, key: string): Promise<Arr
     return null
   }
   return await object.arrayBuffer()
+}
+
+/**
+ * R2から画像とメタデータを取得
+ * @param bucket - R2Bucket
+ * @param key - 取得するキー
+ * @returns 画像データとカスタムメタデータ
+ */
+export async function getImageWithMetadataFromR2(
+  bucket: R2Bucket,
+  key: string,
+): Promise<{ arrayBuffer: ArrayBuffer; customMetadata?: Record<string, string> } | null> {
+  const object = await bucket.get(key)
+  if (!object) {
+    return null
+  }
+
+  return {
+    arrayBuffer: await object.arrayBuffer(),
+    customMetadata: object.customMetadata,
+  }
 }
 
 /**

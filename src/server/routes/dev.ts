@@ -40,12 +40,10 @@ app.get("/api/dev/r2-images/:path{.+}", async (c) => {
 
   try {
     const key = c.req.param("path") ?? ""
-    console.log("Requested key:", key)
 
     const arrayBuffer = await getImageFromR2(c.env.BUCKET, key)
 
     if (!arrayBuffer) {
-      console.log("Object not found in R2:", key)
       return c.json({ error: "Image not found", key }, 404)
     }
 

@@ -78,7 +78,6 @@ app.post("/api/save-states", async (c) => {
           contentType: "image/jpeg",
           cacheControl: "public, max-age=31536000, immutable",
         })
-        console.log(`OGP image saved to R2: ${ogpImagePath}`)
       } catch (error) {
         console.error("Failed to save OGP image:", error)
         // Continue without OGP image

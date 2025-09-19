@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm"
 import { createDb, schema } from "../db"
 import { SaveDeckImageRequestSchema } from "../../shared/types/api"
 import { arrayBufferToBase64 } from "../utils/base64"
-import { saveBase64ToR2, getImageFromR2 } from "../utils/r2-storage"
+import { saveBase64ToR2, getImageFromR2, getImageWithMetadataFromR2 } from "../utils/r2-storage"
 import type { Bindings } from "../types/bindings"
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -15,13 +15,19 @@ app.post("/api/deck-images", async (c) => {
     // リクエストボディのバリデーション
     const body = await c.req.json()
     const validated = SaveDeckImageRequestSchema.parse(body)
-    const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight } = validated
+    const { hash, imageData, mainDeckCount, extraDeckCount, sourceWidth, sourceHeight, deckConfig } = validated
     const db = createDb(c.env.DB)
 
-    // Save image to R2
+    // Save image to R2 with deck config as custom metadata
+    const customMetadata: Record<string, string> = {}
+    if (deckConfig != null) {
+      customMetadata.deckConfig = JSON.stringify(deckConfig)
+    }
+
     await saveBase64ToR2(c.env.BUCKET, `deck-images/${hash}`, imageData, {
       contentType: "image/png",
       cacheControl: "public, max-age=31536000, immutable",
+      customMetadata,
     })
 
     // Save metadata to DB (using Drizzle ORM)
@@ -76,19 +82,30 @@ app.get("/api/deck-images/:hash", async (c) => {
       return c.json({ error: "Deck image not found" }, 404)
     }
 
-    // Get image from R2
-    const arrayBuffer = await getImageFromR2(c.env.BUCKET, `deck-images/${hash}`)
+    // Get image and metadata from R2
+    const r2Data = await getImageWithMetadataFromR2(c.env.BUCKET, `deck-images/${hash}`)
 
-    if (!arrayBuffer) {
+    if (!r2Data) {
       return c.json({ error: "Deck image file not found" }, 404)
     }
 
     // Convert ArrayBuffer to base64
-    const imageDataUrl = arrayBufferToBase64(arrayBuffer, "image/png")
+    const imageDataUrl = arrayBufferToBase64(r2Data.arrayBuffer, "image/png")
+
+    // Parse deck config from custom metadata if exists
+    let deckConfig = undefined
+    if (r2Data.customMetadata?.deckConfig != null) {
+      try {
+        deckConfig = JSON.parse(r2Data.customMetadata.deckConfig)
+      } catch (e) {
+        console.warn("Failed to parse deck config from R2 metadata:", e)
+      }
+    }
 
     return c.json({
       ...metadata,
       imageDataUrl,
+      deckConfig,
     })
   } catch (error) {
     console.error("Failed to get deck image:", error)

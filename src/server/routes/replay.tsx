@@ -17,9 +17,6 @@ app.get("/replay/:id", async (c) => {
     // Get replay data from DB
     const result = await db.select().from(schema.savedStates).where(eq(schema.savedStates.id, id)).get()
 
-    // デバッグ用ログ
-    console.log(`Replay request for ID: ${id}, User-Agent: ${c.req.header("user-agent")}`)
-
     if (!result) {
       // リプレイが見つからない場合は通常のHTMLを返す
       return c.html(<Root />)

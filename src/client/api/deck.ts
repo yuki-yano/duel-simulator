@@ -1,3 +1,8 @@
+import type { DeckConfiguration } from "@/client/schemas/replay"
+import { ErrorResponseSchema } from "@/shared/types/api"
+import { apiUrl } from "@/client/lib/api"
+import { sha256 } from "js-sha256"
+
 export type SaveDeckImageRequest = {
   hash: string
   imageData: string
@@ -5,6 +10,7 @@ export type SaveDeckImageRequest = {
   extraDeckCount: number
   sourceWidth: number
   sourceHeight: number
+  deckConfig?: DeckConfiguration // DeckConfiguration型を保存
 }
 
 export type DeckImageResponse = {
@@ -16,11 +22,8 @@ export type DeckImageResponse = {
   createdAt: string
   imageDataUrl: string
   imageUrl?: string
+  deckConfig?: DeckConfiguration // DeckConfiguration型を返す
 }
-
-import { ErrorResponseSchema } from "@/shared/types/api"
-import { apiUrl } from "@/client/lib/api"
-import { sha256 } from "js-sha256"
 
 export async function saveDeckImage(data: SaveDeckImageRequest): Promise<{ success: boolean; hash: string }> {
   const response = await fetch(apiUrl("/deck-images"), {
