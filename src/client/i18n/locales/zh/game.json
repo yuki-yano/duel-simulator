@@ -77,6 +77,16 @@
     "doubleClickEffect": "雙擊：發動效果",
     "shiftDoubleClickTarget": "Shift + 雙擊：作為對象",
     "undoShortcut": "Ctrl/Cmd + Z：復原",
-    "redoShortcut": "Ctrl/Cmd + Y 或 Ctrl/Cmd + Shift + Z：重做"
+    "redoShortcut": "Ctrl/Cmd + Y 或 Ctrl/Cmd + Shift + Z：重做",
+    "loadOpponentDeck": "載入對手牌組"
+  },
+  "opponentDeck": {
+    "title": "載入對手牌組",
+    "uploadTitle": "上傳對手牌組圖片",
+    "clickOrDrag": "點擊選擇或拖放文件",
+    "supportedFormats": "支持格式：JPEG、PNG、WebP（最大10MB）",
+    "fileSizeExceeded": "文件大小超過10MB",
+    "invalidFileType": "請選擇圖片文件",
+    "fileReadError": "文件讀取失敗"
   }
 }

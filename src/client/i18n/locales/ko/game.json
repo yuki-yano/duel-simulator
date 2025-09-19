@@ -77,6 +77,16 @@
     "doubleClickEffect": "더블클릭: 효과 발동",
     "shiftDoubleClickTarget": "Shift + 더블클릭: 타겟으로 지정",
     "undoShortcut": "Ctrl/Cmd + Z: 실행취소",
-    "redoShortcut": "Ctrl/Cmd + Y 또는 Ctrl/Cmd + Shift + Z: 다시실행"
+    "redoShortcut": "Ctrl/Cmd + Y 또는 Ctrl/Cmd + Shift + Z: 다시실행",
+    "loadOpponentDeck": "상대 덱 불러오기"
+  },
+  "opponentDeck": {
+    "title": "상대 덱 불러오기",
+    "uploadTitle": "상대 덱 이미지 업로드",
+    "clickOrDrag": "클릭하여 선택하거나 드래그 앤 드롭",
+    "supportedFormats": "지원 형식: JPEG, PNG, WebP (최대 10MB)",
+    "fileSizeExceeded": "파일 크기가 10MB를 초과합니다",
+    "invalidFileType": "이미지 파일을 선택해주세요",
+    "fileReadError": "파일 읽기에 실패했습니다"
   }
 }

@@ -63,6 +63,7 @@
     "fiveDraw": "ランダム5ドロー",
     "shuffle": "シャッフル",
     "generateToken": "トークン生成",
+    "loadOpponentDeck": "相手デッキ読み込み",
     "reorderEnable": "並び替え可能",
     "reorderDisable": "並び替え禁止",
     "operationHints": "操作ヒント",
@@ -78,5 +79,14 @@
     "shiftDoubleClickTarget": "Shift + ダブルクリック: 対象に取る",
     "undoShortcut": "Ctrl/Cmd + Z: 元に戻す",
     "redoShortcut": "Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z: やり直し"
+  },
+  "opponentDeck": {
+    "title": "相手デッキを読み込む",
+    "uploadTitle": "相手デッキ画像をアップロード",
+    "clickOrDrag": "クリックして選択またはドラッグ&ドロップ",
+    "supportedFormats": "対応形式: JPEG, PNG, WebP（10MB以下）",
+    "fileSizeExceeded": "ファイルサイズが10MBを超えています",
+    "invalidFileType": "画像ファイルを選択してください",
+    "fileReadError": "ファイルの読み込みに失敗しました"
   }
 }

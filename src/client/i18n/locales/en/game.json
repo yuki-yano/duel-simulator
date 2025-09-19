@@ -63,6 +63,7 @@
     "fiveDraw": "Random 5 Draw",
     "shuffle": "Shuffle",
     "generateToken": "Generate Token",
+    "loadOpponentDeck": "Load Opponent Deck",
     "reorderEnable": "Enable Reorder",
     "reorderDisable": "Disable Reorder",
     "operationHints": "Operation Hints",
@@ -78,5 +79,14 @@
     "shiftDoubleClickTarget": "Shift + Double click: Target",
     "undoShortcut": "Ctrl/Cmd + Z: Undo",
     "redoShortcut": "Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo"
+  },
+  "opponentDeck": {
+    "title": "Load Opponent Deck",
+    "uploadTitle": "Upload Opponent Deck Image",
+    "clickOrDrag": "Click to select or drag and drop",
+    "supportedFormats": "Supported formats: JPEG, PNG, WebP (max 10MB)",
+    "fileSizeExceeded": "File size exceeds 10MB",
+    "invalidFileType": "Please select an image file",
+    "fileReadError": "Failed to read file"
   }
 }
