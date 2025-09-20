@@ -14,6 +14,8 @@ import { Button } from "@client/components/ui/button"
 import { useScreenshot } from "@client/contexts/ScreenshotContext"
 import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
 import { captureGameBoard, canvasToBlob } from "@/client/utils/screenshotUtils"
+import { Z_INDEX } from "@/client/constants/zIndex"
+import { DELAYS } from "@/client/constants/delays"
 
 type ActionButtonsProps = {
   // Undo/Redo state
@@ -53,8 +55,8 @@ function ScreenshotOverlay({ isVisible }: { isVisible: boolean }) {
 
   return (
     <div
-      className="fixed inset-0 bg-white z-[19999] flex items-center justify-center screenshot-overlay"
-      style={{ pointerEvents: "all" }}
+      className="fixed inset-0 bg-white flex items-center justify-center screenshot-overlay"
+      style={{ pointerEvents: "all", zIndex: Z_INDEX.SCREENSHOT_OVERLAY }}
       data-html2canvas-ignore="true"
     >
       <div className="flex flex-col items-center gap-4">
@@ -96,13 +98,13 @@ export function ActionButtons({
     setIsCapturing(true)
 
     // オーバーレイの表示を待つ
-    await new Promise((r) => setTimeout(r, 50))
+    await new Promise((r) => setTimeout(r, DELAYS.DOM_UPDATE_SHORT))
 
     // スクリーンショット幅を設定してReactの再レンダリングをトリガー
     setScreenshotWidth(width)
 
     // Reactの再レンダリングとレイアウトの安定を待つ
-    await new Promise((r) => setTimeout(r, 150))
+    await new Promise((r) => setTimeout(r, DELAYS.DOM_UPDATE_LONG))
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
     // ボード要素取得
@@ -142,7 +144,7 @@ export function ActionButtons({
           a.href = url
           a.download = fileName
           a.click()
-          setTimeout(() => URL.revokeObjectURL(url), 100)
+          setTimeout(() => URL.revokeObjectURL(url), DELAYS.DOM_UPDATE)
         }
       }
     } catch (error) {

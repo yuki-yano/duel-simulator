@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "react"
-import { ANIM } from "@/client/constants/animation"
+import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
 
 type FlipAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -42,7 +43,7 @@ export function FlipAnimation({
       setShowFaceDown(toFaceDown)
       // さらに90度回転して元の向きに戻す
       setRotateY(0)
-    }, duration / 2)
+    }, duration * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER)
 
     const completeTimer = setTimeout(() => {
       onComplete()
@@ -63,7 +64,7 @@ export function FlipAnimation({
         top: `${cardRect.y}px`,
         width: `${cardRect.width}px`,
         height: `${cardRect.height}px`,
-        zIndex: 9999,
+        zIndex: Z_INDEX.FLIP_ANIMATION,
         perspective: "1000px", // 3D効果を適用
       }}
     >
@@ -73,7 +74,9 @@ export function FlipAnimation({
           height: "100%",
           transformStyle: "preserve-3d",
           transform: `rotateZ(${cardRotation}deg) rotateY(${rotateY}deg)`,
-          transition: isAnimating ? `transform ${duration / 2}ms ease-in-out` : "none",
+          transition: isAnimating
+            ? `transform ${duration * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER}ms ease-in-out`
+            : "none",
         }}
       >
         <img

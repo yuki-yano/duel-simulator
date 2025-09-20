@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { TooltipProvider } from "@client/components/ui/tooltip"
 import { useTranslation } from "react-i18next"
+import { DELAYS } from "@/client/constants/delays"
 
 import { CardContextMenu } from "@/client/components/CardContextMenu"
 import { CardAnimationOverlay } from "@/client/components/CardAnimationOverlay"
@@ -16,7 +17,7 @@ import { useGameFieldController } from "./hooks/useGameFieldController"
 
 export function GameField() {
   return (
-    <TooltipProvider delayDuration={100}>
+    <TooltipProvider delayDuration={DELAYS.TOOLTIP_DELAY}>
       <GameFieldContent />
     </TooltipProvider>
   )

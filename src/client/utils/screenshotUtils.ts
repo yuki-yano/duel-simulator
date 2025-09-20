@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas"
 import { preprocessScreenshot } from "./canvasUtils"
+import { DELAYS } from "@/client/constants/delays"
 
 export type ScreenshotOptions = {
   width: number
@@ -81,13 +82,13 @@ export async function captureGameBoard(
   boardElement.style.maxWidth = `${width}px`
 
   // 幅変更に伴うレイアウト再計算を待機
-  await new Promise((res) => setTimeout(res, 100))
+  await new Promise((res) => setTimeout(res, DELAYS.DOM_UPDATE))
 
   // ラベルの位置調整
   adjustLabelsForScreenshot(boardElement)
 
   // レイアウト安定待ち
-  await new Promise((r) => setTimeout(r, 100))
+  await new Promise((r) => setTimeout(r, DELAYS.DOM_UPDATE))
 
   // 高さを自動計算
   const boardHeight = boardElement.scrollHeight

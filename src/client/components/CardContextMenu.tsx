@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { Z_INDEX } from "@/client/constants/zIndex"
 
 type CardContextMenuProps = {
   card: GameCard
@@ -112,7 +113,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-[10000] bg-white dark:bg-gray-800",
+        "fixed bg-white dark:bg-gray-800",
         "border border-gray-200 dark:border-gray-700",
         "rounded-lg shadow-lg py-1 w-auto",
         "animate-in fade-in-0 zoom-in-95 duration-200",
@@ -120,6 +121,7 @@ export function CardContextMenu({ card, zone, position, onClose, onAction, isRep
       style={{
         left: `${adjustedPosition.x}px`,
         top: `${adjustedPosition.y}px`,
+        zIndex: Z_INDEX.CARD_CONTEXT_MENU,
       }}
       onTouchEnd={(e) => {
         // Prevent touch events from propagating on menu container

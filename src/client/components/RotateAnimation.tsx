@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "react"
 import { ANIM } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
 
 type RotateAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -46,7 +47,7 @@ export function RotateAnimation({
 
   return (
     <div
-      className="fixed pointer-events-none z-[9998]"
+      className="fixed pointer-events-none"
       style={{
         left: `${cardRect.x}px`,
         top: `${cardRect.y}px`,
@@ -55,6 +56,7 @@ export function RotateAnimation({
         transform: `rotate(${rotation}deg)`,
         transformOrigin: "center",
         transition: isAnimating ? `transform ${duration}ms ease-in-out` : "none",
+        zIndex: Z_INDEX.ROTATE_ANIMATION,
       }}
     >
       <img

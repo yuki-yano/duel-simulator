@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
-import { ANIM } from "@/client/constants/animation"
+import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
 import type { Position } from "@/shared/types/game"
 
 type NegateAnimationProps = {
@@ -42,7 +43,10 @@ export function NegateAnimation({
     const startId = requestAnimationFrame(() => setAnimationState("showing"))
 
     // Start fading at halfway point
-    const fadeTimer = setTimeout(() => setAnimationState("fading"), D / 2)
+    const fadeTimer = setTimeout(
+      () => setAnimationState("fading"),
+      D * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
+    )
 
     // Call onComplete after animation completes
     const completeTimer = setTimeout(() => {
@@ -74,7 +78,7 @@ export function NegateAnimation({
         height: `${pos.height}px`,
         transform: `rotate(${cardRotation}deg)`,
         transformOrigin: "center",
-        zIndex: 9998,
+        zIndex: Z_INDEX.NEGATE_ANIMATION,
       }}
     >
       {/* Card image (darkened) */}

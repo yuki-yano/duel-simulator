@@ -4,8 +4,9 @@ import { gameStateAtom } from "../core/gameState"
 import { operationsAtom } from "../core/operations"
 import { gameHistoryAtom, gameHistoryIndexAtom } from "./historyStack"
 import { v4 as uuidv4 } from "uuid"
-import { ANIM, REPLAY_DELAY, INITIAL_DOM_WAIT } from "../constants"
+import { ANIM, REPLAY_DELAY } from "../constants"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
+import { DELAYS } from "@/client/constants/delays"
 import { applyOperation } from "../helpers/stateHelpers"
 import { deckLoadHistoryIndexAtom } from "../deck/deckState"
 import { findMovedCards } from "../helpers/cardHelpers"
@@ -154,7 +155,7 @@ export const redoAtom = atom(null, async (get, set) => {
 
       // Wait while paused
       while (get(replayPausedAtom) && get(replayPlayingAtom)) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, DELAYS.DOM_UPDATE))
       }
 
       if (!get(replayPlayingAtom)) break
@@ -229,7 +230,7 @@ export const redoAtom = atom(null, async (get, set) => {
         currentState = nextState
 
         // Small delay to ensure DOM is updated
-        await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+        await new Promise((resolve) => setTimeout(resolve, DELAYS.INITIAL_DOM_WAIT))
 
         // Update animations with actual end positions
         const updatedAnimations = animations.map((anim) => {

@@ -1,6 +1,7 @@
 import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
 import { OGP_IMAGE } from "@/shared/constants/ogp"
 import { captureGameBoard, canvasToBlob } from "@/client/utils/screenshotUtils"
+import { DELAYS } from "@/client/constants/delays"
 
 export async function generateOGPImage(setScreenshotWidth: (width: number | undefined) => void): Promise<Blob | null> {
   try {
@@ -8,7 +9,7 @@ export async function generateOGPImage(setScreenshotWidth: (width: number | unde
     setScreenshotWidth(SCREENSHOT_SCREEN_WIDTH.PC)
 
     // Reactの再レンダリングとレイアウトの安定を待つ
-    await new Promise((r) => setTimeout(r, 150))
+    await new Promise((r) => setTimeout(r, DELAYS.DOM_UPDATE_LONG))
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
     // ボード要素取得

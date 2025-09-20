@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { useAtom } from "jotai"
 import { cardAnimationsAtom, type CardAnimation } from "@/client/atoms/boardAtoms"
 import { cn } from "@/client/lib/utils"
+import { DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
+import { DELAYS } from "@/client/constants/delays"
 import { EffectActivationAnimation } from "./EffectActivationAnimation"
 import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 import { HighlightAnimation } from "./HighlightAnimation"
@@ -47,7 +50,7 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
       if (isFlipping) {
         setRotateY(90)
       }
-    }, 10)
+    }, DELAYS.INITIAL_WAIT)
 
     // If flipping, switch face state at halfway point
     let flipTimer: NodeJS.Timeout | undefined
@@ -57,14 +60,15 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
           setShowFaceDown(animation.toFaceDown ?? false)
           setRotateY(0) // Complete the flip
         },
-        (animation.duration ?? 300) / 2,
+        (animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY) *
+          DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
       )
     }
 
     // Call onComplete when animation finishes
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, animation.duration ?? 300)
+    }, animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY)
 
     return () => {
       clearTimeout(timer)
@@ -80,11 +84,12 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
 
   return (
     <div
-      className="fixed pointer-events-none z-[10000]"
+      className="fixed pointer-events-none"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        transition: `all ${animation.duration ?? 300}ms ease-in-out`,
+        transition: `all ${animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY}ms ease-in-out`,
+        zIndex: Z_INDEX.CARD_ANIMATION_OVERLAY,
         width: `${cardWidth}px`,
         height: `${cardHeight}px`,
         perspective: isFlipping ? "1000px" : undefined,
@@ -97,8 +102,8 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
           transformStyle: isFlipping ? "preserve-3d" : undefined,
           transform: `rotate(${rotation}deg) ${isFlipping ? `rotateY(${rotateY}deg)` : ""}`,
           transition: isFlipping
-            ? `transform ${animation.duration ?? 300}ms ease-in-out, transform ${(animation.duration ?? 300) / 2}ms ease-in-out`
-            : `transform ${animation.duration ?? 300}ms ease-in-out`,
+            ? `transform ${animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY}ms ease-in-out, transform ${(animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY) * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER}ms ease-in-out`
+            : `transform ${animation.duration ?? DEFAULT_ANIMATION_DURATION.CARD_OVERLAY}ms ease-in-out`,
           transformOrigin: "center",
         }}
       >

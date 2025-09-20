@@ -5,7 +5,8 @@ import type { GameState, GameOperation, Card } from "@/shared/types/game"
 import { cardRefsAtom } from "../ui/domRefs"
 import { getCardById } from "../helpers/cardHelpers"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
-import { ANIM } from "@/client/constants/animation"
+import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { DELAYS } from "@/client/constants/delays"
 import { gameStateAtom } from "../core/gameState"
 
 // Animation state atom
@@ -398,7 +399,7 @@ export function createAnimationsFromOperations(
             fromRotation,
             toRotation,
             startTime: Date.now(),
-            duration: animationDuration / 2,
+            duration: animationDuration * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
           })
         }
         break
@@ -492,7 +493,7 @@ export function createAnimationsFromOperations(
               position,
               cardRect,
               startTime: Date.now(),
-              duration: animationDuration / 2,
+              duration: animationDuration * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
             })
           }
         }
@@ -535,7 +536,7 @@ export function createAnimationsFromOperations(
             cardRect,
             cardRotation,
             startTime: Date.now(),
-            duration: animationDuration / 2,
+            duration: animationDuration * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
           })
         }
         break
@@ -707,7 +708,7 @@ export async function playOperationAnimations(
 
     // Small delay to ensure DOM is updated
     await new Promise((resolve, reject) => {
-      const timeout = setTimeout(resolve, 50)
+      const timeout = setTimeout(resolve, DELAYS.DOM_UPDATE_SHORT)
       signal.addEventListener("abort", () => {
         clearTimeout(timeout)
         reject(new DOMException("Animation cancelled"))

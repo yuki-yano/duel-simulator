@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
-import { ANIM } from "@/client/constants/animation"
+import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
 import type { Position } from "@/shared/types/game"
 
 type EffectActivationAnimationProps = {
@@ -42,7 +43,10 @@ export function EffectActivationAnimation({
     const startId = requestAnimationFrame(() => setAnimationState("expanding"))
 
     // Start shrink at halfway point so total expand+shrink fits in D
-    const shrinkTimer = setTimeout(() => setAnimationState("shrinking"), D / 2)
+    const shrinkTimer = setTimeout(
+      () => setAnimationState("shrinking"),
+      D * DEFAULT_ANIMATION_DURATION.HALF_DURATION_MULTIPLIER,
+    )
 
     // Call onComplete after animation completes (hide immediately)
     const completeTimer = setTimeout(() => {
@@ -76,7 +80,7 @@ export function EffectActivationAnimation({
         transform: `rotate(${cardRotation}deg) scale(${scale})`,
         transformOrigin: "center",
         transition: `transform ${ANIM.EFFECT.ANIMATION}ms ease-out`,
-        zIndex: 9997,
+        zIndex: Z_INDEX.EFFECT_ACTIVATION,
       }}
     >
       {/* Card zoom */}

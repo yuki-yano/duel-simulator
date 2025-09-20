@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@client/components/ui/dialog"
 import { useTranslation } from "react-i18next"
+import { DELAYS } from "@/client/constants/delays"
 
 type ShareUrlDisplayProps = {
   isOpen: boolean
@@ -18,7 +19,7 @@ export function ShareUrlDisplay({ isOpen, onOpenChange, shareUrl, shareTitle, on
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), DELAYS.COPY_MESSAGE_DURATION)
     } catch (error) {
       console.error("Failed to copy:", error)
     }

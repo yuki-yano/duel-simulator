@@ -8,9 +8,11 @@ import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import { useScreenSize } from "@client/hooks/useScreenSize"
-import { ANIM } from "@/client/constants/animation"
+import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
+import { DELAYS } from "@/client/constants/delays"
 
-const LONG_PRESS_DURATION_MS = 600
+const LONG_PRESS_DURATION_MS = DELAYS.LONG_PRESS_DURATION
 const TOUCH_MOVE_THRESHOLD = 5
 const DOUBLE_CLICK_THRESHOLD_MS = 300
 
@@ -465,7 +467,7 @@ export function DraggableCard({
     <>
       <div
         ref={cardRef}
-        className={cn("duration-200", className)}
+        className={cn(className)}
         draggable={!isReplayPlaying && !isDisabled}
         data-card-id={card.id}
         onDragStart={handleDragStart}
@@ -492,7 +494,7 @@ export function DraggableCard({
           opacity: activateAnimating ? 0.25 : isTouching || isDragging ? 0.5 : 1,
           visibility: isAnimating || rotateAnimating || flipAnimating ? "hidden" : "visible",
           // transform だけスムーズにする
-          transition: "transform 200ms",
+          transition: `transform ${DEFAULT_ANIMATION_DURATION.CARD_TRANSITION}ms`,
           WebkitTouchCallout: "none",
           WebkitUserSelect: "none",
           position: "relative",
@@ -593,7 +595,7 @@ export function DraggableCard({
                   width: `${dragImageWidth}px`,
                   height: `${dragImageHeight}px`,
                   pointerEvents: "none",
-                  zIndex: 99999,
+                  zIndex: Z_INDEX.DRAGGABLE_CARD_PREVIEW,
                 }}
               >
                 <div

@@ -24,7 +24,8 @@ import {
 } from "./animations"
 import { getCardById, findMovedCards } from "../helpers/cardHelpers"
 import { applyOperation } from "../helpers/stateHelpers"
-import { ANIM, REPLAY_DELAY, INITIAL_DOM_WAIT } from "@/client/constants/animation"
+import { ANIM, REPLAY_DELAY, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
+import { DELAYS } from "@/client/constants/delays"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 // Re-export imported atoms for backward compatibility
@@ -241,7 +242,7 @@ async function handleActivateAnimation(
   updateReplayState(set, nextState, operationIndex + 1)
 
   // Small delay to ensure DOM is updated
-  await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+  await new Promise((resolve) => setTimeout(resolve, DELAYS.INITIAL_DOM_WAIT))
 
   // Clear any existing move and flip animations before creating activation animation
   // This prevents overlapping animations from previous operations
@@ -281,7 +282,7 @@ async function handleTargetAnimation(
   updateReplayState(set, nextState, operationIndex + 1)
 
   // Small delay to ensure DOM is updated
-  await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+  await new Promise((resolve) => setTimeout(resolve, DELAYS.INITIAL_DOM_WAIT))
 
   // Clear any existing flip animations before creating target animation
   set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "flip"))
@@ -294,7 +295,12 @@ async function handleTargetAnimation(
   }
 
   // Wait for target animation to complete (expand + shrink)
-  await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.TARGET.ANIMATION * 2, get)))
+  await new Promise((resolve) =>
+    setTimeout(
+      resolve,
+      getAnimationDuration(ANIM.TARGET.ANIMATION * DEFAULT_ANIMATION_DURATION.DOUBLE_DURATION_MULTIPLIER, get),
+    ),
+  )
 }
 
 // Helper: Handle negate animation
@@ -312,7 +318,7 @@ async function handleNegateAnimation(
   updateReplayState(set, nextState, operationIndex + 1)
 
   // Small delay to ensure DOM is updated
-  await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+  await new Promise((resolve) => setTimeout(resolve, DELAYS.INITIAL_DOM_WAIT))
 
   // Clear any existing flip animations before creating negate animation
   set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "flip"))
@@ -360,7 +366,12 @@ async function handleHighlightAnimation(
     set(cardAnimationsAtom, [...animations, animation])
   }
 
-  await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.HIGHLIGHT.ANIMATION * 2, get)))
+  await new Promise((resolve) =>
+    setTimeout(
+      resolve,
+      getAnimationDuration(ANIM.HIGHLIGHT.ANIMATION * DEFAULT_ANIMATION_DURATION.DOUBLE_DURATION_MULTIPLIER, get),
+    ),
+  )
 }
 
 // Helper: Handle flip animation
@@ -499,7 +510,7 @@ export const playReplayAtom = atom(null, async (get, set) => {
   set(highlightedZonesAtom, [])
 
   // Wait for DOM to update after snapshot restore
-  await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+  await new Promise((resolve) => setTimeout(resolve, DELAYS.INITIAL_DOM_WAIT))
 
   // Apply start delay if set (only for fresh start, not resume)
   if (startDelay > 0 && !isResume) {
@@ -641,7 +652,12 @@ export const playReplayAtom = atom(null, async (get, set) => {
         await new Promise((resolve) => setTimeout(resolve, Math.round(ANIM.MOVE.ANIMATION / get(replaySpeedAtom))))
       } else if (finalOperation.type === "target") {
         // Wait for target animation (expand + shrink)
-        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.TARGET.ANIMATION * 2, get)))
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            getAnimationDuration(ANIM.TARGET.ANIMATION * DEFAULT_ANIMATION_DURATION.DOUBLE_DURATION_MULTIPLIER, get),
+          ),
+        )
       } else if (finalOperation.type === "negate") {
         // Wait for negate animation
         await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.EFFECT.DURATION, get)))

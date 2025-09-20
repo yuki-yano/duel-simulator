@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { ANIM } from "@/client/constants/animation"
+import { Z_INDEX } from "@/client/constants/zIndex"
 
 type HighlightAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -52,7 +53,7 @@ export function HighlightAnimation({ cardRect, cardRotation = 0, cardImageUrl, o
         top: `${cardRect.y}px`,
         width: `${cardRect.width}px`,
         height: `${cardRect.height}px`,
-        zIndex: 9998,
+        zIndex: Z_INDEX.HIGHLIGHT_ANIMATION,
         transform: `rotate(${cardRotation}deg) scale(${scale})`,
         transformOrigin: "center",
         transition: `transform ${ANIM.HIGHLIGHT.ANIMATION}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
