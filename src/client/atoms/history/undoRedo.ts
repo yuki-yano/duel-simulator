@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid"
 import { ANIM, REPLAY_DELAY, INITIAL_DOM_WAIT } from "../constants"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import { applyOperation } from "../helpers/stateHelpers"
+import { deckLoadHistoryIndexAtom } from "../deck/deckState"
 import { findMovedCards } from "../helpers/cardHelpers"
 import { getCardById } from "../helpers/cardHelpers"
 import { getOperationDescription } from "../helpers/operationHelpers"
@@ -37,8 +38,10 @@ export const undoAtom = atom(null, async (get, set) => {
   const history = get(gameHistoryAtom)
   const currentIndex = get(gameHistoryIndexAtom)
   const isPlaying = get(replayPlayingAtom)
+  const deckLoadIndex = get(deckLoadHistoryIndexAtom)
 
-  if (currentIndex > 0) {
+  // Don't allow undo before deck load
+  if (currentIndex > deckLoadIndex) {
     const newIndex = currentIndex - 1
     const previousEntry = history[newIndex]
     const currentEntry = history[currentIndex] // Get current entry before updating index
@@ -470,10 +473,11 @@ export const canUndoAtom = atom((get) => {
   const currentIndex = get(gameHistoryIndexAtom)
   const isPlaying = get(replayPlayingAtom)
   const isPaused = get(replayPausedAtom)
+  const deckLoadIndex = get(deckLoadHistoryIndexAtom)
 
-  // Enable undo when not replaying or when paused
+  // Enable undo when not replaying or when paused, but not before deck load
   if (!isPlaying || isPaused) {
-    return currentIndex > 0
+    return currentIndex > deckLoadIndex
   }
 
   // Disable during active replay

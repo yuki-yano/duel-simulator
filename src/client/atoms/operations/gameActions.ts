@@ -12,7 +12,8 @@ import { replayRecordingAtom, replayOperationsAtom, replayDataAtom, stopReplayRe
 import { replayPlayingAtom, stopReplayAtom } from "../replay/playback"
 import { cardAnimationsAtom } from "../replay/animations"
 import { selectedCardAtom, draggedCardAtom, hoveredZoneAtom, highlightedZonesAtom } from "../ui/selection"
-import { initialStateAfterDeckLoadAtom } from "../deck/deckState"
+import { initialStateAfterDeckLoadAtom, deckLoadHistoryIndexAtom } from "../deck/deckState"
+import { gameHistoryIndexAtom } from "../history/historyStack"
 
 export const drawCardAtom = atom(null, (get, set, player: "self" | "opponent", count: number = 1) => {
   const state = get(gameStateAtom)
@@ -165,6 +166,10 @@ export const loadOpponentDeckToGameStateAtom = atom(
       // set it now with the current state including opponent deck
       set(initialStateAfterDeckLoadAtom, newState)
     }
+
+    // Update deck load history index to current history index
+    const currentHistoryIndex = get(gameHistoryIndexAtom)
+    set(deckLoadHistoryIndexAtom, currentHistoryIndex)
 
     // Create operation for history
     const operation: GameOperation = {

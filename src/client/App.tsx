@@ -16,6 +16,7 @@ import {
   drawCardAtom,
   draggedCardAtom,
   initialStateAfterDeckLoadAtom,
+  deckLoadHistoryIndexAtom,
   deckMetadataAtom,
   hasSideDeckAtom,
 } from "@client/atoms/boardAtoms"
@@ -34,6 +35,7 @@ export default function App() {
   const [_isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
   const [, setInitialStateAfterDeckLoad] = useAtom(initialStateAfterDeckLoadAtom)
+  const [, setDeckLoadHistoryIndex] = useAtom(deckLoadHistoryIndexAtom)
   const [, setDeckMetadataAtom] = useAtom(deckMetadataAtom)
   const [, setHasSideDeck] = useAtom(hasSideDeckAtom)
 
@@ -109,6 +111,8 @@ export default function App() {
 
       // Save initial state for reset functionality
       setInitialStateAfterDeckLoad(newState)
+      // Save history index when deck was loaded (after reset, it's 0)
+      setDeckLoadHistoryIndex(0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extractedCards]) // Intentionally excluding gameState and resetHistory to prevent infinite loop

@@ -23,6 +23,9 @@ export const isDeckLoadedAtom = atom<boolean>((get) => {
 // Initial state after deck loading (for reset functionality)
 export const initialStateAfterDeckLoadAtom = atom<GameState | null>(null)
 
+// History index when deck was loaded (for undo limit)
+export const deckLoadHistoryIndexAtom = atom<number>(0)
+
 // Temporary storage for cards extracted from deck image
 export const extractedCardsAtom = atom<ExtractedCards>({
   mainDeck: [],
