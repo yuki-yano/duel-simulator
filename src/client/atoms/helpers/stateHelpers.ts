@@ -122,6 +122,16 @@ export function performCardMove(
         rotation = 0
         faceDown = false
       }
+    }
+    // Field zone: Handle face down with shift key or mobile face down mode
+    else if (to.zone.type === "fieldZone") {
+      if (options?.shiftKey === true || options?.faceDownMode === true) {
+        rotation = 0
+        faceDown = true
+      } else {
+        rotation = 0
+        faceDown = false
+      }
     } else {
       rotation = 0
       faceDown = false

@@ -5,10 +5,9 @@ export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN
 
   // 本番環境の判定:
-  // MODEが"production"またはPRODフラグがtrueの場合のみ本番環境とする
-  // "client"モードはビルド時に使用されるので、これも本番扱い
-  const isProduction =
-    import.meta.env.PROD || import.meta.env.MODE === "production" || import.meta.env.MODE === "client"
+  // PRODフラグがtrueの場合のみ本番環境とする
+  // 開発環境(DEV=true)では常に無効化
+  const isProduction = import.meta.env.PROD && !import.meta.env.DEV
 
   // DSNがない、または本番環境でない場合はSentryを初期化しない
   if (dsn === undefined || dsn === null || dsn === "") {
@@ -18,7 +17,7 @@ export function initSentry() {
 
   if (!isProduction) {
     console.info(
-      `Sentry: Disabled (Development environment - MODE=${import.meta.env.MODE}, PROD=${import.meta.env.PROD})`,
+      `Sentry: Disabled (Development environment - DEV=${import.meta.env.DEV}, PROD=${import.meta.env.PROD})`,
     )
     return
   }

@@ -25,7 +25,6 @@ export function SaveReplayDialog({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
 
-  const duration = replayData.endTime !== undefined ? Math.floor((replayData.endTime - replayData.startTime) / 1000) : 0
   const operationCount = replayData.operations.length
 
   const handleSave = () => {
@@ -70,7 +69,6 @@ export function SaveReplayDialog({
             />
           </div>
           <div className="text-sm text-gray-600">
-            <p>{t("replay:dialog.duration", { duration })}</p>
             <p>{t("replay:dialog.operationCount", { count: operationCount })}</p>
           </div>
         </div>
