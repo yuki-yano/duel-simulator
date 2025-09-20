@@ -185,6 +185,9 @@ export default function Replay() {
           sourceWidth: deckData.sourceWidth,
           sourceHeight: deckData.sourceHeight,
           deckCardIds: finalDeckCardIds,
+          mainDeckCards: [],  // 後でextractCardsFromDeckImageで生成される
+          extraDeckCards: [],
+          sideDeckCards: [],
         }
         setDeckMetadata(metadata)
 
@@ -571,6 +574,9 @@ export default function Replay() {
                     leftMargin: 0,
                   } as DeckConfiguration),
                 sideDeckCount: Object.keys(replaySaveData.data.deckCardIds.opponentSideDeck || {}).length,
+                mainDeckCards: [],
+                extraDeckCards: [],
+                sideDeckCards: [],
               },
               opponentDeckCardIds,
             )

@@ -6,7 +6,6 @@ import { useSetAtom } from "jotai"
 import { setOpponentDeckAtom, opponentDeckMetadataAtom } from "@/client/atoms/opponentDeckAtom"
 import { loadOpponentDeckToGameStateAtom } from "@/client/atoms/operations/gameActions"
 import { Upload } from "lucide-react"
-import type { Card } from "@/shared/types/game"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 
 type OpponentDeckModalProps = {
@@ -125,60 +124,10 @@ export function OpponentDeckModal({ isOpen, onClose, onLoadSuccess }: OpponentDe
         // エラーがあっても処理を継続
       }
 
-      // メタデータから相手デッキ用のCard配列を生成
-      const mainDeck: Card[] = []
-      const extraDeck: Card[] = []
-      const sideDeck: Card[] = []
-
-      // メインデッキの処理
-      for (let i = 0; i < metadata.mainDeckCount; i++) {
-        const originalCardId =
-          metadata.deckCardIds.mainDeck?.[i.toString()] ?? Object.values(metadata.deckCardIds.mainDeck ?? {})[i]
-        if (originalCardId) {
-          const cardIndex = i
-          const card: Card = {
-            id: originalCardId, // 抽出時に割り当てたIDをそのまま使用
-            imageUrl: _cards[cardIndex],
-            position: "attack",
-            rotation: 0,
-          }
-          mainDeck.push(card)
-        }
-      }
-
-      // エクストラデッキの処理
-      for (let i = 0; i < metadata.extraDeckCount; i++) {
-        const originalCardId =
-          metadata.deckCardIds.extraDeck?.[i.toString()] ?? Object.values(metadata.deckCardIds.extraDeck ?? {})[i]
-        if (originalCardId) {
-          const cardIndex = metadata.mainDeckCount + i
-          const card: Card = {
-            id: originalCardId,
-            imageUrl: _cards[cardIndex],
-            position: "attack",
-            rotation: 0,
-          }
-          extraDeck.push(card)
-        }
-      }
-
-      // サイドデッキの処理
-      if (metadata.sideDeckCount != null && metadata.deckCardIds.sideDeck != null) {
-        for (let i = 0; i < metadata.sideDeckCount; i++) {
-          const originalCardId =
-            metadata.deckCardIds.sideDeck?.[i.toString()] ?? Object.values(metadata.deckCardIds.sideDeck ?? {})[i]
-          if (originalCardId) {
-            const cardIndex = metadata.mainDeckCount + metadata.extraDeckCount + i
-            const card: Card = {
-              id: originalCardId,
-              imageUrl: _cards[cardIndex],
-              position: "attack",
-              rotation: 0,
-            }
-            sideDeck.push(card)
-          }
-        }
-      }
+      // メタデータから直接カード配列を使用
+      const mainDeck = metadata.mainDeckCards
+      const extraDeck = metadata.extraDeckCards
+      const sideDeck = metadata.sideDeckCards
 
       // Atomに保存（リプレイ用）
       setOpponentDeck({
@@ -298,7 +247,6 @@ export function OpponentDeckModal({ isOpen, onClose, onLoadSuccess }: OpponentDe
               onProcessComplete={handleProcessComplete}
               onError={handleError}
               isReplayMode={false}
-              deckTarget="opponent" // 相手デッキとして処理
             />
           )}
         </div>

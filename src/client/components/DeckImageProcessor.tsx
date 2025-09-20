@@ -4,8 +4,6 @@ import i18n from "@client/i18n"
 import { Card } from "@/client/components/ui/Card"
 import { createWorker, PSM } from "tesseract.js"
 import { produce } from "immer"
-import { useSetAtom } from "jotai"
-import { extractedCardsAtom } from "@/client/atoms/boardAtoms"
 import { ErrorDialog } from "@/client/components/ErrorDialog"
 import { DeckImageDebugPanel } from "@/client/components/DeckImageDebugPanel"
 import type { Card as GameCard, DeckCardIdsMapping, DeckConfiguration, DeckSection } from "@/shared/types/game"
@@ -16,7 +14,6 @@ type DeckImageProcessorProps = {
   isReplayMode?: boolean
   onReplayStart?: () => void
   onError?: () => void
-  deckTarget?: "self" | "opponent" // デッキの対象プレイヤー（デフォルト: 'self'）
 }
 
 export type DeckProcessMetadata = {
@@ -29,6 +26,9 @@ export type DeckProcessMetadata = {
   sourceWidth: number
   sourceHeight: number
   deckCardIds: DeckCardIdsMapping
+  mainDeckCards: GameCard[]
+  extraDeckCards: GameCard[]
+  sideDeckCards: GameCard[]
 }
 
 // Position ratios based on image width
@@ -51,7 +51,6 @@ export function DeckImageProcessor({
   isReplayMode = false,
   onReplayStart,
   onError,
-  deckTarget = "self",
 }: DeckImageProcessorProps) {
   const { t } = useTranslation(["ui", "common"])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -80,7 +79,6 @@ export function DeckImageProcessor({
     }>
   >([]) // デバッグ用のカード情報
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
-  const setExtractedCards = useSetAtom(extractedCardsAtom)
   const [errorDialog, setErrorDialog] = useState<{ open: boolean; message: string }>({ open: false, message: "" })
 
   // 解析済みフラグを追加して重複実行を防ぐ
@@ -819,16 +817,6 @@ export function DeckImageProcessor({
       setProcessedCards(cards)
       setDebugExtractedCards(debugCards) // デバッグ用カード情報を保存
 
-      // Store extracted cards for self deck only
-      // (opponent deck is handled directly in OpponentDeckModal)
-      if (deckTarget === "self") {
-        setExtractedCards({
-          mainDeck: mainDeckCards,
-          extraDeck: extraDeckCards,
-          sideDeck: sideDeckCards,
-        })
-      }
-
       // Create metadata
       const metadata: DeckProcessMetadata = {
         imageDataUrl,
@@ -839,6 +827,9 @@ export function DeckImageProcessor({
         sourceWidth: img.width,
         sourceHeight: img.height,
         deckCardIds,
+        mainDeckCards,
+        extraDeckCards,
+        sideDeckCards,
       }
 
       onProcessComplete(cards, metadata)

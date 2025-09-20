@@ -6,7 +6,7 @@ import { DeckImageUploader } from "@client/components/DeckImageUploader"
 import { DeckImageProcessor, type DeckProcessMetadata } from "@client/components/DeckImageProcessor"
 import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
 import { LanguageSelector } from "@client/components/LanguageSelector"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { useTranslation } from "react-i18next"
 import "./i18n"
 import {
@@ -29,6 +29,7 @@ export default function App() {
   const [_deckMetadata, setDeckMetadata] = useState<DeckProcessMetadata | null>(null)
   const [showGoToReplayDialog, setShowGoToReplayDialog] = useState(false)
   const extractedCards = useAtomValue(extractedCardsAtom)
+  const setExtractedCards = useSetAtom(extractedCardsAtom)
   const gameState = useAtomValue(gameStateAtom)
   const [, resetHistory] = useAtom(resetHistoryAtom)
   const [, _drawCard] = useAtom(drawCardAtom)
@@ -61,6 +62,14 @@ export default function App() {
   const handleProcessComplete = (cards: string[], metadata: DeckProcessMetadata) => {
     setProcessedCards(cards)
     setDeckMetadata(metadata)
+
+    // Set the extracted cards from metadata
+    setExtractedCards({
+      mainDeck: metadata.mainDeckCards,
+      extraDeck: metadata.extraDeckCards,
+      sideDeck: metadata.sideDeckCards,
+    })
+
     // Save deck metadata to global atom for replay saving
     setDeckMetadataAtom({
       imageDataUrl: metadata.imageDataUrl,
@@ -70,6 +79,9 @@ export default function App() {
       sourceWidth: metadata.sourceWidth,
       sourceHeight: metadata.sourceHeight,
       deckCardIds: metadata.deckCardIds,
+      mainDeckCards: metadata.mainDeckCards,
+      extraDeckCards: metadata.extraDeckCards,
+      sideDeckCards: metadata.sideDeckCards,
     })
   }
 
@@ -175,7 +187,6 @@ export default function App() {
               imageDataUrl={uploadedImage}
               onProcessComplete={handleProcessComplete}
               onError={() => setUploadedImage(null)}
-              deckTarget="self"
             />
           </div>
         )}
