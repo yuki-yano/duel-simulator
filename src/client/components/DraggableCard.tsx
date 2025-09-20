@@ -3,10 +3,12 @@ import { createPortal } from "react-dom"
 import { useSetAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, replayPlayingAtom, cardAnimationsAtom, updateCardRefAtom } from "@/client/atoms/boardAtoms"
 import { activateEffectAtom, targetSelectAtom } from "@/client/atoms/operations/effects"
+import { flipCardAtom } from "@/client/atoms/operations/rotation"
 import type { Card as GameCard, ZoneId, Position } from "@/shared/types/game"
 import { cn } from "@/client/lib/utils"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { ANIM } from "@/client/constants/animation"
 
 const LONG_PRESS_DURATION_MS = 600
 const TOUCH_MOVE_THRESHOLD = 5
@@ -45,6 +47,7 @@ export function DraggableCard({
   const updateCardRef = useSetAtom(updateCardRefAtom)
   const activateEffect = useSetAtom(activateEffectAtom)
   const targetSelect = useSetAtom(targetSelectAtom)
+  const flipCard = useSetAtom(flipCardAtom)
   const { isMediumScreen, isSmallScreen } = useScreenSize()
   const [isHovered, setIsHovered] = useState(false)
   const [isTouching, setIsTouching] = useState(false)
@@ -425,8 +428,18 @@ export function DraggableCard({
       // Shift + double click = target selection
       targetSelect(position, cardRef.current || undefined)
     } else {
-      // Double click = activate effect
-      activateEffect(position, cardRef.current || undefined)
+      // Check if card is face down
+      if (card.faceDown === true) {
+        // First flip the card face up
+        flipCard(position)
+        // Then activate effect after a short delay for the flip animation
+        setTimeout(() => {
+          activateEffect(position, cardRef.current || undefined)
+        }, ANIM.FLIP.DURATION)
+      } else {
+        // Card is already face up, just activate effect
+        activateEffect(position, cardRef.current || undefined)
+      }
     }
   }
 
