@@ -185,7 +185,7 @@ export default function Replay() {
           sourceWidth: deckData.sourceWidth,
           sourceHeight: deckData.sourceHeight,
           deckCardIds: finalDeckCardIds,
-          mainDeckCards: [],  // 後でextractCardsFromDeckImageで生成される
+          mainDeckCards: [], // 後でextractCardsFromDeckImageで生成される
           extraDeckCards: [],
           sideDeckCards: [],
         }

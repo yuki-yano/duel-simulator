@@ -73,7 +73,9 @@
     "playPause": "Play/pause for review",
     "shareLink": "Share replays with links",
     "gameReset": "Game Reset",
-    "gameResetDescription": "Use 'Reset' button to return the game to its initial state."
+    "gameResetDescription": "Use 'Reset' button to return the game to its initial state.",
+    "opponentDeck": "Load Opponent's Deck",
+    "opponentDeckDescription": "Load your opponent's deck to simulate a two-player duel. Tap 'Show Opponent Field' to reveal the 'Load Opponent's Deck' button."
   },
   "contextMenu": {
     "toHand": "Return to Hand",

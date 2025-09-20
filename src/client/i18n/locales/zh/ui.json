@@ -73,7 +73,9 @@
     "playPause": "播放/暫停進行確認",
     "shareLink": "透過分享連結分享重播",
     "gameReset": "遊戲重置",
-    "gameResetDescription": "使用「重置」按鈕可以將遊戲回到初始狀態。"
+    "gameResetDescription": "使用「重置」按鈕可以將遊戲回到初始狀態。",
+    "opponentDeck": "載入對手牌組",
+    "opponentDeckDescription": "載入對手的牌組以模擬雙人決鬥。點擊「顯示對手場地」後會出現「載入對手牌組」按鈕。"
   },
   "contextMenu": {
     "toHand": "返回手牌",

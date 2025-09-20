@@ -434,7 +434,13 @@ export function applyOperation(state: GameState, operation: GameOperation): Game
       break
     case "changePosition":
       // Handle flip operations
-      if (operation.to && operation.cardId && operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
+      if (
+        operation.to &&
+        operation.cardId &&
+        operation.metadata &&
+        "flip" in operation.metadata &&
+        operation.metadata.flip === true
+      ) {
         const position: Position = {
           zone: {
             player: operation.to.player,

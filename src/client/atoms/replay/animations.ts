@@ -449,8 +449,10 @@ export function createAnimationsFromOperations(
 
             // Get card info from either state (prefer the current/starting state)
             const cardRes = isReverse
-              ? (getCardById(prevState.players[operation.player], cardId) ?? getCardById(nextState.players[operation.player], cardId))
-              : (getCardById(prevState.players[operation.player], cardId) ?? getCardById(nextState.players[operation.player], cardId))
+              ? (getCardById(prevState.players[operation.player], cardId) ??
+                getCardById(nextState.players[operation.player], cardId))
+              : (getCardById(prevState.players[operation.player], cardId) ??
+                getCardById(nextState.players[operation.player], cardId))
 
             if (cardRect && cardRes) {
               const cardImageUrl = cardRes.card.name === "token" ? TOKEN_IMAGE_DATA_URL : (cardRes.card.imageUrl ?? "")

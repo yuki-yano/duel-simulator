@@ -105,7 +105,9 @@ async function handleMoveAnimation(
     let cardForAnimation: Card | null = null
 
     // Get card from current state
-    const fromPlayer = operation.from ? currentState.players[operation.from.player] : currentState.players[operation.player]
+    const fromPlayer = operation.from
+      ? currentState.players[operation.from.player]
+      : currentState.players[operation.player]
     const fromCardResult = getCardById(fromPlayer, operation.cardId)
     if (fromCardResult) {
       cardForAnimation = fromCardResult.card
@@ -163,7 +165,7 @@ async function handleMoveAnimation(
   await new Promise((resolve) => setTimeout(resolve, Math.round(ANIM.MOVE.ANIMATION / get(replaySpeedAtom))))
 
   // Clear move animations after they complete
-  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "move"))
+  set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "move"))
 }
 
 // Helper: Handle rotate animation
@@ -243,7 +245,7 @@ async function handleActivateAnimation(
 
   // Clear any existing move and flip animations before creating activation animation
   // This prevents overlapping animations from previous operations
-  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "move" && a.type !== "flip"))
+  set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "move" && a.type !== "flip"))
 
   // Create activation animation
   const animation = createActivateAnimation(operation, currentState, get)
@@ -282,7 +284,7 @@ async function handleTargetAnimation(
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
 
   // Clear any existing flip animations before creating target animation
-  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "flip"))
+  set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "flip"))
 
   // Create target animation
   const animation = createTargetAnimation(operation, currentState, get)
@@ -313,7 +315,7 @@ async function handleNegateAnimation(
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
 
   // Clear any existing flip animations before creating negate animation
-  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "flip"))
+  set(cardAnimationsAtom, (anims) => anims.filter((a) => a.type !== "flip"))
 
   // Create negate animation
   const animation = createNegateAnimation(operation, currentState, get)

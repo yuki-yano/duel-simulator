@@ -73,7 +73,9 @@
     "playPause": "재생/일시정지로 확인",
     "shareLink": "공유 링크로 리플레이 공유",
     "gameReset": "게임 리셋",
-    "gameResetDescription": "「리셋」 버튼으로 게임을 초기 상태로 되돌릴 수 있습니다."
+    "gameResetDescription": "「리셋」 버튼으로 게임을 초기 상태로 되돌릴 수 있습니다.",
+    "opponentDeck": "상대 덱 로드",
+    "opponentDeckDescription": "상대의 덱을 로드하여 2인 듀얼을 시뮬레이션할 수 있습니다. 「상대 필드 표시」를 탭하면 「상대 덱 로드」 버튼이 표시됩니다."
   },
   "contextMenu": {
     "toHand": "패로 되돌리기",

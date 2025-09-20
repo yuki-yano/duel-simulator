@@ -24,9 +24,10 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
 
   // Check if this move involves a flip
   // Only flip if both values are explicitly defined and different
-  const isFlipping = animation.fromFaceDown !== undefined &&
-                     animation.toFaceDown !== undefined &&
-                     animation.fromFaceDown !== animation.toFaceDown
+  const isFlipping =
+    animation.fromFaceDown !== undefined &&
+    animation.toFaceDown !== undefined &&
+    animation.fromFaceDown !== animation.toFaceDown
 
   useEffect(() => {
     if (animation.type !== "move") {
@@ -51,10 +52,13 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
     // If flipping, switch face state at halfway point
     let flipTimer: NodeJS.Timeout | undefined
     if (isFlipping) {
-      flipTimer = setTimeout(() => {
-        setShowFaceDown(animation.toFaceDown ?? false)
-        setRotateY(0) // Complete the flip
-      }, (animation.duration ?? 300) / 2)
+      flipTimer = setTimeout(
+        () => {
+          setShowFaceDown(animation.toFaceDown ?? false)
+          setRotateY(0) // Complete the flip
+        },
+        (animation.duration ?? 300) / 2,
+      )
     }
 
     // Call onComplete when animation finishes
@@ -106,9 +110,7 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
             "opacity-70", // Semi-transparent during animation
           )}
         />
-        {showFaceDown && (
-          <div className="absolute inset-0 rounded bg-black/40" />
-        )}
+        {showFaceDown && <div className="absolute inset-0 rounded bg-black/40" />}
       </div>
     </div>
   )

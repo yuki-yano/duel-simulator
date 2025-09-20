@@ -73,7 +73,9 @@
     "playPause": "再生/一時停止で確認",
     "shareLink": "共有リンクでリプレイを共有",
     "gameReset": "ゲームリセット",
-    "gameResetDescription": "「リセット」ボタンでゲームを初期状態に戻せます。"
+    "gameResetDescription": "「リセット」ボタンでゲームを初期状態に戻せます。",
+    "opponentDeck": "相手デッキ読み込み",
+    "opponentDeckDescription": "相手のデッキを読み込んで2人対戦をシミュレートできます。「相手フィールドを表示」をタップすると「相手デッキを読み込む」ボタンが表示されます。"
   },
   "contextMenu": {
     "toHand": "手札に戻す",

@@ -113,6 +113,11 @@ export function HelpButton() {
               <h3 className="font-semibold text-sm">{t("help.gameReset")}</h3>
               <p className="text-sm text-gray-600">{t("help.gameResetDescription")}</p>
             </div>
+
+            <div className="space-y-1">
+              <h3 className="font-semibold text-sm">{t("help.opponentDeck")}</h3>
+              <p className="text-sm text-gray-600">{t("help.opponentDeckDescription")}</p>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

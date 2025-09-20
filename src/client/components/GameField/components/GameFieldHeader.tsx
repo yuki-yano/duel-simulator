@@ -1,5 +1,6 @@
 import { ReplayControls } from "../ReplayControls"
 import { ActionButtons } from "../ActionButtons"
+import { ExtraActions } from "../ExtraActions"
 
 import type { GameFieldController } from "../hooks/useGameFieldController"
 
@@ -98,6 +99,8 @@ export function GameFieldHeader({ controller }: GameFieldHeaderProps) {
         onToggleStackBottom={() => setMobileStackBottom(!mobileStackBottom)}
         isTouchDevice={isTouchDevice}
       />
+
+      <ExtraActions controller={controller} />
     </>
   )
 }
