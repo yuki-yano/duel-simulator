@@ -59,6 +59,8 @@ export function createMoveAnimation(
   fromRotation: number,
   toRotation: number,
   duration: number,
+  fromFaceDown?: boolean,
+  toFaceDown?: boolean,
 ): CardAnimation {
   return {
     id: uuidv4(),
@@ -69,6 +71,8 @@ export function createMoveAnimation(
     toPosition,
     fromRotation,
     toRotation,
+    fromFaceDown,
+    toFaceDown,
     startTime: Date.now(),
     duration,
   }
@@ -298,6 +302,8 @@ export function createAnimationsFromOperations(
         let cardImageUrl: string | undefined
         let fromRotation = 0
         let toRotation = 0
+        let fromFaceDown = false
+        let toFaceDown = false
 
         if (isReverse) {
           // Undo animation: animate from current position (operation.to) back to original position (operation.from)
@@ -307,6 +313,7 @@ export function createAnimationsFromOperations(
             if (currentCard) {
               cardImageUrl = currentCard.card.name === "token" ? TOKEN_IMAGE_DATA_URL : currentCard.card.imageUrl
               fromRotation = currentCard.card.rotation ?? 0
+              fromFaceDown = currentCard.card.faceDown === true
             }
           }
 
@@ -315,6 +322,7 @@ export function createAnimationsFromOperations(
             const targetCard = getCardById(targetPlayer, operation.cardId)
             if (targetCard) {
               toRotation = targetCard.card.rotation ?? 0
+              toFaceDown = targetCard.card.faceDown === true
             }
           }
         } else {
@@ -325,6 +333,7 @@ export function createAnimationsFromOperations(
           if (fromCard) {
             cardImageUrl = fromCard.card.name === "token" ? TOKEN_IMAGE_DATA_URL : fromCard.card.imageUrl
             fromRotation = fromCard.card.rotation ?? 0
+            fromFaceDown = fromCard.card.faceDown === true
           }
 
           if (operation.to) {
@@ -332,6 +341,7 @@ export function createAnimationsFromOperations(
             const toCard = getCardById(toPlayer, operation.cardId)
             if (toCard) {
               toRotation = toCard.card.rotation ?? 0
+              toFaceDown = toCard.card.faceDown === true
             }
           }
         }
@@ -348,6 +358,8 @@ export function createAnimationsFromOperations(
             toPosition: cardPos, // Will be updated after state change
             fromRotation,
             toRotation,
+            fromFaceDown,
+            toFaceDown,
             startTime: Date.now(),
             duration: animationDuration,
           })

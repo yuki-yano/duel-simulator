@@ -2,7 +2,7 @@ import { atom } from "jotai"
 import type { WritableAtom } from "jotai"
 import { produce } from "immer"
 import type { Getter, Setter, HistoryEntry, CardAnimation } from "../types"
-import type { GameState, GameOperation } from "@/shared/types/game"
+import type { GameState, GameOperation, Card } from "@/shared/types/game"
 import { gameStateAtom } from "../core/gameState"
 import { gameHistoryAtom, gameHistoryIndexAtom, resetHistoryAtom } from "../history/historyStack"
 import { highlightedZonesAtom } from "../ui/selection"
@@ -84,51 +84,55 @@ async function handleMoveAnimation(
   get: Getter,
   set: Setter,
 ): Promise<void> {
-  const movedCards = findMovedCards(currentState, nextState)
+  // For move operations, always process the animation based on the operation itself
+  // rather than relying on findMovedCards which might miss same-position changes
+  if (!operation.cardId) return
 
-  if (movedCards.length === 0) return
-
-  // Get positions before state update
-  const cardPositions = movedCards.map(({ card }) => ({
-    cardId: card.id,
-    position: getCardElementPosition(card.id, get),
-  }))
-
-  // Create animations for moved cards BEFORE updating state
+  // Create animations BEFORE updating state
   const animations: CardAnimation[] = []
   const currentSpeed = get(replaySpeedAtom)
   const animationDuration = Math.floor((ANIM.MOVE.ANIMATION * 2) / (3 * currentSpeed))
 
-  for (const { card, fromZone } of movedCards) {
-    const prevPos = cardPositions.find((p) => p.cardId === card.id)?.position
+  // Get card position and state before update
+  const prevPos = getCardElementPosition(operation.cardId, get)
 
-    if (prevPos) {
-      // Get rotation info from current and next state
-      let fromRotation = 0
-      let toRotation = 0
+  if (prevPos) {
+    // Get card from current and next state for property comparison
+    let fromRotation = 0
+    let toRotation = 0
+    let fromFaceDown = false
+    let toFaceDown = false
+    let cardForAnimation: Card | null = null
 
-      // Get from rotation
-      const fromPlayer = currentState.players[fromZone.player]
-      const fromCardResult = getCardById(fromPlayer, card.id)
-      if (fromCardResult) {
-        fromRotation = fromCardResult.card.rotation ?? 0
-      }
+    // Get card from current state
+    const fromPlayer = operation.from ? currentState.players[operation.from.player] : currentState.players[operation.player]
+    const fromCardResult = getCardById(fromPlayer, operation.cardId)
+    if (fromCardResult) {
+      cardForAnimation = fromCardResult.card
+      fromRotation = fromCardResult.card.rotation ?? 0
+      fromFaceDown = fromCardResult.card.faceDown === true
+    }
 
-      // Get to rotation from next state
-      const nextPlayer = nextState.players[operation.to?.player ?? operation.player]
-      const toCardResult = getCardById(nextPlayer, card.id)
-      if (toCardResult) {
-        toRotation = toCardResult.card.rotation ?? 0
-      }
+    // Get card from next state
+    const toPlayer = operation.to ? nextState.players[operation.to.player] : nextState.players[operation.player]
+    const toCardResult = getCardById(toPlayer, operation.cardId)
+    if (toCardResult) {
+      if (!cardForAnimation) cardForAnimation = toCardResult.card
+      toRotation = toCardResult.card.rotation ?? 0
+      toFaceDown = toCardResult.card.faceDown === true
+    }
 
+    if (cardForAnimation) {
       animations.push(
         createMoveAnimation(
-          card,
+          cardForAnimation,
           prevPos,
           prevPos, // Will be updated after state change
           fromRotation,
           toRotation,
           animationDuration,
+          fromFaceDown,
+          toFaceDown,
         ),
       )
     }
@@ -157,6 +161,9 @@ async function handleMoveAnimation(
 
   // Wait for animation to complete
   await new Promise((resolve) => setTimeout(resolve, Math.round(ANIM.MOVE.ANIMATION / get(replaySpeedAtom))))
+
+  // Clear move animations after they complete
+  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "move"))
 }
 
 // Helper: Handle rotate animation
@@ -234,6 +241,10 @@ async function handleActivateAnimation(
   // Small delay to ensure DOM is updated
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
 
+  // Clear any existing move and flip animations before creating activation animation
+  // This prevents overlapping animations from previous operations
+  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "move" && a.type !== "flip"))
+
   // Create activation animation
   const animation = createActivateAnimation(operation, currentState, get)
   if (animation) {
@@ -270,6 +281,9 @@ async function handleTargetAnimation(
   // Small delay to ensure DOM is updated
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
 
+  // Clear any existing flip animations before creating target animation
+  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "flip"))
+
   // Create target animation
   const animation = createTargetAnimation(operation, currentState, get)
   if (animation) {
@@ -297,6 +311,9 @@ async function handleNegateAnimation(
 
   // Small delay to ensure DOM is updated
   await new Promise((resolve) => setTimeout(resolve, INITIAL_DOM_WAIT))
+
+  // Clear any existing flip animations before creating negate animation
+  set(cardAnimationsAtom, (anims) => anims.filter(a => a.type !== "flip"))
 
   // Create negate animation
   const animation = createNegateAnimation(operation, currentState, get)
@@ -395,8 +412,8 @@ async function handleFlipAnimation(
     })
   })
 
-  // Wait for flip animation
-  await new Promise((resolve) => setTimeout(resolve, ANIM.FLIP.ANIMATION / get(replaySpeedAtom)))
+  // Wait for flip animation (use DURATION instead of ANIMATION for proper timing)
+  await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.FLIP.DURATION, get)))
 }
 
 // Helper: Handle summon animation
@@ -537,51 +554,66 @@ export const playReplayAtom = atom(null, async (get, set) => {
     // Apply operation to get next state
     const nextState = applyOperation(currentState, operation)
 
-    // Find moved cards
-    const movedCards = findMovedCards(currentState, nextState)
+    // Check operation type and handle accordingly
+    switch (operation.type) {
+      case "move":
+      case "draw":
+      case "set":
+        // Always handle move animations for these operations
+        await handleMoveAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
 
-    if (movedCards.length > 0) {
-      await handleMoveAnimation(currentState, nextState, operation, get, set)
-      currentState = nextState
-    } else {
-      // No card movement, but check for other operation types
-      switch (operation.type) {
-        case "rotate":
-          await handleRotateAnimation(currentState, nextState, operation, get, set)
-          currentState = nextState
-          break
-        case "activate":
-          await handleActivateAnimation(currentState, nextState, operation, get, set)
-          currentState = nextState
-          break
-        case "target":
-          await handleTargetAnimation(currentState, nextState, operation, get, set)
-          currentState = nextState
-          break
-        case "negate":
-          await handleNegateAnimation(currentState, nextState, operation, get, set)
-          currentState = nextState
-          break
-        case "toggleHighlight":
-          await handleHighlightAnimation(currentState, nextState, operation, get, set)
-          currentState = nextState
-          break
-        case "changePosition":
-          // Check if this is a flip operation
-          if (operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
-            await handleFlipAnimation(currentState, nextState, operation, get, set)
-          } else {
-            await handleOtherOperation(nextState, get, set)
-          }
-          currentState = nextState
-          break
-        case "summon":
-          await handleSummonAnimation(nextState, get, set)
-          currentState = nextState
-          break
-        default:
+      case "summon":
+        // Summon creates new cards, handle separately
+        await handleSummonAnimation(nextState, get, set)
+        currentState = nextState
+        break
+
+      case "rotate":
+        await handleRotateAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
+
+      case "activate":
+        await handleActivateAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
+
+      case "target":
+        await handleTargetAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
+
+      case "negate":
+        await handleNegateAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
+
+      case "toggleHighlight":
+        await handleHighlightAnimation(currentState, nextState, operation, get, set)
+        currentState = nextState
+        break
+
+      case "changePosition":
+        // Check if this is a flip operation
+        if (operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
+          await handleFlipAnimation(currentState, nextState, operation, get, set)
+        } else {
           await handleOtherOperation(nextState, get, set)
-          currentState = nextState
+        }
+        currentState = nextState
+        break
+
+      default: {
+        // For any other operation types, check if cards moved
+        const movedCards = findMovedCards(currentState, nextState)
+        if (movedCards.length > 0) {
+          await handleMoveAnimation(currentState, nextState, operation, get, set)
+        } else {
+          await handleOtherOperation(nextState, get, set)
+        }
+        currentState = nextState
       }
     }
   }
@@ -617,8 +649,8 @@ export const playReplayAtom = atom(null, async (get, set) => {
         "flip" in finalOperation.metadata &&
         finalOperation.metadata.flip === true
       ) {
-        // Wait for flip animation
-        await new Promise((resolve) => setTimeout(resolve, 400 / get(replaySpeedAtom)))
+        // Wait for flip animation (use DURATION for consistency)
+        await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.FLIP.DURATION, get)))
       }
     }
   }

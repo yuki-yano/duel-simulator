@@ -18,7 +18,15 @@ type AnimatedCardProps = {
 function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
   const [position, setPosition] = useState(animation.fromPosition!)
   const [rotation, setRotation] = useState(animation.fromRotation ?? 0)
+  const [rotateY, setRotateY] = useState(0)
+  const [showFaceDown, setShowFaceDown] = useState(animation.fromFaceDown ?? false)
   const { isMediumScreen, isSmallScreen } = useScreenSize()
+
+  // Check if this move involves a flip
+  // Only flip if both values are explicitly defined and different
+  const isFlipping = animation.fromFaceDown !== undefined &&
+                     animation.toFaceDown !== undefined &&
+                     animation.fromFaceDown !== animation.toFaceDown
 
   useEffect(() => {
     if (animation.type !== "move") {
@@ -34,7 +42,20 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
       if (animation.toRotation !== undefined) {
         setRotation(animation.toRotation)
       }
+      // If flipping, start the Y rotation
+      if (isFlipping) {
+        setRotateY(90)
+      }
     }, 10)
+
+    // If flipping, switch face state at halfway point
+    let flipTimer: NodeJS.Timeout | undefined
+    if (isFlipping) {
+      flipTimer = setTimeout(() => {
+        setShowFaceDown(animation.toFaceDown ?? false)
+        setRotateY(0) // Complete the flip
+      }, (animation.duration ?? 300) / 2)
+    }
 
     // Call onComplete when animation finishes
     const completeTimer = setTimeout(() => {
@@ -43,11 +64,15 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
 
     return () => {
       clearTimeout(timer)
+      if (flipTimer) clearTimeout(flipTimer)
       clearTimeout(completeTimer)
     }
-  }, [animation, onComplete])
+  }, [animation, onComplete, isFlipping])
 
   if (animation.type !== "move") return null
+
+  const cardWidth = isMediumScreen ? 66 : isSmallScreen ? 55 : 40
+  const cardHeight = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
 
   return (
     <div
@@ -56,20 +81,35 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
         left: `${position.x}px`,
         top: `${position.y}px`,
         transition: `all ${animation.duration ?? 300}ms ease-in-out`,
-        width: isMediumScreen ? "66px" : isSmallScreen ? "55px" : "40px",
-        height: isMediumScreen ? "96px" : isSmallScreen ? "80px" : "56px",
-        transform: `rotate(${rotation}deg)`,
-        transformOrigin: "center",
+        width: `${cardWidth}px`,
+        height: `${cardHeight}px`,
+        perspective: isFlipping ? "1000px" : undefined,
       }}
     >
-      <img
-        src={animation.cardImageUrl}
-        alt="Animating card"
-        className={cn(
-          "w-full h-full object-cover rounded shadow-xl",
-          "opacity-70", // Semi-transparent during animation
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          transformStyle: isFlipping ? "preserve-3d" : undefined,
+          transform: `rotate(${rotation}deg) ${isFlipping ? `rotateY(${rotateY}deg)` : ""}`,
+          transition: isFlipping
+            ? `transform ${animation.duration ?? 300}ms ease-in-out, transform ${(animation.duration ?? 300) / 2}ms ease-in-out`
+            : `transform ${animation.duration ?? 300}ms ease-in-out`,
+          transformOrigin: "center",
+        }}
+      >
+        <img
+          src={animation.cardImageUrl}
+          alt="Animating card"
+          className={cn(
+            "w-full h-full object-cover rounded shadow-xl",
+            "opacity-70", // Semi-transparent during animation
+          )}
+        />
+        {showFaceDown && (
+          <div className="absolute inset-0 rounded bg-black/40" />
         )}
-      />
+      </div>
     </div>
   )
 }
