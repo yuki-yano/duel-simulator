@@ -168,14 +168,14 @@ describe('zoneHelpers', () => {
     })
 
     describe('デッキ', () => {
-      it('デッキの先頭にカードを追加できる', () => {
+      it('デッキのボトムにカードを追加できる', () => {
         const board = boardFactory.withDeck(2).build()
         const zone: ZoneId = { player: 'self', type: 'deck' }
 
         const result = addCardToZone(board, zone, testCard)
 
         expect(result.deck).toHaveLength(3)
-        expect(result.deck[0].id).toBe(testCard.id)
+        expect(result.deck[2].id).toBe(testCard.id)
       })
 
       it('デッキの特定位置にカードを挿入できる', () => {
