@@ -7,6 +7,7 @@ import { getCardById } from "../helpers/cardHelpers"
 import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
 import { DELAYS } from "@/client/constants/delays"
+import { REPLAY_SETTINGS } from "@/client/constants/limits"
 import { gameStateAtom } from "../core/gameState"
 
 // Animation state atom
@@ -17,7 +18,7 @@ export let animationController: AbortController | null = null
 
 // Replay speed control
 export const replaySpeedAtom = atom<number>(1) // Default 1x speed
-export const replayStartDelayAtom = atom<number>(0.5) // Default 0.5 seconds delay
+export const replayStartDelayAtom = atom<number>(REPLAY_SETTINGS.DEFAULT_START_DELAY) // Default delay before replay starts
 
 // Get animation duration based on current speed multiplier
 export function getAnimationDuration(baseDuration: number, get: Getter): number {

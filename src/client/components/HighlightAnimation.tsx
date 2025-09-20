@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { ANIM } from "@/client/constants/animation"
 import { Z_INDEX } from "@/client/constants/zIndex"
+import { OPACITY_VALUES } from "@/client/constants/limits"
 
 type HighlightAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -72,7 +73,7 @@ export function HighlightAnimation({ cardRect, cardRotation = 0, cardImageUrl, o
         className="absolute inset-0 rounded pointer-events-none"
         style={{
           border: "3px solid #ef4444",
-          boxShadow: "inset 0 0 10px rgba(239, 68, 68, 0.5), 0 0 15px rgba(239, 68, 68, 0.6)",
+          boxShadow: `inset 0 0 10px rgba(239, 68, 68, ${OPACITY_VALUES.EFFECT_SHADOW_LIGHT}), 0 0 15px rgba(239, 68, 68, ${OPACITY_VALUES.EFFECT_SHADOW_MEDIUM})`,
         }}
       />
     </div>

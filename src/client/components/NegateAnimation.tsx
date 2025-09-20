@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
 import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
 import { Z_INDEX } from "@/client/constants/zIndex"
+import { OPACITY_VALUES } from "@/client/constants/limits"
 import type { Position } from "@/shared/types/game"
 
 type NegateAnimationProps = {
@@ -111,7 +112,7 @@ export function NegateAnimation({
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%) rotate(45deg)",
-              boxShadow: "0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.4)",
+              boxShadow: `0 0 20px rgba(220, 38, 38, ${OPACITY_VALUES.EFFECT_SHADOW_DARK}), 0 0 40px rgba(220, 38, 38, 0.4)`,
             }}
           />
           {/* Second diagonal line */}
@@ -126,7 +127,7 @@ export function NegateAnimation({
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%) rotate(-45deg)",
-              boxShadow: "0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.4)",
+              boxShadow: `0 0 20px rgba(220, 38, 38, ${OPACITY_VALUES.EFFECT_SHADOW_DARK}), 0 0 40px rgba(220, 38, 38, 0.4)`,
             }}
           />
 

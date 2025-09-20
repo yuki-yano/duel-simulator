@@ -16,6 +16,7 @@ import { SCREENSHOT_SCREEN_WIDTH } from "@/client/constants/screen"
 import { captureGameBoard, canvasToBlob } from "@/client/utils/screenshotUtils"
 import { Z_INDEX } from "@/client/constants/zIndex"
 import { DELAYS } from "@/client/constants/delays"
+import { FILE_SIZE_LIMITS } from "@/client/constants/limits"
 
 type ActionButtonsProps = {
   // Undo/Redo state
@@ -131,7 +132,7 @@ export function ActionButtons({
         const fileName = `duel-simulator-w${width}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.png`
 
         // データURLに変換（10MB以下の場合）
-        if (blob.size < 10 * 1024 * 1024) {
+        if (blob.size < FILE_SIZE_LIMITS.MAX_BLOB_SIZE) {
           const reader = new FileReader()
           reader.onloadend = () => {
             const dataUrl = reader.result as string

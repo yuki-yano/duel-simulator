@@ -6,6 +6,7 @@ import { useSetAtom } from "jotai"
 import { setOpponentDeckAtom, opponentDeckMetadataAtom } from "@/client/atoms/opponentDeckAtom"
 import { loadOpponentDeckToGameStateAtom } from "@/client/atoms/operations/gameActions"
 import { Upload } from "lucide-react"
+import { FILE_SIZE_LIMITS } from "@/client/constants/limits"
 import { calculateImageHash, saveDeckImage } from "@/client/api/deck"
 
 type OpponentDeckModalProps = {
@@ -27,7 +28,7 @@ export function OpponentDeckModal({ isOpen, onClose, onLoadSuccess }: OpponentDe
   const processFile = useCallback(
     (file: File) => {
       // ファイルサイズチェック（10MB制限）
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > FILE_SIZE_LIMITS.MAX_IMAGE_SIZE) {
         alert(t("game:opponentDeck.fileSizeExceeded"))
         return
       }

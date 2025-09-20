@@ -1,4 +1,5 @@
 import { produce } from "immer"
+import { INITIAL_GAME_VALUES } from "@/shared/constants/game"
 import type { Card, GameState, PlayerBoard, Position, ZoneId, GameOperation } from "@/shared/types/game"
 import { getCardById } from "./cardHelpers"
 import { removeCardFromZoneById, addCardToZone, updateCardInZone } from "./zoneHelpers"
@@ -23,7 +24,7 @@ export const createInitialPlayerBoard = (): PlayerBoard => ({
   freeZone: [], // フィールド下のフリーゾーン
   sideFreeZone: [], // 左側のフリーゾーン（1024px以上）
   sideDeck: [], // サイドデッキ
-  lifePoints: 8000,
+  lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
 })
 
 // Create initial game state

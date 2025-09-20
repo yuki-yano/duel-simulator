@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { ANIM } from "@/client/constants/animation"
 import { Z_INDEX } from "@/client/constants/zIndex"
+import { OPACITY_VALUES } from "@/client/constants/limits"
 
 type TargetSelectionAnimationProps = {
   cardRect: { x: number; y: number; width: number; height: number }
@@ -73,7 +74,7 @@ export function TargetSelectionAnimation({
         className="absolute inset-0 rounded pointer-events-none"
         style={{
           border: "3px solid #fbbf24",
-          boxShadow: "inset 0 0 10px rgba(251, 191, 36, 0.5), 0 0 15px rgba(251, 191, 36, 0.6)",
+          boxShadow: `inset 0 0 10px rgba(251, 191, 36, ${OPACITY_VALUES.EFFECT_SHADOW_LIGHT}), 0 0 15px rgba(251, 191, 36, ${OPACITY_VALUES.EFFECT_SHADOW_MEDIUM})`,
         }}
       />
     </div>

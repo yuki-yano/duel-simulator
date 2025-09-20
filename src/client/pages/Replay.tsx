@@ -6,6 +6,7 @@ import { Copy } from "lucide-react"
 import { GameField } from "@client/components/GameField"
 import { LanguageSelector } from "@client/components/LanguageSelector"
 import { useTranslation } from "react-i18next"
+import { INITIAL_GAME_VALUES } from "@/shared/constants/game"
 import "@client/i18n" // Initialize i18n
 import { loadGameState } from "@client/api/gameState"
 import { getDeckImage, getDeckImageUrl } from "@client/api/deck"
@@ -240,7 +241,7 @@ export default function Replay() {
                   .map(() => []),
                 freeZone: [],
                 sideFreeZone: [],
-                lifePoints: 8000,
+                lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
               },
               opponent: {
                 monsterZones: Array(5)
@@ -260,7 +261,7 @@ export default function Replay() {
                   .map(() => []),
                 freeZone: [],
                 sideFreeZone: [],
-                lifePoints: 8000,
+                lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
               },
             },
             turn: 1,
@@ -318,7 +319,7 @@ export default function Replay() {
             .map(() => []),
           freeZone: [],
           sideFreeZone: [],
-          lifePoints: 8000,
+          lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
         },
         opponent: {
           monsterZones: Array(5)
@@ -338,7 +339,7 @@ export default function Replay() {
             .map(() => []),
           freeZone: [],
           sideFreeZone: [],
-          lifePoints: 8000,
+          lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
         },
       },
       turn: 1,
@@ -479,7 +480,7 @@ export default function Replay() {
                     .map(() => []),
                   freeZone: [],
                   sideFreeZone: [],
-                  lifePoints: 8000,
+                  lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
                 },
                 opponent: {
                   monsterZones: Array(5)
@@ -499,7 +500,7 @@ export default function Replay() {
                     .map(() => []),
                   freeZone: [],
                   sideFreeZone: [],
-                  lifePoints: 8000,
+                  lifePoints: INITIAL_GAME_VALUES.LIFE_POINTS,
                 },
               },
               turn: 1,

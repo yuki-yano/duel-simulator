@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react"
 import { cn } from "@client/lib/utils"
+import { CARD_SIZE, calculateCardWidth } from "@/client/constants/card"
+import { UI_CONSTRAINTS } from "@/client/constants/limits"
 import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { Card as GameCard, ZoneId } from "@/shared/types/game"
@@ -80,8 +82,12 @@ export function DeckZone({
         const relativeX = e.clientX - rect.left
 
         // Get card dimensions
-        const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
-        const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
+        const cardHeightPx = isMediumScreen
+          ? CARD_SIZE.MEDIUM.HEIGHT
+          : isSmallScreen
+            ? CARD_SIZE.SMALL.HEIGHT
+            : CARD_SIZE.DEFAULT.HEIGHT
+        const cardWidthPx = calculateCardWidth(cardHeightPx)
         const padding = isSmallScreen ? 16 : 8
         const availableWidth = containerWidth - padding * 2
 
@@ -207,7 +213,11 @@ export function DeckZone({
 
   if (orientation === "horizontal") {
     // Card dimensions for horizontal layout (maintaining aspect ratio)
-    const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
+    const cardHeightPx = isMediumScreen
+      ? CARD_SIZE.MEDIUM.HEIGHT
+      : isSmallScreen
+        ? CARD_SIZE.SMALL.HEIGHT
+        : CARD_SIZE.DEFAULT.HEIGHT // md:h-24, sm:h-20, h-14
     const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
     const padding = isSmallScreen ? 16 : 8 // Container padding (smaller on mobile)
 
@@ -429,7 +439,12 @@ export function DeckZone({
             <div className="flex-1 relative">
               <div
                 className="relative w-10 sm:w-14 md:w-18"
-                style={{ height: `${Math.max(80, cards.length * 3 + 60)}px` }}
+                style={{
+                  height: `${Math.max(
+                    UI_CONSTRAINTS.MIN_DECK_ZONE_HEIGHT_BASE,
+                    cards.length * UI_CONSTRAINTS.DECK_ZONE_CARD_SPACING + UI_CONSTRAINTS.MIN_DECK_ZONE_HEIGHT_OFFSET,
+                  )}px`,
+                }}
               >
                 {cards.map((card, index) => (
                   <div

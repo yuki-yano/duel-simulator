@@ -1,5 +1,6 @@
 import React from "react"
 import { cn } from "@client/lib/utils"
+import { CARD_SIZE, calculateCardWidth } from "@/client/constants/card"
 import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import { DraggableCard } from "@/client/components/DraggableCard"
@@ -92,20 +93,20 @@ export function Zone({
 
             if (isLargeScreen) {
               offsetPx = 13 // Tablet and Desktop: 13px offset
-              cardHeight = "96px" // md:h-24
-              cardWidth = `${Math.round((96 * 59) / 86)}px` // Maintain aspect ratio
+              cardHeight = `${CARD_SIZE.MEDIUM.HEIGHT}px` // md:h-24
+              cardWidth = `${calculateCardWidth(CARD_SIZE.MEDIUM.HEIGHT)}px` // Maintain aspect ratio
             } else if (isMediumScreen) {
               offsetPx = 10 // Small tablet: 10px offset
-              cardHeight = "80px" // sm:h-20
-              cardWidth = `${Math.round((80 * 59) / 86)}px` // Maintain aspect ratio
+              cardHeight = `${CARD_SIZE.SMALL.HEIGHT}px` // sm:h-20
+              cardWidth = `${calculateCardWidth(CARD_SIZE.SMALL.HEIGHT)}px` // Maintain aspect ratio
             } else if (isSmallScreen) {
               offsetPx = 8 // Mobile: 8px offset
-              cardHeight = "56px" // h-14
-              cardWidth = `${Math.round((56 * 59) / 86)}px` // Maintain aspect ratio
+              cardHeight = `${CARD_SIZE.DEFAULT.HEIGHT}px` // h-14
+              cardWidth = `${calculateCardWidth(CARD_SIZE.DEFAULT.HEIGHT)}px` // Maintain aspect ratio
             } else {
               offsetPx = 8 // Mobile: 8px offset
-              cardHeight = "56px" // h-14
-              cardWidth = `${Math.round((56 * 59) / 86)}px` // Maintain aspect ratio
+              cardHeight = `${CARD_SIZE.DEFAULT.HEIGHT}px` // h-14
+              cardWidth = `${calculateCardWidth(CARD_SIZE.DEFAULT.HEIGHT)}px` // Maintain aspect ratio
             }
 
             return (

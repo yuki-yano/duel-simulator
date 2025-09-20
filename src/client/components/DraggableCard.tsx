@@ -11,6 +11,7 @@ import { useScreenSize } from "@client/hooks/useScreenSize"
 import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
 import { Z_INDEX } from "@/client/constants/zIndex"
 import { DELAYS } from "@/client/constants/delays"
+import { CARD_SIZE, calculateCardWidth } from "@/client/constants/card"
 
 const LONG_PRESS_DURATION_MS = DELAYS.LONG_PRESS_DURATION
 const TOUCH_MOVE_THRESHOLD = 5
@@ -564,15 +565,12 @@ export function DraggableCard({
         createPortal(
           (() => {
             // Use responsive size for drag image based on screen size
-            let baseHeight: number
-            if (isMediumScreen) {
-              baseHeight = 96
-            } else if (isSmallScreen) {
-              baseHeight = 80
-            } else {
-              baseHeight = 56
-            }
-            const baseWidth = Math.round((baseHeight * 59) / 86) // Maintain aspect ratio
+            const baseHeight = isMediumScreen
+              ? CARD_SIZE.MEDIUM.HEIGHT
+              : isSmallScreen
+                ? CARD_SIZE.SMALL.HEIGHT
+                : CARD_SIZE.DEFAULT.HEIGHT
+            const baseWidth = calculateCardWidth(baseHeight) // Maintain aspect ratio
 
             // Adjust container size based on rotation
             const isRotated = card.rotation === -90 || card.rotation === 90

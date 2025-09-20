@@ -12,6 +12,7 @@ import { RotateAnimation } from "./RotateAnimation"
 import { NegateAnimation } from "./NegateAnimation"
 import { FlipAnimation } from "./FlipAnimation"
 import { useScreenSize } from "@client/hooks/useScreenSize"
+import { CARD_SIZE } from "@/client/constants/card"
 
 type AnimatedCardProps = {
   animation: CardAnimation
@@ -79,8 +80,16 @@ function AnimatedCard({ animation, onComplete }: AnimatedCardProps) {
 
   if (animation.type !== "move") return null
 
-  const cardWidth = isMediumScreen ? 66 : isSmallScreen ? 55 : 40
-  const cardHeight = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
+  const cardWidth = isMediumScreen
+    ? CARD_SIZE.MEDIUM.WIDTH
+    : isSmallScreen
+      ? CARD_SIZE.SMALL.WIDTH
+      : CARD_SIZE.DEFAULT.WIDTH
+  const cardHeight = isMediumScreen
+    ? CARD_SIZE.MEDIUM.HEIGHT
+    : isSmallScreen
+      ? CARD_SIZE.SMALL.HEIGHT
+      : CARD_SIZE.DEFAULT.HEIGHT
 
   return (
     <div

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react"
 import { X } from "lucide-react"
 import { cn } from "@client/lib/utils"
+import { CARD_SIZE, calculateCardWidth } from "@/client/constants/card"
 import { DraggableCard } from "@/client/components/DraggableCard"
 import { useAtom, useAtomValue } from "jotai"
 import { draggedCardAtom, hoveredZoneAtom } from "@/client/atoms/boardAtoms"
@@ -48,8 +49,12 @@ export function ZoneExpandModal({
   const modalHeight = modalBounds.bottom - modalBounds.top
 
   // Card dimensions (same as graveyard)
-  const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56
-  const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
+  const cardHeightPx = isMediumScreen
+    ? CARD_SIZE.MEDIUM.HEIGHT
+    : isSmallScreen
+      ? CARD_SIZE.SMALL.HEIGHT
+      : CARD_SIZE.DEFAULT.HEIGHT
+  const cardWidthPx = calculateCardWidth(cardHeightPx)
 
   // Calculate layout for 2 columns
   const padding = isSmallScreen ? 16 : 12

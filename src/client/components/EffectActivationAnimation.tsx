@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { cn } from "@/client/lib/utils"
 import { ANIM, DEFAULT_ANIMATION_DURATION } from "@/client/constants/animation"
 import { Z_INDEX } from "@/client/constants/zIndex"
+import { OPACITY_VALUES } from "@/client/constants/limits"
 import type { Position } from "@/shared/types/game"
 
 type EffectActivationAnimationProps = {
@@ -115,7 +116,7 @@ export function EffectActivationAnimation({
             animationState === "expanding" && "animate-[pulseGlow_0.5s_ease-out]",
           )}
           style={{
-            boxShadow: "inset 0 0 20px rgba(96, 165, 250, 0.5), 0 0 30px rgba(147, 197, 253, 0.4)",
+            boxShadow: `inset 0 0 20px rgba(96, 165, 250, ${OPACITY_VALUES.EFFECT_SHADOW_LIGHT}), 0 0 30px rgba(147, 197, 253, 0.4)`,
           }}
         />
 

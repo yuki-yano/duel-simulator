@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@client/lib/utils"
+import { CARD_SIZE, calculateCardWidth } from "@/client/constants/card"
 import { useAtom, useAtomValue } from "jotai"
 import { hoveredZoneAtom, draggedCardAtom } from "@/client/atoms/boardAtoms"
 import type { ZoneId } from "@/shared/types/game"
@@ -53,8 +54,12 @@ export function GraveZone({
   const orderedDisplayCards = type === "grave" || type === "banish" ? [...displayCards].reverse() : displayCards
 
   // Card dimensions based on height (maintaining 59:86 ratio)
-  const cardHeightPx = isMediumScreen ? 96 : isSmallScreen ? 80 : 56 // md:h-24 (96px), sm:h-20 (80px), h-14 (56px)
-  const cardWidthPx = Math.round((cardHeightPx * 59) / 86)
+  const cardHeightPx = isMediumScreen
+    ? CARD_SIZE.MEDIUM.HEIGHT
+    : isSmallScreen
+      ? CARD_SIZE.SMALL.HEIGHT
+      : CARD_SIZE.DEFAULT.HEIGHT // md:h-24, sm:h-20, h-14
+  const cardWidthPx = calculateCardWidth(cardHeightPx)
   const spacing = 4 // gap between cards when not overlapping
 
   // Calculate available height for cards
