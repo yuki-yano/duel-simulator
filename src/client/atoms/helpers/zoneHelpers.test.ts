@@ -190,7 +190,7 @@ describe('zoneHelpers', () => {
     })
 
     describe('墓地', () => {
-      it('墓地の先頭にカードを追加できる', () => {
+      it('墓地の末尾にカードを追加できる', () => {
         const board = boardFactory.build()
         board.graveyard = [cardFactory.withName('Old Card').build()]
         const zone: ZoneId = { player: 'self', type: 'graveyard' }
@@ -198,7 +198,7 @@ describe('zoneHelpers', () => {
         const result = addCardToZone(board, zone, testCard)
 
         expect(result.graveyard).toHaveLength(2)
-        expect(result.graveyard[0].id).toBe(testCard.id)
+        expect(result.graveyard[1].id).toBe(testCard.id)
       })
     })
 

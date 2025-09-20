@@ -118,8 +118,8 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
           // Insert card at specified position
           draft.graveyard.splice(zone.index, 0, cardWithResetCounter)
         } else {
-          // Otherwise insert at beginning (top of graveyard)
-          draft.graveyard.unshift(cardWithResetCounter)
+          // Otherwise append to end (bottom of graveyard)
+          draft.graveyard.push(cardWithResetCounter)
         }
         break
       }
