@@ -8,12 +8,11 @@ import { GoToReplayDialog } from "@client/components/GoToReplayDialog"
 import { LanguageSelector } from "@client/components/LanguageSelector"
 import { useAtom, useAtomValue } from "jotai"
 import { useTranslation } from "react-i18next"
-import "./i18n" // Initialize i18n
+import "./i18n"
 import {
   extractedCardsAtom,
   gameStateAtom,
   resetHistoryAtom,
-  operationsAtom,
   drawCardAtom,
   draggedCardAtom,
   initialStateAfterDeckLoadAtom,
@@ -31,7 +30,6 @@ export default function App() {
   const extractedCards = useAtomValue(extractedCardsAtom)
   const gameState = useAtomValue(gameStateAtom)
   const [, resetHistory] = useAtom(resetHistoryAtom)
-  const _operations = useAtomValue(operationsAtom)
   const [, _drawCard] = useAtom(drawCardAtom)
   const [_isGameStarted, _setIsGameStarted] = useState(false)
   const draggedCard = useAtomValue(draggedCardAtom)
@@ -184,41 +182,6 @@ export default function App() {
             <GameField />
           </CardContent>
         </Card>
-
-        {/* Processed Cards Display (before game starts) */}
-        {/* {processedCards.length > 0 && !isGameStarted && (                                                       */}
-        {/*   <div className="max-w-7xl mx-auto mt-8 space-y-4">                                                    */}
-        {/*     <Card className="p-6">                                                                              */}
-        {/*       <h3 className="text-lg font-semibold mb-4">メインデッキ ({extractedCards.mainDeck.length}枚)</h3> */}
-        {/*       <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                          */}
-        {/*         {extractedCards.mainDeck.map((card) => (                                                        */}
-        {/*           <img                                                                                          */}
-        {/*             key={card.id}                                                                               */}
-        {/*             src={card.imageUrl}                                                                         */}
-        {/*             alt={`Main Deck Card`}                                                                      */}
-        {/*             className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"       */}
-        {/*           />                                                                                            */}
-        {/*         ))}                                                                                             */}
-        {/*       </div>                                                                                            */}
-        {/*     </Card>                                                                                             */}
-
-        {/*     {extractedCards.extraDeck.length > 0 && (                                                           */}
-        {/*       <Card className="p-6">                                                                            */}
-        {/*         <h3 className="text-lg font-semibold mb-4">EXデッキ ({extractedCards.extraDeck.length}枚)</h3>  */}
-        {/*         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">                                        */}
-        {/*           {extractedCards.extraDeck.map((card) => (                                                     */}
-        {/*             <img                                                                                        */}
-        {/*               key={card.id}                                                                             */}
-        {/*               src={card.imageUrl}                                                                       */}
-        {/*               alt={`Extra Deck Card`}                                                                   */}
-        {/*               className="w-full aspect-[59/86] rounded shadow-sm hover:shadow-lg transition-shadow"     */}
-        {/*             />                                                                                          */}
-        {/*           ))}                                                                                           */}
-        {/*         </div>                                                                                          */}
-        {/*       </Card>                                                                                           */}
-        {/*     )}                                                                                                  */}
-        {/*   </div>                                                                                                */}
-        {/* )}                                                                                                      */}
 
         {/* Go to Replay Dialog */}
         <GoToReplayDialog isOpen={showGoToReplayDialog} onOpenChange={setShowGoToReplayDialog} />

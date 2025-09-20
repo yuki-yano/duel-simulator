@@ -28,7 +28,7 @@ export type ReplayData = {
 // Card animation for visual effects
 export type CardAnimation = {
   id: string
-  type: "move" | "activate" | "target" | "rotate" | "changePosition" | "highlight" | "negate"
+  type: "move" | "activate" | "target" | "rotate" | "changePosition" | "highlight" | "negate" | "flip"
   cardId?: string
   cardImageUrl?: string
   fromPosition?: { x: number; y: number }
@@ -36,15 +36,14 @@ export type CardAnimation = {
   position?: Position
   cardRect?: { x: number; y: number; width: number; height: number }
   cardRotation?: number
-  // For rotate animation
   fromRotation?: number
   toRotation?: number
-  // For changePosition animation
   fromCardPosition?: Position
   toCardPosition?: Position
-  // For highlight animation
   fromHighlight?: boolean
   toHighlight?: boolean
+  fromFaceDown?: boolean
+  toFaceDown?: boolean
   startTime: number
   duration?: number
 }

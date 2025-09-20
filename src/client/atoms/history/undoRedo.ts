@@ -62,8 +62,16 @@ export const undoAtom = atom(null, async (get, set) => {
       }
     }
 
-    // Update state immediately
-    set(gameStateAtom, previousEntry.gameState)
+    // Check if any operation needs animation
+    const isPaused = get(replayPausedAtom)
+    const hasAnimatableOperations = removedOperations.length > 0 && (!isPlaying || isPaused)
+
+    // If animations will be played, don't update state yet (animations will handle it)
+    if (!hasAnimatableOperations) {
+      // Update state immediately only when no animations
+      set(gameStateAtom, previousEntry.gameState)
+    }
+
     set(gameHistoryIndexAtom, newIndex)
 
     // Restore operations from history
@@ -100,10 +108,9 @@ export const undoAtom = atom(null, async (get, set) => {
     }
 
     // Play animations for removed operations (in reverse)
-    const isPaused = get(replayPausedAtom)
-    if (removedOperations.length > 0 && (!isPlaying || isPaused)) {
+    if (hasAnimatableOperations) {
       const currentSpeed = get(replaySpeedAtom)
-      // Fire and forget animation
+      // Fire and forget animation (animation will update state)
       playOperationAnimations(
         get,
         set,
@@ -405,8 +412,19 @@ export const redoAtom = atom(null, async (get, set) => {
       set(cardAnimationsAtom, [])
     }
 
-    // Update state immediately
-    set(gameStateAtom, nextEntry.gameState)
+    // Find operations that need to be added to replay
+    const operationsToAdd = nextEntry.operations.slice(currentEntry.operationCount, nextEntry.operationCount)
+
+    // Check if any operation needs animation
+    const isPaused = get(replayPausedAtom)
+    const hasAnimatableOperations = operationsToAdd.length > 0 && (!isPlaying || isPaused)
+
+    // If animations will be played, don't update state yet (animations will handle it)
+    if (!hasAnimatableOperations) {
+      // Update state immediately only when no animations
+      set(gameStateAtom, nextEntry.gameState)
+    }
+
     set(gameHistoryIndexAtom, newIndex)
 
     // Restore operations from history
@@ -417,9 +435,6 @@ export const redoAtom = atom(null, async (get, set) => {
       // Set the operation count (not history index) as replay current index
       set(replayCurrentIndexAtom, nextEntry.operationCount)
     }
-
-    // Find operations that need to be added to replay
-    const operationsToAdd = nextEntry.operations.slice(currentEntry.operationCount, nextEntry.operationCount)
 
     // Also add to replay operations if recording
     if (get(replayRecordingAtom)) {
@@ -438,10 +453,9 @@ export const redoAtom = atom(null, async (get, set) => {
     }
 
     // Play animations for added operations
-    const isPaused = get(replayPausedAtom)
-    if (operationsToAdd.length > 0 && (!isPlaying || isPaused)) {
+    if (hasAnimatableOperations) {
       const currentSpeed = get(replaySpeedAtom)
-      // Fire and forget animation
+      // Fire and forget animation (animation will update state)
       playOperationAnimations(get, set, operationsToAdd, currentState, nextEntry.gameState, false, currentSpeed).catch(
         () => {
           // Ignore cancellation errors

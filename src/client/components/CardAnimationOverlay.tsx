@@ -7,6 +7,7 @@ import { TargetSelectionAnimation } from "./TargetSelectionAnimation"
 import { HighlightAnimation } from "./HighlightAnimation"
 import { RotateAnimation } from "./RotateAnimation"
 import { NegateAnimation } from "./NegateAnimation"
+import { FlipAnimation } from "./FlipAnimation"
 import { useScreenSize } from "@client/hooks/useScreenSize"
 
 type AnimatedCardProps = {
@@ -134,6 +135,19 @@ export function CardAnimationOverlay() {
               cardRect={animation.cardRect}
               cardRotation={animation.cardRotation}
               cardImageUrl={animation.cardImageUrl}
+              onComplete={() => handleAnimationComplete(animation.id)}
+            />
+          )
+        } else if (animation.type === "flip" && animation.cardRect) {
+          return (
+            <FlipAnimation
+              key={animation.id}
+              cardRect={animation.cardRect}
+              cardImageUrl={animation.cardImageUrl}
+              fromFaceDown={animation.fromFaceDown ?? false}
+              toFaceDown={animation.toFaceDown ?? false}
+              cardRotation={animation.cardRotation ?? 0}
+              duration={animation.duration}
               onComplete={() => handleAnimationComplete(animation.id)}
             />
           )

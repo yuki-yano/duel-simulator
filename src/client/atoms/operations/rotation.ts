@@ -105,6 +105,15 @@ export const rotateCardAtom = atom(null, (get, set, position: Position, angle: n
 // Card flip (face up/down) action
 export const flipCardAtom = atom(null, (get, set, position: Position) => {
   const state = get(gameStateAtom)
+
+  // Get current card state before flipping
+  let prevFaceDown = false
+  {
+    const player = state.players[position.zone.player]
+    const res = getCardById(player, position.cardId)
+    if (res) prevFaceDown = res.card.faceDown === true
+  }
+
   const newState = performCardFlip(state, position)
 
   if (newState !== state) {
@@ -123,17 +132,48 @@ export const flipCardAtom = atom(null, (get, set, position: Position) => {
       metadata: { flip: true },
     }
 
-    // Update operations BEFORE history
-    set(operationsAtom, [...get(operationsAtom), operation])
+    // Create flip animation BEFORE updating state to prevent flicker
+    const cardRect = getCardRect(position.cardId, get)
 
-    // Then update game state and add to history
-    set(gameStateAtom, newState)
-    addToHistory(get, set, newState)
+    if (cardRect) {
+      // Retrieve card info from current state (before update)
+      const player = state.players[position.zone.player]
+      const res = getCardById(player, position.cardId)
 
-    // Also record to replay operations if recording
-    if (get(replayRecordingAtom)) {
-      set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+      const cardImageUrl = res ? (res.card.name === "token" ? TOKEN_IMAGE_DATA_URL : res.card.imageUrl) : undefined
+      const cardRotation = res ? res.card.rotation : 0
+
+      const animation: CardAnimation = {
+        id: uuidv4(),
+        type: "flip",
+        cardId: position.cardId,
+        cardImageUrl,
+        cardRect,
+        cardRotation,
+        fromFaceDown: prevFaceDown,
+        toFaceDown: !prevFaceDown,
+        startTime: Date.now(),
+        duration: ANIM.FLIP.ANIMATION,
+      }
+
+      const existingAnims = get(cardAnimationsAtom)
+      set(cardAnimationsAtom, [...existingAnims, animation])
     }
+
+    // Delay state update by 1 frame to prevent flicker
+    requestAnimationFrame(() => {
+      // Update operations BEFORE history
+      set(operationsAtom, [...get(operationsAtom), operation])
+
+      // Then update game state and add to history
+      set(gameStateAtom, newState)
+      addToHistory(get, set, newState)
+
+      // Also record to replay operations if recording
+      if (get(replayRecordingAtom)) {
+        set(replayOperationsAtom, [...get(replayOperationsAtom), operation])
+      }
+    })
   }
 })
 

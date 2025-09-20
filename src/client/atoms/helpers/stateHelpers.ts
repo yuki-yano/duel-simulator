@@ -422,6 +422,21 @@ export function applyOperation(state: GameState, operation: GameOperation): Game
     case "target":
       // Target operations don't change state, only visual effects
       break
+    case "changePosition":
+      // Handle flip operations
+      if (operation.to && operation.cardId && operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
+        const position: Position = {
+          zone: {
+            player: operation.to.player,
+            type: operation.to.zoneType,
+            index: operation.to.zoneIndex,
+          },
+          cardId: operation.cardId,
+        }
+        newState = performCardFlip(state, position)
+        return newState
+      }
+      break
     case "toggleHighlight":
       if (operation.to && operation.cardId) {
         // Reconstruct Position object

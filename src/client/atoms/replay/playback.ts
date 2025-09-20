@@ -20,10 +20,12 @@ import {
   createNegateAnimation,
   createTargetAnimation,
   createHighlightAnimation,
+  createFlipAnimation,
 } from "./animations"
 import { getCardById, findMovedCards } from "../helpers/cardHelpers"
 import { applyOperation } from "../helpers/stateHelpers"
 import { ANIM, REPLAY_DELAY, INITIAL_DOM_WAIT } from "@/client/constants/animation"
+import { TOKEN_IMAGE_DATA_URL } from "@/client/constants/tokenImage"
 
 // Re-export imported atoms for backward compatibility
 export { replayDataAtom } from "./recording"
@@ -342,6 +344,61 @@ async function handleHighlightAnimation(
   await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.HIGHLIGHT.ANIMATION * 2, get)))
 }
 
+// Helper: Handle flip animation
+async function handleFlipAnimation(
+  currentState: GameState,
+  nextState: GameState,
+  operation: GameOperation,
+  get: Getter,
+  set: Setter,
+): Promise<void> {
+  if (!operation.to || !operation.cardId) return
+
+  const cardId = operation.cardId as string // TypeScript needs explicit cast
+
+  // Get current faceDown state before update from the correct player/zone
+  let fromFaceDown = false
+  const currentPlayer = currentState.players[operation.to.player]
+
+  // Get card using getCardById which handles all zone types correctly
+  const currentCardRes = getCardById(currentPlayer, cardId)
+
+  if (currentCardRes) {
+    fromFaceDown = currentCardRes.card.faceDown === true
+  }
+
+  // Get next faceDown state after flip - it should be the opposite
+  // Since this is a flip operation, toFaceDown should be !fromFaceDown
+  const toFaceDown = !fromFaceDown
+
+  // Create flip animation BEFORE updating state to prevent flicker
+  const cardRect = getCardRect(cardId, get)
+
+  if (cardRect && currentCardRes) {
+    const cardImageUrl =
+      currentCardRes.card.name === "token" ? TOKEN_IMAGE_DATA_URL : (currentCardRes.card.imageUrl ?? "")
+    const cardRotation = currentCardRes.card.rotation ?? 0
+
+    const animation = createFlipAnimation(cardId, cardImageUrl, cardRect, cardRotation, fromFaceDown, toFaceDown)
+
+    const animations = get(cardAnimationsAtom)
+    set(cardAnimationsAtom, [...animations, animation])
+  }
+
+  // Delay state update by 1 frame to prevent flicker
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      // Update state WITHOUT adding to history
+      const operationIndex = get(replayCurrentIndexAtom) ?? 0
+      updateReplayState(set, nextState, operationIndex + 1)
+      resolve()
+    })
+  })
+
+  // Wait for flip animation
+  await new Promise((resolve) => setTimeout(resolve, ANIM.FLIP.ANIMATION / get(replaySpeedAtom)))
+}
+
 // Helper: Handle summon animation
 async function handleSummonAnimation(nextState: GameState, get: Getter, set: Setter): Promise<void> {
   // Update state for summon (token generation)
@@ -509,6 +566,15 @@ export const playReplayAtom = atom(null, async (get, set) => {
           await handleHighlightAnimation(currentState, nextState, operation, get, set)
           currentState = nextState
           break
+        case "changePosition":
+          // Check if this is a flip operation
+          if (operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
+            await handleFlipAnimation(currentState, nextState, operation, get, set)
+          } else {
+            await handleOtherOperation(nextState, get, set)
+          }
+          currentState = nextState
+          break
         case "summon":
           await handleSummonAnimation(nextState, get, set)
           currentState = nextState
@@ -545,6 +611,14 @@ export const playReplayAtom = atom(null, async (get, set) => {
       } else if (finalOperation.type === "negate") {
         // Wait for negate animation
         await new Promise((resolve) => setTimeout(resolve, getAnimationDuration(ANIM.EFFECT.DURATION, get)))
+      } else if (
+        finalOperation.type === "changePosition" &&
+        finalOperation.metadata &&
+        "flip" in finalOperation.metadata &&
+        finalOperation.metadata.flip === true
+      ) {
+        // Wait for flip animation
+        await new Promise((resolve) => setTimeout(resolve, 400 / get(replaySpeedAtom)))
       }
     }
   }

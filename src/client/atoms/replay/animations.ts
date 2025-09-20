@@ -179,6 +179,29 @@ export function createNegateAnimation(
   }
 }
 
+// Create flip animation
+export function createFlipAnimation(
+  cardId: string,
+  cardImageUrl: string,
+  cardRect: { x: number; y: number; width: number; height: number },
+  cardRotation: number,
+  fromFaceDown: boolean,
+  toFaceDown: boolean,
+): CardAnimation {
+  return {
+    id: uuidv4(),
+    type: "flip",
+    cardId,
+    cardImageUrl,
+    cardRect,
+    cardRotation,
+    fromFaceDown,
+    toFaceDown,
+    startTime: Date.now(),
+    duration: ANIM.FLIP.ANIMATION,
+  }
+}
+
 // Create target animation
 export function createTargetAnimation(
   operation: GameOperation,
@@ -370,28 +393,94 @@ export function createAnimationsFromOperations(
 
       case "changePosition":
         if (operation.to) {
-          // Get card element position
-          const cardRect = getCardRect(operation.cardId, get)
+          // Check if this is a flip operation
+          if (operation.metadata && "flip" in operation.metadata && operation.metadata.flip === true) {
+            // Handle flip animation
+            const cardId = operation.cardId as string
 
-          const position: Position = {
-            zone: {
-              player: operation.to.player,
-              type: operation.to.zoneType,
-              index: operation.to.zoneIndex,
+            // Get faceDown states from both states
+            let fromFaceDown = false
+            let toFaceDown = false
+
+            if (isReverse) {
+              // Undo: animate from current state (prevState) to target state (nextState)
+              // prevState = fromState = current state
+              // nextState = toState = target state we're undoing to
+              const prevPlayer = prevState.players[operation.player]
+              const prevCardRes = getCardById(prevPlayer, cardId)
+              if (prevCardRes) {
+                fromFaceDown = prevCardRes.card.faceDown === true
+              }
+
+              const nextPlayer = nextState.players[operation.player]
+              const nextCardRes = getCardById(nextPlayer, cardId)
+              if (nextCardRes) {
+                toFaceDown = nextCardRes.card.faceDown === true
+              }
+            } else {
+              // Forward: animate from previous state to next state
+              const prevPlayer = prevState.players[operation.player]
+              const prevCardRes = getCardById(prevPlayer, cardId)
+              if (prevCardRes) {
+                fromFaceDown = prevCardRes.card.faceDown === true
+              }
+
+              const nextPlayer = nextState.players[operation.player]
+              const nextCardRes = getCardById(nextPlayer, cardId)
+              if (nextCardRes) {
+                toFaceDown = nextCardRes.card.faceDown === true
+              }
+            }
+
+            // Get card rect and other info
+            const cardRect = getCardRect(cardId, get)
+
+            // Get card info from either state (prefer the current/starting state)
+            const cardRes = isReverse
+              ? (getCardById(prevState.players[operation.player], cardId) ?? getCardById(nextState.players[operation.player], cardId))
+              : (getCardById(prevState.players[operation.player], cardId) ?? getCardById(nextState.players[operation.player], cardId))
+
+            if (cardRect && cardRes) {
+              const cardImageUrl = cardRes.card.name === "token" ? TOKEN_IMAGE_DATA_URL : (cardRes.card.imageUrl ?? "")
+              const cardRotation = cardRes.card.rotation ?? 0
+
+              animations.push({
+                id: uuidv4(),
+                type: "flip",
+                cardId,
+                cardImageUrl,
+                cardRect,
+                cardRotation,
+                fromFaceDown,
+                toFaceDown,
+                startTime: Date.now(),
+                duration: ANIM.FLIP.ANIMATION,
+              })
+            }
+          } else {
+            // Normal changePosition animation
+            const cardRect = getCardRect(operation.cardId, get)
+
+            const position: Position = {
+              zone: {
+                player: operation.to.player,
+                type: operation.to.zoneType,
+                index: operation.to.zoneIndex,
+                cardId: operation.cardId,
+              },
               cardId: operation.cardId,
-            },
-            cardId: operation.cardId,
-          }
+            }
 
-          animations.push({
-            id: uuidv4(),
-            type: "changePosition",
-            cardId: operation.cardId,
-            position,
-            cardRect,
-            startTime: Date.now(),
-            duration: animationDuration / 2,
-          })
+            animations.push({
+              id: uuidv4(),
+              type: "changePosition",
+              cardId: operation.cardId,
+              position,
+              cardRect,
+              startTime: Date.now(),
+              duration: animationDuration / 2,
+            })
+          }
         }
         break
 
@@ -623,8 +712,16 @@ export async function playOperationAnimations(
     // Update animations with correct end positions
     set(cardAnimationsAtom, updatedAnimations)
 
-    // Wait for animation to complete
-    const animationDuration = Math.floor((ANIM.MOVE.ANIMATION * 2) / (3 * speedMultiplier))
+    // Wait for animation to complete (use the longest animation duration)
+    let animationDuration = Math.floor((ANIM.MOVE.ANIMATION * 2) / (3 * speedMultiplier))
+
+    // Find the longest animation duration
+    for (const anim of animations) {
+      if (anim.duration !== undefined && anim.duration > animationDuration) {
+        animationDuration = anim.duration
+      }
+    }
+
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(resolve, animationDuration)
       signal.addEventListener("abort", () => {

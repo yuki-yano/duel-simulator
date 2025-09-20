@@ -70,6 +70,8 @@ export function DraggableCard({
   const activateAnimating = cardAnimations.some((anim) => anim.type === "activate" && anim.cardId === card.id)
   // Check if this card is in rotate animation (used to suppress hover shift)
   const rotateAnimating = cardAnimations.some((anim) => anim.type === "rotate" && anim.cardId === card.id)
+  // Check if this card is in flip animation (hide the original card)
+  const flipAnimating = cardAnimations.some((anim) => anim.type === "flip" && anim.cardId === card.id)
 
   // Track card ref
   useEffect(() => {
@@ -475,7 +477,7 @@ export function DraggableCard({
           cursor: isReplayPlaying || isDisabled ? "not-allowed" : "grab",
           // activate アニメーション中は薄くする程度に留め、完全に隠さない
           opacity: activateAnimating ? 0.25 : isTouching || isDragging ? 0.5 : 1,
-          visibility: isAnimating || rotateAnimating ? "hidden" : "visible",
+          visibility: isAnimating || rotateAnimating || flipAnimating ? "hidden" : "visible",
           // transform だけスムーズにする
           transition: "transform 200ms",
           WebkitTouchCallout: "none",
@@ -487,7 +489,8 @@ export function DraggableCard({
             !highlightAnimating &&
             !targetAnimating &&
             !activateAnimating &&
-            !rotateAnimating
+            !rotateAnimating &&
+            !flipAnimating
               ? hoverDirection === "left"
                 ? "translateX(-8px)"
                 : hoverDirection === "right"
