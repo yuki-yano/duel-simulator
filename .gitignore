@@ -20,3 +20,5 @@ tmp
 
 # Generated Service Worker
 public/sw.js
+coverage/
+test-results/

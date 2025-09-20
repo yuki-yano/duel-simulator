@@ -103,8 +103,8 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
           // Insert card at specified position
           draft.deck.splice(zone.index, 0, cardWithResetCounter)
         } else {
-          // Otherwise append to end
-          draft.deck.push(cardWithResetCounter)
+          // Otherwise insert at beginning (top of deck)
+          draft.deck.unshift(cardWithResetCounter)
         }
         break
       }
@@ -118,8 +118,8 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
           // Insert card at specified position
           draft.graveyard.splice(zone.index, 0, cardWithResetCounter)
         } else {
-          // Otherwise append to end
-          draft.graveyard.push(cardWithResetCounter)
+          // Otherwise insert at beginning (top of graveyard)
+          draft.graveyard.unshift(cardWithResetCounter)
         }
         break
       }
@@ -155,35 +155,39 @@ export function addCardToZone(player: PlayerBoard, zone: ZoneId, card: Card): Pl
       }
       case "freeZone": {
         if (!draft.freeZone) draft.freeZone = []
-        // Reset counter when moving to free zone
-        const cardWithResetCounter = produce(card, (draftCard) => {
+        // Reset counter, rotation, and faceDown when moving to free zone
+        const cardWithResetProperties = produce(card, (draftCard) => {
           draftCard.counter = undefined
+          draftCard.rotation = 0
+          draftCard.faceDown = false
         })
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.freeZone.length) {
           // Insert card at specified position
-          draft.freeZone.splice(insertIndex, 0, cardWithResetCounter)
+          draft.freeZone.splice(insertIndex, 0, cardWithResetProperties)
         } else {
           // Otherwise append to end
-          draft.freeZone.push(cardWithResetCounter)
+          draft.freeZone.push(cardWithResetProperties)
         }
         break
       }
       case "sideFreeZone": {
         if (!draft.sideFreeZone) draft.sideFreeZone = []
-        // Reset counter when moving to side free zone
-        const cardWithResetCounter = produce(card, (draftCard) => {
+        // Reset counter, rotation, and faceDown when moving to side free zone
+        const cardWithResetProperties = produce(card, (draftCard) => {
           draftCard.counter = undefined
+          draftCard.rotation = 0
+          draftCard.faceDown = false
         })
         // Use cardIndex for stack position, or index for legacy compatibility
         const insertIndex = zone.cardIndex ?? zone.index
         if (insertIndex !== undefined && insertIndex >= 0 && insertIndex <= draft.sideFreeZone.length) {
           // Insert card at specified position
-          draft.sideFreeZone.splice(insertIndex, 0, cardWithResetCounter)
+          draft.sideFreeZone.splice(insertIndex, 0, cardWithResetProperties)
         } else {
           // Otherwise append to end
-          draft.sideFreeZone.push(cardWithResetCounter)
+          draft.sideFreeZone.push(cardWithResetProperties)
         }
         break
       }
